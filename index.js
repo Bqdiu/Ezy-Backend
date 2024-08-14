@@ -1,0 +1,31 @@
+const express = require("express");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
+const connectDB = require("./config/connectDB");
+require("dotenv").config();
+const router = require("./routes/index");
+const app = express();
+const port = process.env.PORT || 8080;
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  })
+);
+
+app.use(express.json());
+app.use(cookieParser());
+
+app.get("/", (req, res) => {
+  res.json({
+    message: "Server running at " + port,
+  });
+});
+
+app.use("/api", router);
+
+connectDB().then(() => {
+  app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+  });
+});
