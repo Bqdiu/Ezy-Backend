@@ -4,7 +4,8 @@ const jwt = require("jsonwebtoken");
 const getUserDetailsFromToken = require("../helpers/getUserDetailsFromToken");
 const registerUser = async (req, res) => {
   try {
-    const { name, username, phoneNumber, password, profile_pic } = req.body;
+    const { name, username, email, phoneNumber, password, profile_pic } =
+      req.body;
     const checkPhoneNumber = await UserModel.findOne({ phoneNumber });
     if (checkPhoneNumber) {
       return res.status(400).json({
@@ -20,6 +21,7 @@ const registerUser = async (req, res) => {
       name,
       phoneNumber,
       username,
+      email,
       password: hashPassword,
       profile_pic,
     });
@@ -133,8 +135,7 @@ const searchUser = async (req, res) => {
     const query = new RegExp(search, "i"); //i: bo qua chu hoa chu thuong
 
     const user = await UserModel.find({
-      username: query,
-      username: { $ne: currentUser },
+      $and: [{ username: query }, { username: { $ne: currentUser } }],
     }).select("-password");
     return res.json({
       message: "All User",
