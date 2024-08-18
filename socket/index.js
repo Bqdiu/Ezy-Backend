@@ -31,6 +31,8 @@ io.on("connection", async (socket) => {
   onlineUser.add(user?._id?.toString());
   console.log(onlineUser);
 
+  
+
   //Left Chatbox
   socket.on("sidebar", async (currentUserID) => {
     console.log("Current User", currentUserID);

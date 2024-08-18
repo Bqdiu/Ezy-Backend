@@ -4,17 +4,31 @@ const userSchema = mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "provide name"],
+      required: [true, "Vui lòng nhập vào họ tên"],
+    },
+    username: {
+      type: String,
+      required: [true, "Vui lòng nhập vào username"],
+      unique: [true, "username đã tồn tại. Vui lòng thử lại"],
+    },
+    email: {
+      type: String,
+      required: [true, "Vui lòng nhập vào email"],
+      unique: [true, "Email đã tồn tại. Vui lòng thử lại"],
+      match: [
+        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        "Vui lòng nhập một địa chỉ email hợp lệ",
+      ],
     },
     phoneNumber: {
       type: String,
-      required: [true, "provide Number Phone"],
-      minlength: [10, "Phone number must be exactly 10 digits"],
-      maxlength: [10, "Phone number must be exactly 10 digits"],
+      required: [true, "Vui lòng nhập vào số điện thoại"],
+      minlength: [10, "Số điện thoại phải đủ 10 chữ số"],
+      maxlength: [10, "Số điện thoại phải đủ 10 chữ số"],
     },
     password: {
       type: String,
-      required: [true, "provide password"],
+      required: [true, "Vui lòng nhập vào mật khẩu"],
     },
     profile_pic: {
       type: String,

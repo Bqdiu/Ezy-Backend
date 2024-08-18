@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const getUserDetailsFromToken = require("../helpers/getUserDetailsFromToken");
 const registerUser = async (req, res) => {
   try {
-    const { name, phoneNumber, password, profile_pic } = req.body;
+    const { name, username, phoneNumber, password, profile_pic } = req.body;
     const checkPhoneNumber = await UserModel.findOne({ phoneNumber });
     if (checkPhoneNumber) {
       return res.status(400).json({
@@ -19,6 +19,7 @@ const registerUser = async (req, res) => {
     const payload = await UserModel({
       name,
       phoneNumber,
+      username,
       password: hashPassword,
       profile_pic,
     });
@@ -44,7 +45,13 @@ const loginUser = async (req, res) => {
     const { phoneNumber, password } = req.body;
 
     //Check phoneNumber
-    const user = await UserModel.findOne({ phoneNumber: phoneNumber });
+    const user = await UserModel.findOne({
+      $or: [
+        { phoneNumber: phoneNumber },
+        { username: phoneNumber },
+        { email: phoneNumber },
+      ],
+    });
     if (!user) {
       return res.status(400).json({
         message: "Tài khoản không tồn tại",
@@ -119,4 +126,27 @@ const userDetails = async (req, res) => {
     });
   }
 };
-module.exports = { registerUser, loginUser, userDetails, logout };
+
+const searchUser = async (req, res) => {
+  try {
+    const { search, currentUser } = req.body;
+    const query = new RegExp(search, "i"); //i: bo qua chu hoa chu thuong
+
+    const user = await UserModel.find({
+      username: query,
+      username: { $ne: currentUser },
+    }).select("-password");
+    return res.json({
+      message: "All User",
+      data: user,
+      success: true,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message || error,
+      error: true,
+    });
+  }
+};
+
+module.exports = { registerUser, loginUser, userDetails, logout, searchUser };
