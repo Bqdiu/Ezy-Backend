@@ -17,6 +17,12 @@ const messageSchema = moongose.Schema(
       type: Boolean,
       default: false,
     },
+
+    reiceiverID: {
+      type: moongose.Schema.ObjectId,
+      required: true,
+      ref: "User",
+    },
     msgByUserID: {
       type: moongose.Schema.ObjectId,
       required: true,
