@@ -149,7 +149,7 @@ io.on("connection", async (socket) => {
     const updatedMessages = await MessageModel.updateMany(
       {
         _id: { $in: conversationMessageID },
-        msgByUserID: msgByUserID, // Loại trừ các tin nhắn do người dùng hiện tại gửi
+        msgByUserID: msgByUserID,
       },
       {
         $set: { seen: true },
