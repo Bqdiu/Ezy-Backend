@@ -40,7 +40,7 @@ io.on("connection", async (socket) => {
   //Left Chatbox
   socket.on("sidebar", async (currentUserID) => {
     console.log("Current User", currentUserID);
-    const conversation = await getConversation(currentUserID);
+    const conversation = await getConversation.getConversation(currentUserID);
     socket.emit("conversation", conversation);
   });
   //message-Section
@@ -129,10 +129,27 @@ io.on("connection", async (socket) => {
         getConversationMessage.messages || []
       );
 
-      const conversationSender = await getConversation(data?.sender);
-      const conversationReceiver = await getConversation(data?.receiver);
+      const conversationSender = await getConversation.getConversation(
+        data?.sender
+      );
+      const conversationReceiver = await getConversation.getConversation(
+        data?.receiver
+      );
       io.to(data?.sender).emit("conversation", conversationSender);
       io.to(data?.receiver).emit("conversation", conversationReceiver);
+      const countTotalMessageSender =
+        await getConversation.countTotalUnseenMessage(data?.sender.toString());
+      const countTotalMessageReceiver =
+        await getConversation.countTotalUnseenMessage(
+          data?.receiver.toString()
+        );
+      console.log(countTotalMessageSender);
+      console.log(countTotalMessageReceiver);
+      io.to(data?.sender).emit("total-unseen-message", countTotalMessageSender);
+      io.to(data?.receiver).emit(
+        "total-unseen-message",
+        countTotalMessageReceiver
+      );
     } catch (error) {
       console.error("Error handling new message:", error);
     }
@@ -157,11 +174,32 @@ io.on("connection", async (socket) => {
     );
 
     //send conversation
-    const conversationSender = await getConversation(user?._id);
-    const conversationReceiver = await getConversation(msgByUserID);
+    const conversationSender = await getConversation.getConversation(user?._id);
+    const conversationReceiver = await getConversation.getConversation(
+      msgByUserID
+    );
 
     io.to(user?._id?.toString()).emit("conversation", conversationSender);
     io.to(msgByUserID).emit("conversation", conversationReceiver);
+
+    // const countTotalMessageSender =
+    //   await getConversation.countTotalUnseenMessage(user?._id);
+    const countTotalMessageReceiver =
+      await getConversation.countTotalUnseenMessage(user?._id.toString());
+    // console.log(countTotalMessageReceiver);
+    // console.log(countTotalMessageReceiver);
+    // io.to(user?._id).emit("total-unseen-message", countTotalMessageSender);
+    io.to(user?._id.toString()).emit(
+      "total-unseen-message",
+      countTotalMessageReceiver
+    );
+  });
+
+  socket.on("count-unseen-message", async (msgByUserID) => {
+    const totalUnseenMessages = await getConversation.countTotalUnseenMessage(
+      msgByUserID
+    );
+    socket.emit("total-unseen-message", totalUnseenMessages);
   });
   //***disconnect */
   socket.on("disconnect", () => {

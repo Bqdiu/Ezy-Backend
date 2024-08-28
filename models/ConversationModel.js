@@ -47,7 +47,7 @@ const conversationSchema = moongose.Schema(
     },
     messages: [
       {
-        type: String,
+        type: moongose.Schema.ObjectId,
         ref: "Message",
       },
     ],
