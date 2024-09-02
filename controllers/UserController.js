@@ -2,6 +2,7 @@ const UserModel = require("../models/UserModel");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const getUserDetailsFromToken = require("../helpers/getUserDetailsFromToken");
+const generateRefreshToken = require("../helpers/generateRefreshToken");
 const registerUser = async (req, res) => {
   try {
     const { name, username, email, phoneNumber, password, profile_pic } =
@@ -76,7 +77,7 @@ const loginUser = async (req, res) => {
     const token = await jwt.sign(tokenData, process.env.JWT_SECRECT_KEY, {
       expiresIn: "1d",
     });
-
+    const refreshToken = generateRefreshToken();
     const cookieOptions = {
       http: true,
       secure: true,
