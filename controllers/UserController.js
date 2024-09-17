@@ -77,7 +77,7 @@ const loginUser = async (req, res) => {
     const token = await jwt.sign(tokenData, process.env.JWT_SECRECT_KEY, {
       expiresIn: "1d",
     });
-    const refreshToken = generateRefreshToken();
+
     const cookieOptions = {
       http: true,
       secure: true,
