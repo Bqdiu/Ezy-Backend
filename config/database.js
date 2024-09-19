@@ -1,18 +1,13 @@
-const mysql = require("mysql2");
+const { Sequelize } = require("sequelize");
 
-const connection = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "ezy_ecommerce",
-});
-
-connection.connect((error) => {
-  if (error) {
-    console.error("Lỗi kết nối đến cơ sở dữ liệu");
-    return;
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASSWORD,
+  {
+    host: process.env.DB_HOST,
+    dialect: process.env.DB_DIALECT,
   }
-  console.log("Kết nối tới cơ sở dữ liệu thành công");
-});
+);
 
-module.exports = connection;
+module.exports = sequelize;

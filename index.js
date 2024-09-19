@@ -1,11 +1,12 @@
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const connectDB = require("./config/connectDB");
+// const connectDB = require("./config/connectDB");
 require("dotenv").config();
+const syncModels = require("./models/index");
 const router = require("./routes/index");
-const { app, server } = require("./socket/index");
-// const app = express();
+// const { app, server } = require("./socket/index");
+const app = express();
 const port = process.env.PORT || 8080;
 
 app.use(
@@ -26,8 +27,8 @@ app.get("/", (req, res) => {
 
 app.use("/api", router);
 
-connectDB().then(() => {
-  server.listen(port, () => {
+syncModels().then(() => {
+  app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
   });
 });
