@@ -28,6 +28,7 @@ const SaleEvents = sequelize.define(
   },
   {
     tableName: "sale_events",
+    timestamps: false,
   }
 );
 

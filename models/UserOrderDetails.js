@@ -13,7 +13,7 @@ const UserOrderDetails = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "UserOrder",
+        model: "user_order",
         key: "user_order_id",
       },
     },
@@ -21,7 +21,7 @@ const UserOrderDetails = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "ProductVarients",
+        model: "product_varients",
         key: "product_varients_id",
       },
     },

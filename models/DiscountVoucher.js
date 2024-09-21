@@ -13,7 +13,7 @@ const DiscountVoucher = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "SaleEvents",
+        model: "sale_events",
         key: "sale_events_id",
       },
     },
@@ -52,6 +52,7 @@ const DiscountVoucher = sequelize.define(
   },
   {
     tableName: "discount_voucher",
+    timestamps: false,
   }
 );
 

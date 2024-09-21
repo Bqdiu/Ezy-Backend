@@ -13,7 +13,7 @@ const CustomizeShop = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "Shop",
+        model: "shop",
         key: "shop_id",
       },
     },
@@ -32,6 +32,7 @@ const CustomizeShop = sequelize.define(
   },
   {
     tableName: "customize_shop",
+    timestamps: false,
   }
 );
 

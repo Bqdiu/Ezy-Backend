@@ -25,7 +25,7 @@ const Shop = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "BusinessStyle",
+        model: "business_style",
         key: "business_style_id",
       },
     },
@@ -63,7 +63,7 @@ const Shop = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "UserAccount",
+        model: "user_account",
         key: "user_id",
       },
     },

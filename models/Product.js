@@ -21,7 +21,7 @@ const Product = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "SubCategory",
+        model: "sub_category",
         key: "sub_category_id",
       },
     },
@@ -77,6 +77,7 @@ const Product = sequelize.define(
   },
   {
     tableName: "product",
+    timestamps: false,
   }
 );
 

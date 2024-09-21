@@ -13,7 +13,7 @@ const HistorySearch = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "UserAccount",
+        model: "user_account",
         key: "user_id",
       },
     },
@@ -21,7 +21,7 @@ const HistorySearch = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "SubCategory",
+        model: "sub_category",
         key: "sub_category_id",
       },
     },
@@ -34,6 +34,7 @@ const HistorySearch = sequelize.define(
       },
     ],
     tableName: "history_search",
+    timestamps: false,
   }
 );
 

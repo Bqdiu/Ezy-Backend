@@ -13,7 +13,7 @@ const ShippingOrder = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "UserOrder",
+        model: "user_order",
         key: "user_order_id",
       },
     },
@@ -21,7 +21,7 @@ const ShippingOrder = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "ShippingProvider",
+        model: "shipping_provider",
         key: "provider_id",
       },
     },
@@ -52,6 +52,7 @@ const ShippingOrder = sequelize.define(
     updatedAt: false,
     createdAt: false,
     tableName: "shipping_order",
+    timestamps: false,
   }
 );
 

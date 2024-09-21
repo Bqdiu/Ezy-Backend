@@ -13,7 +13,7 @@ const ProductSize = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "Product",
+        model: "product",
         key: "product_id",
       },
     },
@@ -24,6 +24,7 @@ const ProductSize = sequelize.define(
   },
   {
     tableName: "product_size",
+    timestamps: false,
   }
 );
 

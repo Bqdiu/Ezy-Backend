@@ -21,7 +21,7 @@ const ProductVarients = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "ProductClassify",
+        model: "product_classify",
         key: "product_classify_id",
       },
     },
@@ -29,7 +29,7 @@ const ProductVarients = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
       references: {
-        model: "ProductSize",
+        model: "product_size",
         key: "product_size_id",
       },
     },
@@ -63,6 +63,7 @@ const ProductVarients = sequelize.define(
   },
   {
     tableName: "product_varients",
+    timestamps: false,
   }
 );
 

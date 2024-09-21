@@ -4,7 +4,7 @@ const sequelize = require("../config/database");
 const SaleEventsUser = sequelize.define(
   "SaleEventsUser",
   {
-    sale_event_user_id: {
+    sale_events_user_id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
@@ -13,7 +13,7 @@ const SaleEventsUser = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "SaleEvents",
+        model: "sale_events",
         key: "sale_events_id",
       },
     },
@@ -21,13 +21,14 @@ const SaleEventsUser = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "UserAccount",
+        model: "user_account",
         key: "user_id",
       },
     },
   },
   {
     tableName: "sale_events_user",
+    timestamps: false,
   }
 );
 

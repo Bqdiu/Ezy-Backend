@@ -16,6 +16,7 @@ const OrderStatus = sequelize.define(
   },
   {
     tableName: "order_status",
+    timestamps: false,
   }
 );
 

@@ -9,11 +9,11 @@ const WalletTransaction = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    wallet_id: {
+    user_wallet_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "UserWallet",
+        model: "user_wallet",
         key: "user_wallet_id",
       },
     },

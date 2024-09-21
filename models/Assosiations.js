@@ -124,3 +124,32 @@ ShippingOrder.belongsTo(ShippingProvider, { foreignKey: "provider_id" });
 
 UserOrder.hasMany(ShippingOrder, { foreignKey: "user_order_id" });
 ShippingOrder.belongsTo(UserOrder, { foreignKey: "user_order_id" });
+
+module.exports = {
+  UserAccount,
+  UserAddress,
+  Role,
+  Category,
+  SubCategory,
+  Product,
+  Shop,
+  BusinessStyle,
+  UserOrder,
+  UserOrderDetails,
+  OrderStatus,
+  HistorySearch,
+  ProductReview,
+  CustomizeShop,
+  ProductImgs,
+  ProductVarients,
+  ProductClassify,
+  ProductSize,
+  SaleEvents,
+  DiscountVoucher,
+  SaleEventsUser,
+  SaleEventsOnCategories,
+  UserWallet,
+  WalletTransaction,
+  ShippingProvider,
+  ShippingOrder,
+};

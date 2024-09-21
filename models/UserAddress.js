@@ -13,7 +13,7 @@ const UserAddress = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "UserAccount",
+        model: "user_account",
         key: "user_id",
       },
     },
@@ -32,6 +32,7 @@ const UserAddress = sequelize.define(
   },
   {
     tableName: "user_address",
+    timestamps: false,
   }
 );
 

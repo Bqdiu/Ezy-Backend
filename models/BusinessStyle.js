@@ -8,6 +8,7 @@ const BusinessStyle = sequelize.define(
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
+      allowNull: false,
     },
     business_style_name: {
       type: DataTypes.STRING,
@@ -16,7 +17,12 @@ const BusinessStyle = sequelize.define(
   },
   {
     tableName: "business_style",
+    timestamps: false,
   }
 );
+
+BusinessStyle.describe().then((description) => {
+  console.log(description);
+});
 
 module.exports = BusinessStyle;

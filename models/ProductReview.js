@@ -13,7 +13,7 @@ const ProductReview = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "UserAccount",
+        model: "user_account",
         key: "user_id",
       },
     },
@@ -21,7 +21,7 @@ const ProductReview = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "ProductVarients",
+        model: "product_varients",
         key: "product_varients_id",
       },
     },
@@ -43,6 +43,7 @@ const ProductReview = sequelize.define(
     updatedAt: false,
     createdAt: false,
     tableName: "product_review",
+    timestamps: false,
   }
 );
 

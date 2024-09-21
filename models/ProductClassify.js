@@ -13,7 +13,7 @@ const ProductClassify = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "Product",
+        model: "product",
         key: "product_id",
       },
     },
@@ -28,6 +28,7 @@ const ProductClassify = sequelize.define(
   },
   {
     tableName: "product_classify",
+    timestamps: false,
   }
 );
 

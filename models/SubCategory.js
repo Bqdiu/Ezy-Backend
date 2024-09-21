@@ -13,18 +13,18 @@ const SubCategory = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "Category",
+        model: "category",
         key: "category_id",
       },
     },
     sub_category_name: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
     },
   },
   {
     tableName: "sub_category",
+    timestamps: false,
   }
 );
 

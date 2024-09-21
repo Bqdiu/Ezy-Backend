@@ -13,7 +13,7 @@ const SaleEventsOnCategories = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "SaleEvents",
+        model: "sale_events",
         key: "sale_events_id",
       },
     },
@@ -21,13 +21,14 @@ const SaleEventsOnCategories = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "Category",
+        model: "category",
         key: "category_id",
       },
     },
   },
   {
     tableName: "sale_events_on_categories",
+    timestamps: false,
   }
 );
 

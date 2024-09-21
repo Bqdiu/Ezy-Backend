@@ -13,7 +13,7 @@ const ProductImgs = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
       references: {
-        model: "Product",
+        model: "product",
         key: "product_id",
       },
     },
@@ -24,6 +24,7 @@ const ProductImgs = sequelize.define(
   },
   {
     tableName: "product_imgs",
+    timestamps: false,
   }
 );
 
