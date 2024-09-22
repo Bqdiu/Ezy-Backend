@@ -21,6 +21,10 @@ const ProductClassify = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    type_name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     thumbnail: {
       type: DataTypes.STRING,
       allowNull: true,

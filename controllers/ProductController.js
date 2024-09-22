@@ -145,6 +145,12 @@ const getProductDetailsByID = async (req, res) => {
       },
       include: [
         {
+          model: ProductClassify,
+          attributes: {
+            exclude: ["product_id"],
+          },
+        },
+        {
           model: Shop,
           attributes: {
             exclude: ["user_id", "business_style_id"],
