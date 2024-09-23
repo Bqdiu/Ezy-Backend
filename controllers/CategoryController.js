@@ -1,4 +1,8 @@
-const Category = require("../models/Category");
+const { model } = require("mongoose");
+const {
+  SubCategory,
+  Category
+} = require("../models/Assosiations");
 
 const getAllCategories = async (req, res) => {
   try {
@@ -10,6 +14,28 @@ const getAllCategories = async (req, res) => {
   }
 };
 
+const getAllCategoriesWithSubCategories = async (req, res) => {
+  try {
+    const categories = await Category.findAll({
+      include: [
+        {
+          model: SubCategory,
+        }
+      ]
+    })
+    res.status(200).json({
+      success: true,
+      data: categories,
+    })
+  } catch (error) {
+    res.status(200).json({
+      error: true,
+      message: error.message || error
+    })
+  }
+}
+
 module.exports = {
   getAllCategories,
+  getAllCategoriesWithSubCategories
 };
