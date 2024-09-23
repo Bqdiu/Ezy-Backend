@@ -6,7 +6,7 @@ const express = require("express");
 //   userDetails,
 //   searchUser,
 // } = require("../controllers/UserController");
-const { getAllCategories } = require("../controllers/CategoryController");
+const { getAllCategories, getAllCategoriesWithSubCategories } = require("../controllers/CategoryController");
 const {
   getAllProducts,
   getProductDetailsByID,
@@ -17,6 +17,7 @@ const router = express.Router();
 
 //Categories
 router.get("/categories", getAllCategories);
+router.get("/categories-sub", getAllCategoriesWithSubCategories);
 
 //Products
 router.get("/products", getAllProducts);
