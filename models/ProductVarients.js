@@ -19,7 +19,7 @@ const ProductVarients = sequelize.define(
     },
     product_classify_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: "product_classify",
         key: "product_classify_id",
@@ -40,11 +40,11 @@ const ProductVarients = sequelize.define(
     },
     stock: {
       type: DataTypes.BIGINT,
-      allowNull: false,
+      allowNull: true,
     },
     price: {
       type: DataTypes.BIGINT,
-      allowNull: false,
+      allowNull: true,
     },
     sale_percents: {
       type: DataTypes.DOUBLE,

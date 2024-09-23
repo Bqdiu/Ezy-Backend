@@ -12,6 +12,7 @@ const {
   getProductDetailsByID,
   getSuggestProducts,
   getLimitSuggestProducts,
+  getProductVarients,
 } = require("../controllers/ProductController");
 const router = express.Router();
 
@@ -21,6 +22,7 @@ router.get("/categories", getAllCategories);
 //Products
 router.get("/products", getAllProducts);
 router.get("/product-details/:id", getProductDetailsByID);
+router.get("/product-varients", getProductVarients);
 //-----------------Suggest Products-----------------
 router.get("/suggest-products-limit", getLimitSuggestProducts);
 router.get("/suggest-products", getSuggestProducts);

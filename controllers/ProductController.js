@@ -14,6 +14,7 @@ const {
   HistorySearch,
 } = require("../models/Assosiations");
 const sequelize = require("../config/database");
+const { Sequelize } = require("sequelize");
 const getAllProducts = async (req, res) => {
   try {
     const products = await Product.findAll({
@@ -179,23 +180,23 @@ const getProductDetailsByID = async (req, res) => {
             model: Category,
           },
         },
-        {
-          model: ProductVarients,
-          attributes: {
-            exclude: ["product_id", "product_classify_id", "product_size_id"],
-          },
-          include: [
-            {
-              model: ProductClassify,
-            },
-            {
-              model: ProductSize,
-              attributes: {
-                exclude: ["product_id"],
-              },
-            },
-          ],
-        },
+        // {
+        //   model: ProductVarients,
+        //   attributes: {
+        //     exclude: ["product_id", "product_classify_id", "product_size_id"],
+        //   },
+        //   include: [
+        //     {
+        //       model: ProductClassify,
+        //     },
+        //     {
+        //       model: ProductSize,
+        //       attributes: {
+        //         exclude: ["product_id"],
+        //       },
+        //     },
+        //   ],
+        // },
         {
           model: ProductSize,
           attributes: {
@@ -237,6 +238,26 @@ const getProductDetailsByID = async (req, res) => {
       });
     }
 
+    //Tính tổng trên mỗi loại sản phẩm
+    const totalStockQuery = `SELECT product_classify_id,SUM(stock) as total_stock from product_varients where product_varients.product_classify_id in 
+    (SELECT product_classify_id from product_classify where product_id = ${id})
+    group by product_classify_id;`;
+
+    const totalStock = await sequelize.query(totalStockQuery, {
+      replacements: { product_id: id },
+      type: Sequelize.QueryTypes.SELECT,
+    });
+
+    // console.log("Total stock: ", totalStock);
+
+    product?.ProductClassifies?.forEach((classify) => {
+      const data = totalStock.find(
+        (stock) => stock.product_classify_id === classify.product_classify_id
+      );
+
+      console.log("Total stock of " + classify?.product_classify_id, data);
+      classify.dataValues.total_stock = data ? data.total_stock : 0;
+    });
     // if (!req.session.visitedProduct) {
     //   req.session.visitedProduct = new Set();
     // }
@@ -276,9 +297,51 @@ const getProductDetailsByID = async (req, res) => {
   }
 };
 
+const getProductVarients = async (req, res) => {
+  try {
+    const { product_id, product_classify_id } = req.query;
+
+    let productVarient = {};
+    if (product_id && product_classify_id) {
+      productVarient = await ProductVarients.findAll({
+        where: {
+          product_id,
+          product_classify_id,
+        },
+        include: [
+          {
+            model: ProductSize,
+            attributes: {
+              exclude: ["product_id"],
+            },
+          },
+        ],
+      });
+    } else {
+      productVarient = await ProductVarients.findAll({
+        where: {
+          product_id,
+        },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: productVarient,
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy dữ liệu loại sản phẩm: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
 module.exports = {
   getAllProducts,
   getProductDetailsByID,
   getSuggestProducts,
   getLimitSuggestProducts,
+  getProductVarients,
 };

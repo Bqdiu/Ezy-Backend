@@ -41,6 +41,10 @@ const Product = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     gender_object: {
       type: DataTypes.STRING,
       allowNull: true,
