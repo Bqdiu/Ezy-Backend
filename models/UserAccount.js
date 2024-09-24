@@ -52,6 +52,10 @@ const UserAccount = sequelize.define(
         isBefore: new Date().toISOString(),
       },
     },
+    avt_url: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     role_id: {
       type: DataTypes.INTEGER,
       allowNull: false,

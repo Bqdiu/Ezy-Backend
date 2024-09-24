@@ -142,7 +142,7 @@ const getProductDetailsByID = async (req, res) => {
     const product = await Product.findOne({
       where: { product_id: id },
       attributes: {
-        exclude: ["shop_id", "sub_category_id"],
+        exclude: ["sub_category_id"],
       },
       include: [
         {
@@ -180,23 +180,6 @@ const getProductDetailsByID = async (req, res) => {
             model: Category,
           },
         },
-        // {
-        //   model: ProductVarients,
-        //   attributes: {
-        //     exclude: ["product_id", "product_classify_id", "product_size_id"],
-        //   },
-        //   include: [
-        //     {
-        //       model: ProductClassify,
-        //     },
-        //     {
-        //       model: ProductSize,
-        //       attributes: {
-        //         exclude: ["product_id"],
-        //       },
-        //     },
-        //   ],
-        // },
         {
           model: ProductSize,
           attributes: {
@@ -211,6 +194,8 @@ const getProductDetailsByID = async (req, res) => {
         },
       ],
     });
+
+    //Reviews
     const reviews = await ProductReview.findAll({
       attributes: {
         exclude: ["user_id", "product_varients_id"],
@@ -248,8 +233,18 @@ const getProductDetailsByID = async (req, res) => {
       type: Sequelize.QueryTypes.SELECT,
     });
 
-    // console.log("Total stock: ", totalStock);
+    //Tổng sản phẩm của Shop
+    if (product && product.Shop && product.Shop.dataValues) {
+      const totalProductOfShop = `SELECT COUNT(product_id) as total_product from product where shop_id = ${product.shop_id}`;
+      const totalProduct = await sequelize.query(totalProductOfShop, {
+        type: Sequelize.QueryTypes.SELECT,
+      });
+      product.Shop.dataValues.total_product = totalProduct
+        ? totalProduct[0]?.total_product
+        : 0;
+    }
 
+    //Tổng sản phẩm mỗi ProductClassify
     product?.ProductClassifies?.forEach((classify) => {
       const data = totalStock.find(
         (stock) => stock.product_classify_id === classify.product_classify_id
@@ -258,15 +253,7 @@ const getProductDetailsByID = async (req, res) => {
       console.log("Total stock of " + classify?.product_classify_id, data);
       classify.dataValues.total_stock = data ? data.total_stock : 0;
     });
-    // if (!req.session.visitedProduct) {
-    //   req.session.visitedProduct = new Set();
-    // }
-
-    // if (!req.session.visitedProduct.has(id)) {
-    //   product.visited = product.visited + 1;
-    //   await product.save();
-    //   req.session.visitedProduct.add(id);
-    // }
+    //Kiểm tra người dùng đã có sub_category_id trong lịch sử tìm kiếm chưa
     const history = await HistorySearch.findOne({
       where: {
         user_id: 1,
@@ -280,6 +267,7 @@ const getProductDetailsByID = async (req, res) => {
       });
     }
 
+    //Mỗi khi người dùng xem chi tiết sản phẩm thì tăng số lượt xem
     product.visited = product.visited + 1;
     await product.save();
 
