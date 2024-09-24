@@ -14,7 +14,7 @@ const {
   HistorySearch,
 } = require("../models/Assosiations");
 const sequelize = require("../config/database");
-const { Sequelize } = require("sequelize");
+const Sequelize = require("sequelize");
 const getAllProducts = async (req, res) => {
   try {
     const products = await Product.findAll({
@@ -196,26 +196,18 @@ const getProductDetailsByID = async (req, res) => {
     });
 
     //Reviews
-    const reviews = await ProductReview.findAll({
-      attributes: {
-        exclude: ["user_id", "product_varients_id"],
-      },
-      include: [
-        {
-          model: UserAccount,
-          include: {
-            model: Role,
-          },
-        },
-        {
-          model: ProductVarients,
-          where: {
-            product_id: id,
-          },
-        },
-      ],
+    const totalRatingQuery = `SELECT SUM(rating) as total_Rating, count(*) as total_Review
+    FROM product_review pr
+    inner join product_varients pv ON pr.product_varients_id = pv.product_varients_id
+    where pv.product_id = ${id}`;
+    const totalRating = await sequelize.query(totalRatingQuery, {
+      type: Sequelize.QueryTypes.SELECT,
     });
 
+    const avgRating =
+      totalRating[0]?.total_Rating / totalRating[0]?.total_Review || 0;
+
+    const totalReviews = totalRating[0]?.total_Review;
     if (!product) {
       return res.status(404).json({
         success: false,
@@ -274,7 +266,8 @@ const getProductDetailsByID = async (req, res) => {
     res.status(200).json({
       success: true,
       product,
-      reviews,
+      avgRating,
+      totalReviews,
     });
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu sản phẩm: ", error);

@@ -6,7 +6,10 @@ const express = require("express");
 //   userDetails,
 //   searchUser,
 // } = require("../controllers/UserController");
-const { getAllCategories, getAllCategoriesWithSubCategories } = require("../controllers/CategoryController");
+const {
+  getAllCategories,
+  getAllCategoriesWithSubCategories,
+} = require("../controllers/CategoryController");
 const {
   getAllProducts,
   getProductDetailsByID,
@@ -14,16 +17,20 @@ const {
   getLimitSuggestProducts,
   getProductVarients,
 } = require("../controllers/ProductController");
+const { getProductReview } = require("../controllers/ProductReviewController");
 const router = express.Router();
 
-//Categories
+//------------------Categories-----------------------
 router.get("/categories", getAllCategories);
 router.get("/categories-sub", getAllCategoriesWithSubCategories);
 
-//Products
+//------------------Products-----------------------
 router.get("/products", getAllProducts);
 router.get("/product-details/:id", getProductDetailsByID);
 router.get("/product-varients", getProductVarients);
+//-----------------ProductsReview-------------------
+router.get("/product-reviews/:product_id", getProductReview);
+
 //-----------------Suggest Products-----------------
 router.get("/suggest-products-limit", getLimitSuggestProducts);
 router.get("/suggest-products", getSuggestProducts);
