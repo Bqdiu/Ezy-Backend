@@ -319,10 +319,36 @@ const getProductVarients = async (req, res) => {
   }
 };
 
+const getAllProductsOfShop = async (req, res) => {
+  try {
+    const { shop_id, product_id } = req.query;
+    const products = await Product.findAll({
+      where: {
+        shop_id,
+        product_id: {
+          [Sequelize.Op.ne]: product_id,
+        },
+      },
+      limit: 10,
+    });
+    res.status(200).json({
+      success: true,
+      products,
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy dữ liệu sản phẩm của shop: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
 module.exports = {
   getAllProducts,
   getProductDetailsByID,
   getSuggestProducts,
   getLimitSuggestProducts,
   getProductVarients,
+  getAllProductsOfShop,
 };

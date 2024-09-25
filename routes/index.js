@@ -16,6 +16,7 @@ const {
   getSuggestProducts,
   getLimitSuggestProducts,
   getProductVarients,
+  getAllProductsOfShop,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
 const router = express.Router();
@@ -23,7 +24,8 @@ const router = express.Router();
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
 router.get("/categories-sub", getAllCategoriesWithSubCategories);
-
+//------------------Shop--------------------------------
+router.get("/shop-products", getAllProductsOfShop);
 //------------------Products-----------------------
 router.get("/products", getAllProducts);
 router.get("/product-details/:id", getProductDetailsByID);
