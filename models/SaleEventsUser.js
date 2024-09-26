@@ -18,7 +18,7 @@ const SaleEventsUser = sequelize.define(
       },
     },
     user_id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING,
       allowNull: false,
       references: {
         model: "user_account",

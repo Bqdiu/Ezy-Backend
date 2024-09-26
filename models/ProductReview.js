@@ -10,7 +10,7 @@ const ProductReview = sequelize.define(
       autoIncrement: true,
     },
     user_id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING,
       allowNull: false,
       references: {
         model: "user_account",

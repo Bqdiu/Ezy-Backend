@@ -19,6 +19,8 @@ const {
   getAllProductsOfShop,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
+const { getAllUser } = require("../controllers/UserController");
+const { getAllRole } = require("../controllers/RoleController");
 const router = express.Router();
 
 //------------------Categories-----------------------
@@ -41,4 +43,12 @@ router.get("/suggest-products", getSuggestProducts);
 // router.get("/user-details", userDetails);
 // router.get("/logout", logout);
 // router.post("/search-user", searchUser);
+
+//-----------------UserAccount-----------------
+router.get("/all-user",getAllUser);
+
+
+//-----------------Role-----------------
+router.get("/all-role", getAllRole);
+
 module.exports = router;
