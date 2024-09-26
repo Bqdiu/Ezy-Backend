@@ -13,6 +13,10 @@ const UserAccount = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     full_name: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -20,6 +24,7 @@ const UserAccount = sequelize.define(
     email: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true,
       validate: {
         isEmail: true,
         notEmpty: true,
@@ -27,6 +32,7 @@ const UserAccount = sequelize.define(
     },
     phone_number: {
       type: DataTypes.STRING,
+      unique: true,
       allowNull: true,
       validate: {
         notEmpty: true,

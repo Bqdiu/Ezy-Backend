@@ -25,7 +25,7 @@ const getAllUser = async (req, res) => {
 }
 
 const checkEmailExists = async (req, res) => {
-    const { email } = req.body;
+    const { email } = req.query;
     if (!email) {
         return res.status(400).json({ error: true, message: 'Email is required' });
     }
