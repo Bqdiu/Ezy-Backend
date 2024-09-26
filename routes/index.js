@@ -9,6 +9,7 @@ const express = require("express");
 const {
   getAllCategories,
   getAllCategoriesWithSubCategories,
+  getSubCategories,
 } = require("../controllers/CategoryController");
 const {
   getAllProducts,
@@ -19,13 +20,18 @@ const {
   getAllProductsOfShop,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
-const { getAllUser, sellerRegister, checkEmailExists } = require("../controllers/UserController");
+const {
+  getAllUser,
+  sellerRegister,
+  checkEmailExists,
+} = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
 const router = express.Router();
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
 router.get("/categories-sub", getAllCategoriesWithSubCategories);
+router.get("/sub-categories/:category_id", getSubCategories);
 //------------------Shop--------------------------------
 router.get("/shop-products", getAllProductsOfShop);
 //------------------Products-----------------------
@@ -48,7 +54,6 @@ router.get("/suggest-products", getSuggestProducts);
 router.get("/all-user", getAllUser);
 router.get("/check-email", checkEmailExists);
 router.post("/seller-register", sellerRegister);
-
 
 //-----------------Role-----------------
 router.get("/all-role", getAllRole);

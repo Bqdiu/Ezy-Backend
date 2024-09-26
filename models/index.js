@@ -31,7 +31,7 @@ const syncModels = async () => {
   try {
     await sequelize.authenticate();
     console.log("Connection has been established successfully.");
-    await sequelize.sync({ alter: true }); // Hoặc { force: true } để xóa và tạo lại bảng
+    await sequelize.sync({ force: false });
     // await Role.sync();
     // await UserAccount.sync();
     // await UserAddress.sync();

@@ -344,6 +344,16 @@ const getAllProductsOfShop = async (req, res) => {
   }
 };
 
+const getProductBySortAndFilter = async (req, res) => {
+  try {
+    const { cat_id } = req.params;
+    const { sort, filter, pageNumbers = 1, limit = 48 } = req.query;
+    const offset = (pageNumbers - 1) * limit;
+  } catch (error) {
+    console.log("Lỗi khi lấy dữ liệu sản phẩm theo sort và filter: ", error);
+  }
+};
+
 module.exports = {
   getAllProducts,
   getProductDetailsByID,
