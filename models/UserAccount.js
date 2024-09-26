@@ -11,11 +11,11 @@ const UserAccount = sequelize.define(
     },
     username: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     full_name: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     email: {
       type: DataTypes.STRING,
@@ -27,7 +27,7 @@ const UserAccount = sequelize.define(
     },
     phone_number: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       validate: {
         notEmpty: true,
         isNumeric: true,
@@ -36,7 +36,7 @@ const UserAccount = sequelize.define(
     },
     gender: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       validate: {
         notEmpty: true,
         isIn: [["Nam", "Nữ", "Khác"]],
@@ -44,7 +44,7 @@ const UserAccount = sequelize.define(
     },
     dob: {
       type: DataTypes.DATE,
-      allowNull: false,
+      allowNull: true,
       validate: {
         notEmpty: true,
         isDate: true,

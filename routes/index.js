@@ -19,7 +19,7 @@ const {
   getAllProductsOfShop,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
-const { getAllUser } = require("../controllers/UserController");
+const { getAllUser, sellerRegister, checkEmailExists } = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
 const router = express.Router();
 
@@ -45,7 +45,9 @@ router.get("/suggest-products", getSuggestProducts);
 // router.post("/search-user", searchUser);
 
 //-----------------UserAccount-----------------
-router.get("/all-user",getAllUser);
+router.get("/all-user", getAllUser);
+router.get("/check-email", checkEmailExists);
+router.post("/seller-register", sellerRegister);
 
 
 //-----------------Role-----------------
