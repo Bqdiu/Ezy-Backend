@@ -21,7 +21,7 @@ const getProductReview = async (req, res) => {
   const offset = (pageNumbers - 1) * limit;
   try {
     if (rating >= 1 && rating <= 5) {
-      const reviews = await ProductReview.findAll({
+      const totalReviews = await ProductReview.count({
         attributes: {
           exclude: ["user_id", "product_varients_id"],
         },
@@ -42,6 +42,36 @@ const getProductReview = async (req, res) => {
         where: {
           rating: rating,
         },
+      });
+      const reviews = await ProductReview.findAll({
+        attributes: {
+          exclude: ["user_id", "product_varients_id"],
+        },
+        include: [
+          {
+            model: UserAccount,
+            include: {
+              model: Role,
+            },
+          },
+          {
+            model: ProductVarients,
+            where: {
+              product_id: product_id,
+            },
+            include: [
+              {
+                model: ProductSize,
+              },
+              {
+                model: ProductClassify,
+              },
+            ],
+          },
+        ],
+        where: {
+          rating: rating,
+        },
         order: [["created_at", "DESC"]],
         offset,
         limit,
@@ -49,9 +79,28 @@ const getProductReview = async (req, res) => {
       res.status(200).json({
         success: true,
         reviews,
-        totalPage: Math.ceil(reviews.length / limit),
+        totalPage: Math.ceil(totalReviews / limit),
       });
     } else {
+      const totalReviews = await ProductReview.count({
+        attributes: {
+          exclude: ["user_id", "product_varients_id"],
+        },
+        include: [
+          {
+            model: UserAccount,
+            include: {
+              model: Role,
+            },
+          },
+          {
+            model: ProductVarients,
+            where: {
+              product_id: product_id,
+            },
+          },
+        ],
+      });
       const reviews = await ProductReview.findAll({
         attributes: {
           exclude: ["user_id", "product_varients_id"],
@@ -86,7 +135,7 @@ const getProductReview = async (req, res) => {
       res.status(200).json({
         success: true,
         reviews,
-        totalPage: Math.ceil(reviews.length / limit),
+        totalPage: Math.ceil(totalReviews / limit),
       });
     }
   } catch (error) {

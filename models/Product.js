@@ -78,6 +78,16 @@ const Product = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    created_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: DataTypes.NOW,
+    },
+    updated_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: DataTypes.NOW,
+    },
   },
   {
     tableName: "product",

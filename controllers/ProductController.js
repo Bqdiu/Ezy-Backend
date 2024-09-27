@@ -69,6 +69,7 @@ const getLimitSuggestProducts = async (req, res) => {
     const suggestedProducts = await Product.findAll({
       where: {
         sub_category_id: Array.from(subCategoryIds),
+        stock: { [Sequelize.Op.gt]: 0 },
       },
       limit: 48,
     });
@@ -87,7 +88,7 @@ const getLimitSuggestProducts = async (req, res) => {
 const getSuggestProducts = async (req, res) => {
   try {
     const userID = 1;
-    const { pageNumbers = 1, limit = 48 } = req.query;
+    const { pageNumbers = 1, limit = 28 } = req.query;
     const offset = (pageNumbers - 1) * limit;
 
     const randomSubCategories = await SubCategory.findAll({
@@ -113,10 +114,15 @@ const getSuggestProducts = async (req, res) => {
     historySearches.forEach((search) =>
       subCategoryIds.add(search.SubCategory.sub_category_id)
     );
-
+    const totalPages = await Product.count({
+      where: {
+        sub_category_id: Array.from(subCategoryIds),
+      },
+    });
     const suggestedProducts = await Product.findAll({
       where: {
         sub_category_id: Array.from(subCategoryIds),
+        stock: { [Sequelize.Op.gt]: 0 },
       },
       limit,
       offset,
@@ -126,7 +132,7 @@ const getSuggestProducts = async (req, res) => {
       data: suggestedProducts,
       total: suggestedProducts.length,
       pageNumbers,
-      totalPages: Math.ceil(suggestedProducts.length / limit),
+      totalPages: Math.ceil(totalPages / limit),
     });
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu sản phẩm gợi ý: ", error);
@@ -163,7 +169,7 @@ const getProductDetailsByID = async (req, res) => {
             {
               model: UserAccount,
               attributes: {
-                exclude: ["role_id"],
+                exclude: ["role_id", "password"],
               },
               include: {
                 model: Role,
@@ -328,6 +334,7 @@ const getAllProductsOfShop = async (req, res) => {
         product_id: {
           [Sequelize.Op.ne]: product_id,
         },
+        stock: { [Sequelize.Op.gt]: 0 },
       },
       limit: 10,
     });
@@ -347,10 +354,109 @@ const getAllProductsOfShop = async (req, res) => {
 const getProductBySortAndFilter = async (req, res) => {
   try {
     const { cat_id } = req.params;
-    const { sort, filter, pageNumbers = 1, limit = 48 } = req.query;
+    const {
+      pageNumbers = 1,
+      limit = 28,
+      sortBy,
+      facet,
+      minPrice,
+      maxPrice,
+      ratingFilter,
+    } = req.query;
     const offset = (pageNumbers - 1) * limit;
+
+    var products = [];
+    let totalProducts = 0;
+    switch (sortBy) {
+      case "cTime":
+        totalProducts = await Product.findAll({
+          include: [
+            {
+              model: SubCategory,
+              where: {
+                category_id: cat_id,
+              },
+            },
+          ],
+          where: {
+            stock: { [Sequelize.Op.gt]: 0 },
+          },
+        });
+        products = await Product.findAll({
+          include: [
+            {
+              model: SubCategory,
+              where: {
+                category_id: cat_id,
+              },
+            },
+          ],
+          where: {
+            stock: { [Sequelize.Op.gt]: 0 },
+          },
+          order: [["created_at", "DESC"]],
+        });
+        break;
+      case "sales":
+        products = await Product.findAll({
+          include: [
+            {
+              model: SubCategory,
+              where: {
+                category_id: cat_id,
+              },
+            },
+          ],
+          where: {
+            stock: { [Sequelize.Op.gt]: 0 },
+          },
+          order: [["sold", "DESC"]],
+        });
+        break;
+      default:
+        totalProducts = await Product.count({
+          include: [
+            {
+              model: SubCategory,
+              where: {
+                category_id: cat_id,
+              },
+            },
+          ],
+          where: {
+            stock: { [Sequelize.Op.gt]: 0 },
+          },
+        });
+        products = await Product.findAll({
+          include: [
+            {
+              model: SubCategory,
+              where: {
+                category_id: cat_id,
+              },
+            },
+          ],
+          where: {
+            stock: { [Sequelize.Op.gt]: 0 },
+          },
+          limit,
+          offset,
+        });
+        break;
+    }
+
+    res.status(200).json({
+      success: true,
+      products,
+      currentPage: pageNumbers,
+      totalPages: Math.ceil(totalProducts / limit),
+    });
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu sản phẩm theo sort và filter: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
   }
 };
 
@@ -361,4 +467,5 @@ module.exports = {
   getLimitSuggestProducts,
   getProductVarients,
   getAllProductsOfShop,
+  getProductBySortAndFilter,
 };
