@@ -365,29 +365,23 @@ const getProductBySortAndFilter = async (req, res) => {
       ratingFilter,
     } = req.query;
     const offset = (pageNumbers - 1) * limit;
-
+    const facetArray = facet
+      ? Array.isArray(facet)
+        ? facet.map((value) => parseInt(value, 10))
+        : facet.split(",").map((value) => parseInt(value, 10))
+      : [];
+    console.log("Facet: ", facetArray);
     let filterConditions = [];
-    let havingConditions = [];
     const whereConditions = {
       stock: { [Sequelize.Op.gt]: 0 },
       ...(ratingFilter && { avgRating: { [Sequelize.Op.eq]: ratingFilter } }),
-      // ...(facet.length > 0 && { facet: { [Sequelize.Op.in]: facet } }),
+      ...(minPrice && {
+        discounted_price: { [Sequelize.Op.gte]: minPrice },
+      }),
+      ...(maxPrice && {
+        discounted_price: { [Sequelize.Op.lte]: maxPrice },
+      }),
     };
-
-    if (minPrice) {
-      havingConditions.push(
-        Sequelize.literal(
-          `base_price - (base_price * sale_percents)/100 >= ${minPrice}`
-        )
-      );
-    }
-    if (maxPrice) {
-      havingConditions.push(
-        Sequelize.literal(
-          `base_price - (base_price * sale_percents)/100 <= ${maxPrice}`
-        )
-      );
-    }
 
     switch (sortBy) {
       case "pop":
@@ -429,47 +423,30 @@ const getProductBySortAndFilter = async (req, res) => {
     let totalProducts = 0;
 
     totalProducts = await Product.count({
-      attributes: {
-        include: [
-          [
-            Sequelize.literal("base_price - (base_price * sale_percents)/100"),
-            "discounted_price",
-          ],
-        ],
-      },
       where: whereConditions,
-      having:
-        havingConditions.length > 0
-          ? { [Sequelize.Op.and]: havingConditions }
-          : undefined,
+
       include: [
         {
           model: SubCategory,
           where: {
             category_id: cat_id,
+            ...(facetArray.length > 0 && {
+              sub_category_id: { [Sequelize.Op.in]: facetArray },
+            }),
           },
         },
       ],
     });
     products = await Product.findAll({
-      attributes: {
-        include: [
-          [
-            Sequelize.literal("base_price - (base_price * sale_percents)/100"),
-            "discounted_price",
-          ],
-        ],
-      },
       where: whereConditions,
-      having:
-        havingConditions.length > 0
-          ? { [Sequelize.Op.and]: havingConditions }
-          : undefined,
       include: [
         {
           model: SubCategory,
           where: {
             category_id: cat_id,
+            ...(facetArray.length > 0 && {
+              sub_category_id: { [Sequelize.Op.in]: facetArray },
+            }),
           },
         },
       ],
