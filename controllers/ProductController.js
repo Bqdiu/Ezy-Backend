@@ -213,6 +213,7 @@ const getProductDetailsByID = async (req, res) => {
     const avgRating =
       totalRating[0]?.total_Rating / totalRating[0]?.total_Review || 0;
 
+    product.update({ avgRating: avgRating });
     const totalReviews = totalRating[0]?.total_Review;
     if (!product) {
       return res.status(404).json({
@@ -358,12 +359,28 @@ const getProductBySortAndFilter = async (req, res) => {
       pageNumbers = 1,
       limit = 28,
       sortBy,
-      facet,
+      facet = [],
       minPrice,
       maxPrice,
       ratingFilter,
     } = req.query;
     const offset = (pageNumbers - 1) * limit;
+
+    let filterConditions = [];
+    switch (sortBy) {
+      case "pop":
+        filterConditions = [["visited", "DESC"]];
+        break;
+      case "cTime":
+        filterConditions = [["created_at", "DESC"]];
+        break;
+      case "sales":
+        filterConditions = [["sold", "DESC"]];
+        break;
+      default:
+        filterConditions = [];
+        break;
+    }
 
     var products = [];
     let totalProducts = 0;

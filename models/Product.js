@@ -88,6 +88,10 @@ const Product = sequelize.define(
       allowNull: true,
       defaultValue: DataTypes.NOW,
     },
+    avgRating: {
+      type: DataTypes.DOUBLE,
+      allowNull: true,
+    },
   },
   {
     tableName: "product",

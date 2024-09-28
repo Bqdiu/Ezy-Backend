@@ -24,7 +24,7 @@ const UserWallet = require("./UserWallet");
 const WalletTransaction = require("./WalletTransaction");
 const ShippingProvider = require("./ShippingProvider");
 const ShippingOrder = require("./ShippingOrder");
-
+const ProductVarientsService = require("./ProductVarientsService");
 // Thiết lập mối quan hệ
 UserAccount.hasMany(UserAddress, { foreignKey: "user_id" });
 UserAddress.belongsTo(UserAccount, { foreignKey: "user_id" });
@@ -125,6 +125,12 @@ ShippingOrder.belongsTo(ShippingProvider, { foreignKey: "provider_id" });
 UserOrder.hasMany(ShippingOrder, { foreignKey: "user_order_id" });
 ShippingOrder.belongsTo(UserOrder, { foreignKey: "user_order_id" });
 
+ProductVarients.hasMany(ProductVarientsService, {
+  foreignKey: "product_varients_id",
+});
+ProductVarientsService.belongsTo(ProductVarients, {
+  foreignKey: "product_varients_id",
+});
 module.exports = {
   UserAccount,
   UserAddress,
