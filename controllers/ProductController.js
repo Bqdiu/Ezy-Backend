@@ -367,15 +367,58 @@ const getProductBySortAndFilter = async (req, res) => {
     const offset = (pageNumbers - 1) * limit;
 
     let filterConditions = [];
+    let havingConditions = [];
+    const whereConditions = {
+      stock: { [Sequelize.Op.gt]: 0 },
+      ...(ratingFilter && { avgRating: { [Sequelize.Op.eq]: ratingFilter } }),
+      // ...(facet.length > 0 && { facet: { [Sequelize.Op.in]: facet } }),
+    };
+
+    if (minPrice) {
+      havingConditions.push(
+        Sequelize.literal(
+          `base_price - (base_price * sale_percents)/100 >= ${minPrice}`
+        )
+      );
+    }
+    if (maxPrice) {
+      havingConditions.push(
+        Sequelize.literal(
+          `base_price - (base_price * sale_percents)/100 <= ${maxPrice}`
+        )
+      );
+    }
+
     switch (sortBy) {
       case "pop":
-        filterConditions = [["visited", "DESC"]];
+        filterConditions = [
+          ["visited", "DESC"],
+          ["sold", "DESC"],
+          ["avgRating", "DESC"],
+        ];
         break;
       case "cTime":
         filterConditions = [["created_at", "DESC"]];
         break;
       case "sales":
         filterConditions = [["sold", "DESC"]];
+        whereConditions.sold = { [Sequelize.Op.gt]: 0 };
+        break;
+      case "ASC":
+        filterConditions = [
+          [
+            Sequelize.literal("base_price - (base_price * sale_percents)/100"),
+            "ASC",
+          ],
+        ];
+        break;
+      case "DESC":
+        filterConditions = [
+          [
+            Sequelize.literal("base_price - (base_price * sale_percents)/100"),
+            "DESC",
+          ],
+        ];
         break;
       default:
         filterConditions = [];
@@ -384,83 +427,57 @@ const getProductBySortAndFilter = async (req, res) => {
 
     var products = [];
     let totalProducts = 0;
-    switch (sortBy) {
-      case "cTime":
-        totalProducts = await Product.findAll({
-          include: [
-            {
-              model: SubCategory,
-              where: {
-                category_id: cat_id,
-              },
-            },
+
+    totalProducts = await Product.count({
+      attributes: {
+        include: [
+          [
+            Sequelize.literal("base_price - (base_price * sale_percents)/100"),
+            "discounted_price",
           ],
+        ],
+      },
+      where: whereConditions,
+      having:
+        havingConditions.length > 0
+          ? { [Sequelize.Op.and]: havingConditions }
+          : undefined,
+      include: [
+        {
+          model: SubCategory,
           where: {
-            stock: { [Sequelize.Op.gt]: 0 },
+            category_id: cat_id,
           },
-        });
-        products = await Product.findAll({
-          include: [
-            {
-              model: SubCategory,
-              where: {
-                category_id: cat_id,
-              },
-            },
+        },
+      ],
+    });
+    products = await Product.findAll({
+      attributes: {
+        include: [
+          [
+            Sequelize.literal("base_price - (base_price * sale_percents)/100"),
+            "discounted_price",
           ],
+        ],
+      },
+      where: whereConditions,
+      having:
+        havingConditions.length > 0
+          ? { [Sequelize.Op.and]: havingConditions }
+          : undefined,
+      include: [
+        {
+          model: SubCategory,
           where: {
-            stock: { [Sequelize.Op.gt]: 0 },
+            category_id: cat_id,
           },
-          order: [["created_at", "DESC"]],
-        });
-        break;
-      case "sales":
-        products = await Product.findAll({
-          include: [
-            {
-              model: SubCategory,
-              where: {
-                category_id: cat_id,
-              },
-            },
-          ],
-          where: {
-            stock: { [Sequelize.Op.gt]: 0 },
-          },
-          order: [["sold", "DESC"]],
-        });
-        break;
-      default:
-        totalProducts = await Product.count({
-          include: [
-            {
-              model: SubCategory,
-              where: {
-                category_id: cat_id,
-              },
-            },
-          ],
-          where: {
-            stock: { [Sequelize.Op.gt]: 0 },
-          },
-        });
-        products = await Product.findAll({
-          include: [
-            {
-              model: SubCategory,
-              where: {
-                category_id: cat_id,
-              },
-            },
-          ],
-          where: {
-            stock: { [Sequelize.Op.gt]: 0 },
-          },
-          limit,
-          offset,
-        });
-        break;
-    }
+        },
+      ],
+
+      order: filterConditions,
+      limit,
+      offset,
+    });
 
     res.status(200).json({
       success: true,

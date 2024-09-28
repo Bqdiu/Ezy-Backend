@@ -50,6 +50,11 @@ const ProductVarients = sequelize.define(
       type: DataTypes.DOUBLE,
       allowNull: true,
     },
+    discounted_price: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+      defaultValue: 0,
+    },
     height: {
       type: DataTypes.DOUBLE,
       allowNull: true,

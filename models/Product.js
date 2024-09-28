@@ -61,6 +61,11 @@ const Product = sequelize.define(
       type: DataTypes.DOUBLE,
       allowNull: true,
     },
+    discounted_price: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+      defaultValue: 0,
+    },
     stock: {
       type: DataTypes.BIGINT,
       allowNull: false,
