@@ -19,6 +19,8 @@ const {
   getProductVarients,
   getAllProductsOfShop,
   getProductBySortAndFilter,
+  getSuggestProductsNameBySearch,
+  getProductAndShopBySearch,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
 const {
@@ -40,6 +42,8 @@ router.get("/products", getAllProducts);
 router.get("/product-details/:id", getProductDetailsByID);
 router.get("/product-varients", getProductVarients);
 router.get("/product-by-sort-and-filter/:cat_id", getProductBySortAndFilter);
+router.get("/suggest-products-name", getSuggestProductsNameBySearch);
+router.get("/search", getProductAndShopBySearch);
 //-----------------ProductsReview-------------------
 router.get("/product-reviews/:product_id", getProductReview);
 

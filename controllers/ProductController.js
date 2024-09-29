@@ -370,7 +370,7 @@ const getProductBySortAndFilter = async (req, res) => {
         ? facet.map((value) => parseInt(value, 10))
         : facet.split(",").map((value) => parseInt(value, 10))
       : [];
-    console.log("Facet: ", facetArray);
+
     let filterConditions = [];
     const whereConditions = {
       stock: { [Sequelize.Op.gt]: 0 },
@@ -471,6 +471,139 @@ const getProductBySortAndFilter = async (req, res) => {
   }
 };
 
+const getSuggestProductsNameBySearch = async (req, res) => {
+  try {
+    const { search } = req.query;
+    const products = await Product.findAll({
+      where: {
+        product_name: {
+          [Sequelize.Op.like]: `%${search}%`,
+        },
+      },
+      limit: 9,
+    });
+
+    res.status(200).json({
+      success: true,
+      products,
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy dữ liệu sản phẩm gợi ý theo tên: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+const getProductAndShopBySearch = async (req, res) => {
+  try {
+    const {
+      keyword = "",
+      pageNumbers = 1,
+      limit = 28,
+      sortBy,
+      minPrice,
+      maxPrice,
+      ratingFilter,
+    } = req.query;
+    const offset = (pageNumbers - 1) * limit;
+
+    const whereConditions = {
+      product_name: {
+        [Sequelize.Op.like]: `%${keyword}%`,
+      },
+      stock: { [Sequelize.Op.gt]: 0 },
+      ...(ratingFilter && { avgRating: { [Sequelize.Op.eq]: ratingFilter } }),
+      ...(minPrice && {
+        discounted_price: { [Sequelize.Op.gte]: minPrice },
+      }),
+      ...(maxPrice && {
+        discounted_price: { [Sequelize.Op.lte]: maxPrice },
+      }),
+    };
+
+    let filterConditions = [];
+    switch (sortBy) {
+      case "pop":
+        filterConditions = [
+          ["visited", "DESC"],
+          ["sold", "DESC"],
+          ["avgRating", "DESC"],
+        ];
+        break;
+      case "cTime":
+        filterConditions = [["created_at", "DESC"]];
+        break;
+      case "sales":
+        filterConditions = [["sold", "DESC"]];
+        whereConditions.sold = { [Sequelize.Op.gt]: 0 };
+        break;
+      case "ASC":
+        filterConditions = [
+          [
+            Sequelize.literal("base_price - (base_price * sale_percents)/100"),
+            "ASC",
+          ],
+        ];
+        break;
+      case "DESC":
+        filterConditions = [
+          [
+            Sequelize.literal("base_price - (base_price * sale_percents)/100"),
+            "DESC",
+          ],
+        ];
+        break;
+      default:
+        filterConditions = [];
+        break;
+    }
+
+    totalProducts = await Product.count({
+      where: whereConditions,
+
+      include: [
+        {
+          model: SubCategory,
+        },
+      ],
+    });
+    products = await Product.findAll({
+      where: whereConditions,
+      include: [
+        {
+          model: SubCategory,
+        },
+      ],
+
+      order: filterConditions,
+      limit,
+      offset,
+    });
+
+    const shop = await Shop.findOne({
+      where: {
+        shop_name: {
+          [Sequelize.Op.like]: `%${keyword}%`,
+        },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      shop,
+      products,
+      currentPage: pageNumbers,
+      totalPages: Math.ceil(totalProducts / limit),
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy dữ liệu sản phẩm gợi ý theo tên: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
 module.exports = {
   getAllProducts,
   getProductDetailsByID,
@@ -479,4 +612,6 @@ module.exports = {
   getProductVarients,
   getAllProductsOfShop,
   getProductBySortAndFilter,
+  getSuggestProductsNameBySearch,
+  getProductAndShopBySearch,
 };
