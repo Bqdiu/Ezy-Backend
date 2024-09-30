@@ -477,20 +477,22 @@ const getProductBySortAndFilter = async (req, res) => {
 const getSuggestProductsNameBySearch = async (req, res) => {
   try {
     const { search } = req.query;
-    const products = await Product.findAll({
-      where: {
-        product_name: {
-          [Sequelize.Op.like]: `%${search}%`,
+    if (search !== "") {
+      const products = await Product.findAll({
+        where: {
+          product_name: {
+            [Sequelize.Op.like]: `%${search}%`,
+          },
         },
-      },
-      limit: 9,
-      order: sequelize.random(),
-    });
+        limit: 9,
+        order: sequelize.random(),
+      });
 
-    res.status(200).json({
-      success: true,
-      products,
-    });
+      res.status(200).json({
+        success: true,
+        products,
+      });
+    }
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu sản phẩm gợi ý theo tên: ", error);
     res.status(500).json({

@@ -29,8 +29,10 @@ const {
   checkEmailExists,
 } = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
-const { getAllBusinessStyle } = require("../controllers/BusinessStyleController");
-const { getShops } = require("../controllers/ShopController");
+const {
+  getAllBusinessStyle,
+} = require("../controllers/BusinessStyleController");
+const { getShops, getShopDetail } = require("../controllers/ShopController");
 const router = express.Router();
 
 //------------------Categories-----------------------
@@ -40,6 +42,7 @@ router.get("/sub-categories/:category_id", getSubCategories);
 //------------------Shop--------------------------------
 router.get("/shop-products", getAllProductsOfShop);
 router.get("/search-shop", getShops);
+router.get("/shop/:shop_username", getShopDetail);
 //------------------Products-----------------------
 router.get("/products", getAllProducts);
 router.get("/product-details/:id", getProductDetailsByID);
@@ -69,6 +72,5 @@ router.get("/all-role", getAllRole);
 
 //-----------------BusinessStyle-----------------
 router.get("/all-business-styles", getAllBusinessStyle);
-
 
 module.exports = router;
