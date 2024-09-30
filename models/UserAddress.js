@@ -25,6 +25,18 @@ const UserAddress = sequelize.define(
       type: DataTypes.CHAR,
       allowNull: false,
     },
+    province_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    district_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    ward_code: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     address: {
       type: DataTypes.STRING,
       allowNull: false,

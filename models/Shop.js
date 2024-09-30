@@ -56,6 +56,18 @@ const Shop = sequelize.define(
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
+    province_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    district_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    ward_code: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     shop_address: {
       type: DataTypes.TEXT,
       allowNull: false,
