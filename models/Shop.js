@@ -37,6 +37,11 @@ const Shop = sequelize.define(
       type: DataTypes.BIGINT,
       allowNull: true,
     },
+    total_ratings: {
+      type: DataTypes.DOUBLE,
+      allowNull: true,
+      defaultValue: 0,
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,

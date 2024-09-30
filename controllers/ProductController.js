@@ -15,6 +15,9 @@ const {
 } = require("../models/Assosiations");
 const sequelize = require("../config/database");
 const Sequelize = require("sequelize");
+const translate = require("translate-google");
+const { de } = require("translate-google/languages");
+
 const getAllProducts = async (req, res) => {
   try {
     const products = await Product.findAll({
@@ -481,6 +484,7 @@ const getSuggestProductsNameBySearch = async (req, res) => {
         },
       },
       limit: 9,
+      order: sequelize.random(),
     });
 
     res.status(200).json({
@@ -508,10 +512,40 @@ const getProductAndShopBySearch = async (req, res) => {
     } = req.query;
     const offset = (pageNumbers - 1) * limit;
 
-    const whereConditions = {
-      product_name: {
-        [Sequelize.Op.like]: `%${keyword}%`,
-      },
+    const lowerKeyword = keyword.toLowerCase();
+
+    let translatedKeyword = await translate(lowerKeyword, {
+      from: "en",
+      to: "vi",
+    });
+    const stopWords = ["đôi"];
+    translatedKeyword = translatedKeyword
+      .split(" ")
+      .filter((word) => !stopWords.includes(word))
+      .join(" ");
+
+    // console.log("Translated keyword: ", translatedKeyword);
+    // const translatedKeywords = translatedKeyword.split(" ");
+
+    let whereConditions = {
+      [Sequelize.Op.or]: [
+        { product_name: { [Sequelize.Op.like]: `%${keyword}%` } },
+        { product_name: { [Sequelize.Op.like]: `%${translatedKeyword}%` } },
+        {
+          "$SubCategory.sub_category_name$": {
+            [Sequelize.Op.like]: `%${keyword}%`,
+          },
+        },
+        {
+          "$SubCategory.Category.category_name$": {
+            [Sequelize.Op.like]: `%${keyword}%`,
+          },
+        },
+        {
+          description: { [Sequelize.Op.like]: `%${keyword}%` },
+        },
+      ],
+
       stock: { [Sequelize.Op.gt]: 0 },
       ...(ratingFilter && { avgRating: { [Sequelize.Op.eq]: ratingFilter } }),
       ...(minPrice && {
@@ -559,20 +593,26 @@ const getProductAndShopBySearch = async (req, res) => {
         break;
     }
 
-    totalProducts = await Product.count({
+    let totalProducts = await Product.count({
       where: whereConditions,
 
       include: [
         {
           model: SubCategory,
+          include: {
+            model: Category,
+          },
         },
       ],
     });
-    products = await Product.findAll({
+    let products = await Product.findAll({
       where: whereConditions,
       include: [
         {
           model: SubCategory,
+          include: {
+            model: Category,
+          },
         },
       ],
 
@@ -587,7 +627,28 @@ const getProductAndShopBySearch = async (req, res) => {
           [Sequelize.Op.like]: `%${keyword}%`,
         },
       },
+      include: [
+        {
+          model: UserAccount,
+          attributes: {
+            exclude: ["role_id", "password"],
+          },
+          include: {
+            model: Role,
+          },
+        },
+      ],
     });
+
+    //Tổng sản phẩm của shop
+    const totalProductOfShop = `SELECT COUNT(product_id) as total_product from product where shop_id = ${shop.shop_id}`;
+    const totalProduct = await sequelize.query(totalProductOfShop, {
+      type: Sequelize.QueryTypes.SELECT,
+    });
+
+    shop.dataValues.total_product = totalProduct
+      ? totalProduct[0]?.total_product
+      : 0;
 
     res.status(200).json({
       success: true,
