@@ -29,6 +29,10 @@ const Shop = sequelize.define(
         key: "business_style_id",
       },
     },
+    tax_code: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     business_email: {
       type: DataTypes.STRING,
       allowNull: false,
