@@ -30,6 +30,7 @@ const {
 } = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
 const { getAllBusinessStyle } = require("../controllers/BusinessStyleController");
+const { getShops } = require("../controllers/ShopController");
 const router = express.Router();
 
 //------------------Categories-----------------------
@@ -38,6 +39,7 @@ router.get("/categories-sub", getAllCategoriesWithSubCategories);
 router.get("/sub-categories/:category_id", getSubCategories);
 //------------------Shop--------------------------------
 router.get("/shop-products", getAllProductsOfShop);
+router.get("/search-shop", getShops);
 //------------------Products-----------------------
 router.get("/products", getAllProducts);
 router.get("/product-details/:id", getProductDetailsByID);
