@@ -29,6 +29,7 @@ const {
   checkEmailExists,
 } = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
+const { getAllBusinessStyle } = require("../controllers/BusinessStyleController");
 const router = express.Router();
 
 //------------------Categories-----------------------
@@ -63,5 +64,9 @@ router.post("/seller-register", sellerRegister);
 
 //-----------------Role-----------------
 router.get("/all-role", getAllRole);
+
+//-----------------BusinessStyle-----------------
+router.get("/all-business-styles", getAllBusinessStyle);
+
 
 module.exports = router;
