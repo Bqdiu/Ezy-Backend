@@ -639,16 +639,17 @@ const getProductAndShopBySearch = async (req, res) => {
         },
       ],
     });
+    if (shop) {
+      //Tổng sản phẩm của shop
+      const totalProductOfShop = `SELECT COUNT(product_id) as total_product from product where shop_id = ${shop.shop_id}`;
+      const totalProduct = await sequelize.query(totalProductOfShop, {
+        type: Sequelize.QueryTypes.SELECT,
+      });
 
-    //Tổng sản phẩm của shop
-    const totalProductOfShop = `SELECT COUNT(product_id) as total_product from product where shop_id = ${shop.shop_id}`;
-    const totalProduct = await sequelize.query(totalProductOfShop, {
-      type: Sequelize.QueryTypes.SELECT,
-    });
-
-    shop.dataValues.total_product = totalProduct
-      ? totalProduct[0]?.total_product
-      : 0;
+      shop.dataValues.total_product = totalProduct
+        ? totalProduct[0]?.total_product
+        : 0;
+    }
 
     res.status(200).json({
       success: true,
