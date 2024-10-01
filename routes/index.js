@@ -33,7 +33,7 @@ const { getAllRole } = require("../controllers/RoleController");
 const {
   getAllBusinessStyle,
 } = require("../controllers/BusinessStyleController");
-const { getShops, getShopDetail } = require("../controllers/ShopController");
+const { getShops, getShopDetail, createShop } = require("../controllers/ShopController");
 const router = express.Router();
 
 //------------------Categories-----------------------
@@ -45,6 +45,7 @@ router.get("/shop-products", getAllProductsOfShop);
 router.get("/search-shop", getShops);
 router.get("/shop/:shop_username", getShopDetail);
 router.get("/shop_recommendations/:shop_id", getSuggestProductsOfShop);
+router.post("/create-shop", createShop);
 //------------------Products-----------------------
 router.get("/products", getAllProducts);
 router.get("/product-details/:id", getProductDetailsByID);

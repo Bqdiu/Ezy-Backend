@@ -158,4 +158,49 @@ const getShopDetail = async (req, res) => {
     });
   }
 };
-module.exports = { getShops, getShopDetail };
+
+const createShop = async (req, res) => {
+  const {
+    shop_name,
+    logo_url,
+    shop_description,
+    business_style_id,
+    tax_code,
+    business_email,
+    province_id,
+    district_id,
+    ward_code,
+    shop_address,
+    citizen_number,
+    full_name,
+    user_id
+  } = req.body;
+  try {
+    const new_shop = await Shop.create({
+      shop_name,
+      logo_url,
+      shop_description,
+      business_style_id,
+      tax_code,
+      business_email,
+      province_id,
+      district_id,
+      ward_code,
+      shop_address,
+      citizen_number,
+      full_name,
+      user_id
+    });
+    res.status(200).json({
+      success: true,
+      shop: new_shop
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: error.message || error
+    });
+  }
+}
+
+module.exports = { getShops, getShopDetail, createShop };
