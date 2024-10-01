@@ -69,6 +69,10 @@ const UserAccount = sequelize.define(
         isInt: true,
       },
     },
+    setup: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
   },
   {
     tableName: "user_account",
