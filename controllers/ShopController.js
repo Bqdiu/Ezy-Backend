@@ -22,7 +22,7 @@ const getShops = async (req, res) => {
   try {
     const { keyword = "", pageNumbers = 1, limit = 5 } = req.query;
     const offset = (pageNumbers - 1) * limit;
-    const shops = await Shop.findAndCountAll({
+    const shops = await Shop.findAll({
       attributes: {
         include: [
           [
@@ -49,7 +49,13 @@ const getShops = async (req, res) => {
       offset,
       limit,
     });
-    const totalShop = shops.count;
+    const totalShop = await Shop.count({
+      where: {
+        shop_name: {
+          [Op.like]: `%${keyword}%`,
+        },
+      },
+    });
     res.status(200).json({
       success: true,
       message: "Lấy danh sách shop thành công",
@@ -91,6 +97,16 @@ const getShopDetail = async (req, res) => {
         },
         {
           model: Product,
+          where: {
+            [Op.and]: [
+              {
+                stock: { [Op.gt]: 0 },
+                avgRating: { [Op.gte]: 4 },
+                sold: { [Op.gt]: 0 },
+              },
+            ],
+          },
+          limit: 6,
         },
         {
           model: CustomizeShop,
@@ -127,6 +143,7 @@ const getShopDetail = async (req, res) => {
       ],
       raw: true,
     });
+
     res.status(200).json({
       success: true,
       message: "Lấy thông tin shop thành công",

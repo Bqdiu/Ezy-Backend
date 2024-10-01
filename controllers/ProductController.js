@@ -17,7 +17,7 @@ const sequelize = require("../config/database");
 const Sequelize = require("sequelize");
 const translate = require("translate-google");
 const { de } = require("translate-google/languages");
-
+const { Op } = require("sequelize");
 const getAllProducts = async (req, res) => {
   try {
     const products = await Product.findAll({
@@ -145,6 +145,49 @@ const getSuggestProducts = async (req, res) => {
     });
   }
 };
+
+const getSuggestProductsOfShop = async (req, res) => {
+  try {
+    const { shop_id } = req.params;
+    const { pageNumbers = 1, limit = 28 } = req.query;
+    const offset = (pageNumbers - 1) * limit;
+
+    const products = await Product.findAll({
+      where: {
+        shop_id,
+        [Op.and]: [
+          { avgRating: { [Op.gte]: 4 } },
+          { sold: { [Op.gt]: 0 } },
+          { stock: { [Op.gt]: 0 } },
+        ],
+      },
+      offset,
+      limit,
+    });
+    const totalProduct = await Product.count({
+      where: {
+        shop_id,
+        [Op.and]: [
+          { avgRating: { [Op.gte]: 4 } },
+          { sold: { [Op.gt]: 0 } },
+          { stock: { [Op.gt]: 0 } },
+        ],
+      },
+    });
+    res.status(200).json({
+      success: true,
+      products,
+      totalPage: Math.ceil(totalProduct / limit),
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy dữ liệu sản phẩm gợi ý của shop: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
 const getProductDetailsByID = async (req, res) => {
   try {
     const { id } = req.params;
@@ -678,4 +721,5 @@ module.exports = {
   getProductBySortAndFilter,
   getSuggestProductsNameBySearch,
   getProductAndShopBySearch,
+  getSuggestProductsOfShop,
 };
