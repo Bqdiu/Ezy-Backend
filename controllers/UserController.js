@@ -6,6 +6,9 @@ const {
 const getAllUser = async (req, res) => {
     try {
         const users = await UserAccount.findAll({
+            attributes: {
+                exclude: ["password"]
+            },
             include: [
                 {
                     model: Role
@@ -33,7 +36,10 @@ const checkEmailExists = async (req, res) => {
         const user = await UserAccount.findOne({ 
             where: {
                 email: email
-            }
+            },
+            attributes: {
+                exclude: ["password"]
+            },
          });
         console.log('User:', user); 
         if (user) {
