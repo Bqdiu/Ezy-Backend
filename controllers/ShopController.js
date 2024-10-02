@@ -16,6 +16,7 @@ const {
 } = require("../models/Assosiations");
 const sequelize = require("../config/database");
 const Sequelize = require("sequelize");
+const ImgCustomizeShop = require("../models/ImgCustomizeShop");
 const Op = Sequelize.Op;
 
 const getShops = async (req, res) => {
@@ -110,6 +111,11 @@ const getShopDetail = async (req, res) => {
         },
         {
           model: CustomizeShop,
+          include: [
+            {
+              model: ImgCustomizeShop,
+            },
+          ],
         },
       ],
     });
@@ -173,7 +179,7 @@ const createShop = async (req, res) => {
     shop_address,
     citizen_number,
     full_name,
-    user_id
+    user_id,
   } = req.body;
   try {
     const new_shop = await Shop.create({
@@ -189,18 +195,18 @@ const createShop = async (req, res) => {
       shop_address,
       citizen_number,
       full_name,
-      user_id
+      user_id,
     });
     res.status(200).json({
       success: true,
-      shop: new_shop
+      shop: new_shop,
     });
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: error.message || error
+      message: error.message || error,
     });
   }
-}
+};
 
 module.exports = { getShops, getShopDetail, createShop };

@@ -711,6 +711,81 @@ const getProductAndShopBySearch = async (req, res) => {
     });
   }
 };
+
+const getProductBySubCategory = async (req, res) => {
+  try {
+    const { sub_category_id } = req.params;
+    const { pageNumbers = 1, limit = 28, sortBy } = req.query;
+    const offset = (pageNumbers - 1) * limit;
+
+    let whereConditions = {
+      stock: { [Sequelize.Op.gt]: 0 },
+    };
+    if (sub_category_id != -1) {
+      whereConditions.sub_category_id = sub_category_id;
+    }
+
+    let filterConditions = [];
+    switch (sortBy) {
+      case "pop":
+        filterConditions = [
+          ["visited", "DESC"],
+          ["sold", "DESC"],
+          ["avgRating", "DESC"],
+        ];
+        break;
+      case "cTime":
+        filterConditions = [["created_at", "DESC"]];
+        break;
+      case "sales":
+        filterConditions = [["sold", "DESC"]];
+        whereConditions.sold = { [Sequelize.Op.gt]: 0 };
+        break;
+      case "ASC":
+        filterConditions = [
+          [
+            Sequelize.literal("base_price - (base_price * sale_percents)/100"),
+            "ASC",
+          ],
+        ];
+        break;
+      case "DESC":
+        filterConditions = [
+          [
+            Sequelize.literal("base_price - (base_price * sale_percents)/100"),
+            "DESC",
+          ],
+        ];
+        break;
+      default:
+        filterConditions = [];
+        break;
+    }
+
+    let totalProducts = await Product.count({
+      where: whereConditions,
+    });
+    let products = await Product.findAll({
+      where: whereConditions,
+      order: filterConditions,
+      limit,
+      offset,
+    });
+
+    res.status(200).json({
+      success: true,
+      products,
+      currentPage: pageNumbers,
+      totalPages: Math.ceil(totalProducts / limit),
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy dữ liệu sản phẩm theo subcategory: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
 module.exports = {
   getAllProducts,
   getProductDetailsByID,
@@ -722,4 +797,5 @@ module.exports = {
   getSuggestProductsNameBySearch,
   getProductAndShopBySearch,
   getSuggestProductsOfShop,
+  getProductBySubCategory,
 };

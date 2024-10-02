@@ -25,6 +25,7 @@ const WalletTransaction = require("./WalletTransaction");
 const ShippingProvider = require("./ShippingProvider");
 const ShippingOrder = require("./ShippingOrder");
 const ProductVarientsService = require("./ProductVarientsService");
+const ImgCustomizeShop = require("./ImgCustomizeShop");
 // Thiết lập mối quan hệ
 UserAccount.hasMany(UserAddress, { foreignKey: "user_id" });
 UserAddress.belongsTo(UserAccount, { foreignKey: "user_id" });
@@ -65,8 +66,11 @@ HistorySearch.belongsTo(SubCategory, { foreignKey: "sub_category_id" });
 UserAccount.hasMany(ProductReview, { foreignKey: "user_id" });
 ProductReview.belongsTo(UserAccount, { foreignKey: "user_id" });
 
-Shop.hasOne(CustomizeShop, { foreignKey: "shop_id" });
+Shop.hasMany(CustomizeShop, { foreignKey: "shop_id" });
 CustomizeShop.belongsTo(Shop, { foreignKey: "shop_id" });
+
+CustomizeShop.hasMany(ImgCustomizeShop, { foreignKey: "customize_shop_id" });
+ImgCustomizeShop.belongsTo(CustomizeShop, { foreignKey: "customize_shop_id" });
 
 Product.hasMany(ProductImgs, { foreignKey: "product_id" });
 ProductImgs.belongsTo(Product, { foreignKey: "product_id" });

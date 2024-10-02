@@ -17,18 +17,6 @@ const CustomizeShop = sequelize.define(
         key: "shop_id",
       },
     },
-    img_carousel_1: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
-    img_carousel_2: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
-    img_carousel_3: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
   },
   {
     tableName: "customize_shop",

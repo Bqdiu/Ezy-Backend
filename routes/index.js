@@ -22,6 +22,7 @@ const {
   getSuggestProductsNameBySearch,
   getProductAndShopBySearch,
   getSuggestProductsOfShop,
+  getProductBySubCategory,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
 const {
@@ -33,7 +34,11 @@ const { getAllRole } = require("../controllers/RoleController");
 const {
   getAllBusinessStyle,
 } = require("../controllers/BusinessStyleController");
-const { getShops, getShopDetail, createShop } = require("../controllers/ShopController");
+const {
+  getShops,
+  getShopDetail,
+  createShop,
+} = require("../controllers/ShopController");
 const router = express.Router();
 
 //------------------Categories-----------------------
@@ -51,6 +56,10 @@ router.get("/products", getAllProducts);
 router.get("/product-details/:id", getProductDetailsByID);
 router.get("/product-varients", getProductVarients);
 router.get("/product-by-sort-and-filter/:cat_id", getProductBySortAndFilter);
+router.get(
+  "/product-by-sub-category/:sub_category_id",
+  getProductBySubCategory
+);
 router.get("/suggest-products-name", getSuggestProductsNameBySearch);
 router.get("/search", getProductAndShopBySearch);
 //-----------------ProductsReview-------------------
