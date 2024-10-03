@@ -10,6 +10,7 @@ const {
   getAllCategories,
   getAllCategoriesWithSubCategories,
   getSubCategories,
+  getCategoriesName,
 } = require("../controllers/CategoryController");
 const {
   getAllProducts,
@@ -43,6 +44,7 @@ const router = express.Router();
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
+router.get("/categories_name/:category_id", getCategoriesName);
 router.get("/categories-sub", getAllCategoriesWithSubCategories);
 router.get("/sub-categories/:category_id", getSubCategories);
 //------------------Shop--------------------------------

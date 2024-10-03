@@ -519,14 +519,33 @@ const getProductBySortAndFilter = async (req, res) => {
 
 const getSuggestProductsNameBySearch = async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, cat_id, shop_username } = req.query;
     if (search !== "") {
-      const products = await Product.findAll({
-        where: {
-          product_name: {
-            [Sequelize.Op.like]: `%${search}%`,
-          },
+      let whereConditions = {
+        product_name: {
+          [Sequelize.Op.like]: `%${search}%`,
         },
+        ...(cat_id && { "$SubCategory.category_id$": { [Op.eq]: cat_id } }),
+        ...(shop_username && {
+          "$Shop.UserAccount.username$": { [Op.eq]: shop_username },
+        }),
+      };
+      const products = await Product.findAll({
+        where: whereConditions,
+        include: [
+          {
+            model: Shop,
+            include: {
+              model: UserAccount,
+            },
+          },
+          {
+            model: SubCategory,
+            include: {
+              model: Category,
+            },
+          },
+        ],
         limit: 9,
         order: sequelize.random(),
       });
@@ -554,6 +573,8 @@ const getProductAndShopBySearch = async (req, res) => {
       minPrice,
       maxPrice,
       ratingFilter,
+      cat_id,
+      shop_username,
     } = req.query;
     const offset = (pageNumbers - 1) * limit;
 
@@ -577,17 +598,42 @@ const getProductAndShopBySearch = async (req, res) => {
         { product_name: { [Sequelize.Op.like]: `%${keyword}%` } },
         { product_name: { [Sequelize.Op.like]: `%${translatedKeyword}%` } },
         {
-          "$SubCategory.sub_category_name$": {
-            [Sequelize.Op.like]: `%${keyword}%`,
-          },
+          [Sequelize.Op.or]: [
+            {
+              "$SubCategory.sub_category_name$": {
+                [Sequelize.Op.like]: `%${keyword}%`,
+              },
+            },
+            {
+              "$SubCategory.sub_category_name$": {
+                [Sequelize.Op.like]: `%${translatedKeyword}%`,
+              },
+            },
+          ],
         },
         {
-          "$SubCategory.Category.category_name$": {
-            [Sequelize.Op.like]: `%${keyword}%`,
-          },
+          [Sequelize.Op.or]: [
+            {
+              "$SubCategory.Category.category_name$": {
+                [Sequelize.Op.like]: `%${keyword}%`,
+              },
+            },
+            {
+              "$SubCategory.Category.category_name$": {
+                [Sequelize.Op.like]: `%${translatedKeyword}%`,
+              },
+            },
+          ],
         },
         {
-          description: { [Sequelize.Op.like]: `%${keyword}%` },
+          [Sequelize.Op.or]: [
+            {
+              description: { [Sequelize.Op.like]: `%${keyword}%` },
+            },
+            {
+              description: { [Sequelize.Op.like]: `%${translatedKeyword}%` },
+            },
+          ],
         },
       ],
 
@@ -598,6 +644,10 @@ const getProductAndShopBySearch = async (req, res) => {
       }),
       ...(maxPrice && {
         discounted_price: { [Sequelize.Op.lte]: maxPrice },
+      }),
+      ...(cat_id && { "$SubCategory.category_id$": { [Op.eq]: cat_id } }),
+      ...(shop_username && {
+        "$Shop.UserAccount.username$": { [Op.eq]: shop_username },
       }),
     };
 
@@ -643,6 +693,18 @@ const getProductAndShopBySearch = async (req, res) => {
 
       include: [
         {
+          model: Shop,
+          include: {
+            model: UserAccount,
+            attributes: {
+              exclude: ["role_id", "password"],
+            },
+            include: {
+              model: Role,
+            },
+          },
+        },
+        {
           model: SubCategory,
           include: {
             model: Category,
@@ -653,6 +715,18 @@ const getProductAndShopBySearch = async (req, res) => {
     let products = await Product.findAll({
       where: whereConditions,
       include: [
+        {
+          model: Shop,
+          include: {
+            model: UserAccount,
+            attributes: {
+              exclude: ["role_id", "password"],
+            },
+            include: {
+              model: Role,
+            },
+          },
+        },
         {
           model: SubCategory,
           include: {
