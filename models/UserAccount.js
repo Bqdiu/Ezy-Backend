@@ -31,7 +31,6 @@ const UserAccount = sequelize.define(
     },
     phone_number: {
       type: DataTypes.STRING,
-      unique: true,
       allowNull: true,
       validate: {
         notEmpty: true,
@@ -41,7 +40,6 @@ const UserAccount = sequelize.define(
     },
     gender: {
       type: DataTypes.STRING,
-      allowNull: true,
       validate: {
         notEmpty: true,
         isIn: [["Nam", "Nữ", "Khác"]],
