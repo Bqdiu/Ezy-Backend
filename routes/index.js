@@ -30,6 +30,7 @@ const {
   getAllUser,
   sellerRegister,
   checkEmailExists,
+  buyerRegister,
 } = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
 const {
@@ -80,6 +81,7 @@ router.get("/suggest-products", getSuggestProducts);
 router.get("/all-user", getAllUser);
 router.get("/check-email", checkEmailExists);
 router.post("/seller-register", sellerRegister);
+router.post("/buyer-register", buyerRegister);
 
 //-----------------Role-----------------
 router.get("/all-role", getAllRole);

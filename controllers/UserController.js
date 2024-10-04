@@ -79,8 +79,27 @@ const sellerRegister = async (req, res) => {
     }
 }
 
+const buyerRegister = async (req, res) => {
+    const { user_id, email } = req.body;
+    const role_id = 1; // buyer role
+    try {
+        const newUser = await UserAccount.create({ user_id, email, role_id });
+        res.status(201).json({
+            success: true,
+            user: newUser,
+            message: 'User created successfully'
+        })
+    } catch (error) {
+        res.status(500).json({
+            error: true,
+            message: error.message || error
+        })
+    }
+}
+
 module.exports = {
     getAllUser,
     checkEmailExists,
     sellerRegister,
+    buyerRegister
 }
