@@ -24,7 +24,6 @@ const UserAccount = sequelize.define(
     email: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
       validate: {
         isEmail: true,
         notEmpty: true,
