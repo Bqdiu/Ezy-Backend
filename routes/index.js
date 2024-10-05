@@ -24,6 +24,7 @@ const {
   getProductAndShopBySearch,
   getSuggestProductsOfShop,
   getProductBySubCategory,
+  addProduct,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
 const {
@@ -42,6 +43,10 @@ const {
   getShopDetail,
   createShop,
 } = require("../controllers/ShopController");
+const { getProductClassifyByProductID, getAllProductClassify, addProductClassify } = require("../controllers/ProductClassifyController");
+const { addProductImage } = require("../controllers/ProductImgsController");
+const { addProductVarients } = require("../controllers/ProductVarientsController");
+const { addProductSize, getSizeOfProduct } = require("../controllers/ProductSizeController");
 const router = express.Router();
 
 //------------------Categories-----------------------
@@ -66,6 +71,20 @@ router.get(
 );
 router.get("/suggest-products-name", getSuggestProductsNameBySearch);
 router.get("/search", getProductAndShopBySearch);
+
+router.post("/add-product", addProduct);
+
+//-----------------ProductClassify-------------------
+router.get("/classify-products", getProductClassifyByProductID);
+router.get("/all-classifies", getAllProductClassify);
+router.post("/add-product-classify", addProductClassify);
+//-----------------ProductVarient-------------------
+router.post("/add-product-varient",addProductVarients);
+//-----------------ProductImage-------------------
+router.post("/add-product-image", addProductImage);
+//-----------------ProductSize-------------------
+router.post("/add-product-size", addProductSize);
+router.get("/get-product-size", getSizeOfProduct);
 //-----------------ProductsReview-------------------
 router.get("/product-reviews/:product_id", getProductReview);
 
