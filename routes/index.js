@@ -33,6 +33,7 @@ const {
   checkEmailExists,
   buyerRegister,
   checkUser,
+  checkUsernameExists,
 } = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
 const {
@@ -43,10 +44,19 @@ const {
   getShopDetail,
   createShop,
 } = require("../controllers/ShopController");
-const { getProductClassifyByProductID, getAllProductClassify, addProductClassify } = require("../controllers/ProductClassifyController");
+const {
+  getProductClassifyByProductID,
+  getAllProductClassify,
+  addProductClassify,
+} = require("../controllers/ProductClassifyController");
 const { addProductImage } = require("../controllers/ProductImgsController");
-const { addProductVarients } = require("../controllers/ProductVarientsController");
-const { addProductSize, getSizeOfProduct } = require("../controllers/ProductSizeController");
+const {
+  addProductVarients,
+} = require("../controllers/ProductVarientsController");
+const {
+  addProductSize,
+  getSizeOfProduct,
+} = require("../controllers/ProductSizeController");
 const router = express.Router();
 
 //------------------Categories-----------------------
@@ -79,7 +89,7 @@ router.get("/classify-products", getProductClassifyByProductID);
 router.get("/all-classifies", getAllProductClassify);
 router.post("/add-product-classify", addProductClassify);
 //-----------------ProductVarient-------------------
-router.post("/add-product-varient",addProductVarients);
+router.post("/add-product-varient", addProductVarients);
 //-----------------ProductImage-------------------
 router.post("/add-product-image", addProductImage);
 //-----------------ProductSize-------------------
@@ -100,9 +110,10 @@ router.get("/suggest-products", getSuggestProducts);
 //-----------------UserAccount-----------------
 router.get("/all-user", getAllUser);
 router.get("/check-email", checkEmailExists);
+router.get("/check-username", checkUsernameExists);
 router.post("/seller-register", sellerRegister);
 router.post("/buyer-register", buyerRegister);
-router.get("/check-user", checkUser)
+router.get("/check-user", checkUser);
 //-----------------Role-----------------
 router.get("/all-role", getAllRole);
 
