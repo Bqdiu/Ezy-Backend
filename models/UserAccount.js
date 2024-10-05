@@ -70,6 +70,10 @@ const UserAccount = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    isVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
   },
   {
     tableName: "user_account",
