@@ -860,6 +860,49 @@ const getProductBySubCategory = async (req, res) => {
     });
   }
 };
+
+
+const addProduct = async (req, res) => {
+  const {
+    shop_id,
+    sub_category_id,
+    product_name,
+    thumbnail,
+    brand,
+    description,
+    gender_object,
+    base_price,
+    sale_percents,
+    origin,
+    stock,
+  } = req.body;
+  try {
+    const product = await Product.create({
+      shop_id: shop_id,
+      sub_category_id: sub_category_id,
+      product_name: product_name,
+      thumbnail: thumbnail,
+      brand: brand,
+      description: description,
+      gender_object: gender_object,
+      base_price: base_price,
+      sale_percents: sale_percents,
+      origin: origin,
+      stock: stock,
+      sold: 0,
+    });
+    res.status(200).json({
+      success: true,
+      data: product,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+
+}
 module.exports = {
   getAllProducts,
   getProductDetailsByID,
@@ -872,4 +915,5 @@ module.exports = {
   getProductAndShopBySearch,
   getSuggestProductsOfShop,
   getProductBySubCategory,
+  addProduct
 };
