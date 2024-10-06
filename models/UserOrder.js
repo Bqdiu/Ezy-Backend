@@ -9,6 +9,14 @@ const UserOrder = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+    shop_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "shop",
+        key: "shop_id",
+      },
+    },
     user_address_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -24,6 +32,10 @@ const UserOrder = sequelize.define(
         model: "order_status",
         key: "order_status_id",
       },
+    },
+    total_quantity: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
     },
     total_price: {
       type: DataTypes.BIGINT,

@@ -26,6 +26,9 @@ const ShippingProvider = require("./ShippingProvider");
 const ShippingOrder = require("./ShippingOrder");
 const ProductVarientsService = require("./ProductVarientsService");
 const ImgCustomizeShop = require("./ImgCustomizeShop");
+const CartSections = require("./CartSections");
+const CartShop = require("./CartShop");
+const CartItems = require("./CartItems");
 // Thiết lập mối quan hệ
 UserAccount.hasMany(UserAddress, { foreignKey: "user_id" });
 UserAddress.belongsTo(UserAccount, { foreignKey: "user_id" });
@@ -128,6 +131,8 @@ ShippingOrder.belongsTo(ShippingProvider, { foreignKey: "provider_id" });
 
 UserOrder.hasMany(ShippingOrder, { foreignKey: "user_order_id" });
 ShippingOrder.belongsTo(UserOrder, { foreignKey: "user_order_id" });
+Shop.hasMany(ShippingOrder, { foreignKey: "shop_id" });
+ShippingOrder.belongsTo(Shop, { foreignKey: "shop_id" });
 
 ProductVarients.hasMany(ProductVarientsService, {
   foreignKey: "product_varients_id",
@@ -135,6 +140,19 @@ ProductVarients.hasMany(ProductVarientsService, {
 ProductVarientsService.belongsTo(ProductVarients, {
   foreignKey: "product_varients_id",
 });
+
+UserAccount.hasMany(CartSections, { foreignKey: "user_id" });
+CartSections.belongsTo(UserAccount, { foreignKey: "user_id" });
+
+CartSections.hasMany(CartShop, { foreignKey: "cart_id" });
+CartShop.belongsTo(CartSections, { foreignKey: "cart_id" });
+
+CartShop.hasMany(CartItems, { foreignKey: "cart_shop_id" });
+CartItems.belongsTo(CartShop, { foreignKey: "cart_shop_id" });
+
+CartItems.hasMany(ProductVarients, { foreignKey: "product_varients_id" });
+ProductVarients.belongsTo(CartItems, { foreignKey: "product_varients_id" });
+
 module.exports = {
   UserAccount,
   UserAddress,
@@ -162,4 +180,9 @@ module.exports = {
   WalletTransaction,
   ShippingProvider,
   ShippingOrder,
+  ProductVarientsService,
+  CartItems,
+  ImgCustomizeShop,
+  CartSections,
+  CartShop,
 };

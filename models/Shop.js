@@ -30,8 +30,8 @@ const Shop = sequelize.define(
       },
     },
     tax_code: {
-      type: DataTypes.STRING,
-      allowNull: false,
+      type: DataTypes.STRING(21),
+      allowNull: true,
     },
     business_email: {
       type: DataTypes.STRING,
@@ -58,15 +58,15 @@ const Shop = sequelize.define(
     },
     province_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     district_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     ward_code: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     shop_address: {
       type: DataTypes.TEXT,
