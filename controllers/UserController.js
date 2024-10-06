@@ -1,5 +1,6 @@
 const { UserAccount, Role } = require("../models/Assosiations");
 const { Op } = require("sequelize");
+const admin = require("../firebase/firebaseAdmin");
 const getAllUser = async (req, res) => {
   try {
     const users = await UserAccount.findAll({
@@ -153,15 +154,16 @@ const buyerRegister = async (req, res) => {
     username,
     fullname,
     email,
-    phoneNumber,
-    gender,
-    dob,
+    phoneNumber = null,
+    gender = null,
+    dob = null,
     isVerified = 0,
+    avtUrl = null,
   } = req.body;
 
   console.log("Request body:", req.body);
 
-  if (!email || !phoneNumber || !username || !fullname || !dob || !gender) {
+  if (!email || !username || !fullname) {
     return res.status(400).json({
       error: true,
       message: "All fields are required.",
@@ -193,6 +195,7 @@ const buyerRegister = async (req, res) => {
       gender,
       dob,
       role_id,
+      avt_url: avtUrl,
       isVerified,
     });
 
@@ -202,7 +205,7 @@ const buyerRegister = async (req, res) => {
       message: "User created successfully",
     });
   } catch (error) {
-    console.error("Error creating user:", error); // Log chi tiết lỗi
+    console.error("Error creating user:", error);
     res.status(500).json({
       error: true,
       message: error.message || error,
@@ -210,6 +213,89 @@ const buyerRegister = async (req, res) => {
   }
 };
 
+const findUserByEmailOrUsername = async (req, res) => {
+  const { identifier } = req.body;
+
+  try {
+    const isEmail = identifier.includes("@");
+    let user;
+    if (isEmail) {
+      user = await UserAccount.findOne({
+        where: {
+          email: identifier,
+        },
+      });
+    } else {
+      user = await UserAccount.findOne({
+        where: {
+          username: identifier,
+        },
+      });
+    }
+    if (!user) {
+      return res.status(404).json({
+        error: true,
+        message: "Username or email not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: user,
+    });
+  } catch (error) {
+    console.error("Error finding user by email or username:", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const getUserData = async (req, res) => {
+  try {
+    const uid = req.user.user_id;
+    const user = await UserAccount.findOne({
+      where: {
+        user_id: uid,
+      },
+    });
+    if (user) {
+      res.status(200).json({
+        success: true,
+        user: user,
+      });
+    } else {
+      res.status(404).json({
+        error: true,
+        message: "User not found",
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const logOut = async (req, res) => {
+  try {
+    const uid = req.user.user_id;
+    await admin.auth().revokeRefreshTokens(uid);
+    res.status(200).json({
+      success: true,
+      message: "User logged out successfully",
+    });
+  } catch (error) {
+    console.error("Error logging out:", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
 module.exports = {
   getAllUser,
   checkEmailExists,
@@ -217,4 +303,7 @@ module.exports = {
   sellerRegister,
   buyerRegister,
   checkUser,
+  getUserData,
+  logOut,
+  findUserByEmailOrUsername,
 };

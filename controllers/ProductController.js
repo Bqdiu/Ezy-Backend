@@ -861,7 +861,6 @@ const getProductBySubCategory = async (req, res) => {
   }
 };
 
-
 const addProduct = async (req, res) => {
   const {
     shop_id,
@@ -901,8 +900,7 @@ const addProduct = async (req, res) => {
       message: error.message || error,
     });
   }
-
-}
+};
 module.exports = {
   getAllProducts,
   getProductDetailsByID,
@@ -915,5 +913,5 @@ module.exports = {
   getProductAndShopBySearch,
   getSuggestProductsOfShop,
   getProductBySubCategory,
-  addProduct
+  addProduct,
 };

@@ -34,6 +34,9 @@ const {
   buyerRegister,
   checkUser,
   checkUsernameExists,
+  getUserData,
+  logOut,
+  findUserByEmailOrUsername,
 } = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
 const {
@@ -58,6 +61,7 @@ const {
   getSizeOfProduct,
 } = require("../controllers/ProductSizeController");
 const router = express.Router();
+const authenticate = require("../middleware/authMiddleware");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -101,12 +105,6 @@ router.get("/product-reviews/:product_id", getProductReview);
 //-----------------Suggest Products-----------------
 router.get("/suggest-products-limit", getLimitSuggestProducts);
 router.get("/suggest-products", getSuggestProducts);
-// router.post("/register", registerUser);
-// router.post("/login", loginUser);
-// router.get("/user-details", userDetails);
-// router.get("/logout", logout);
-// router.post("/search-user", searchUser);
-
 //-----------------UserAccount-----------------
 router.get("/all-user", getAllUser);
 router.get("/check-email", checkEmailExists);
@@ -114,6 +112,9 @@ router.get("/check-username", checkUsernameExists);
 router.post("/seller-register", sellerRegister);
 router.post("/buyer-register", buyerRegister);
 router.get("/check-user", checkUser);
+router.post("/find-user-email-or-username", findUserByEmailOrUsername);
+router.post("/fetch_user_data", authenticate, getUserData);
+router.post("/logout", authenticate, logOut);
 //-----------------Role-----------------
 router.get("/all-role", getAllRole);
 
