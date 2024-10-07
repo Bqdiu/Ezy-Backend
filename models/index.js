@@ -27,15 +27,12 @@ const {
   ShippingProvider,
   ShippingOrder,
 } = require("./Assosiations");
-const syncModels = async (forceSync = false) => {
+const syncModels = async () => {
   try {
     await sequelize.authenticate();
     console.log("Connection has been established successfully.");
 
-    await sequelize.sync({
-      force: forceSync,
-      alter: !forceSync,
-    });
+    sequelize.sync({});
     console.log("Models synchronized successfully.");
 
     // await Role.sync();

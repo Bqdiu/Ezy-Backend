@@ -221,12 +221,18 @@ const findUserByEmailOrUsername = async (req, res) => {
     let user;
     if (isEmail) {
       user = await UserAccount.findOne({
+        attributes: {
+          exclude: ["password"],
+        },
         where: {
           email: identifier,
         },
       });
     } else {
       user = await UserAccount.findOne({
+        attributes: {
+          exclude: ["password"],
+        },
         where: {
           username: identifier,
         },
@@ -256,6 +262,9 @@ const getUserData = async (req, res) => {
   try {
     const uid = req.user.user_id;
     const user = await UserAccount.findOne({
+      attributes: {
+        exclude: ["password"],
+      },
       where: {
         user_id: uid,
       },
