@@ -141,7 +141,7 @@ ProductVarientsService.belongsTo(ProductVarients, {
   foreignKey: "product_varients_id",
 });
 
-UserAccount.hasMany(CartSections, { foreignKey: "user_id" });
+UserAccount.hasOne(CartSections, { foreignKey: "user_id" });
 CartSections.belongsTo(UserAccount, { foreignKey: "user_id" });
 
 CartSections.hasMany(CartShop, { foreignKey: "cart_id" });
