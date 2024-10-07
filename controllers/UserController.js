@@ -131,16 +131,63 @@ const checkUser = async (req, res) => {
 };
 
 const sellerRegister = async (req, res) => {
-  const { user_id, email } = req.body;
-  const role_id = 2; // seller role
+  const {
+    user_id,
+    username,
+    fullname,
+    email,
+    phoneNumber = null,
+    gender = null,
+    dob = null,
+    isVerified = 0,
+    avtUrl = null,
+  } = req.body;
+
+  console.log("Request body:", req.body);
+
+  if (!email || !username || !fullname) {
+    return res.status(400).json({
+      error: true,
+      message: "All fields are required.",
+    });
+  }
+
   try {
-    const newUser = await UserAccount.create({ user_id, email, role_id });
+    const userExists = await UserAccount.findOne({
+      where: {
+        [Op.or]: [{ email: email }, { username: username }],
+      },
+    });
+
+    if (userExists) {
+      return res.status(400).json({
+        error: true,
+        message: "User already exists",
+      });
+    }
+
+    const role_id = 2; // seller role
+
+    const newUser = await UserAccount.create({
+      user_id,
+      username,
+      full_name: fullname,
+      email,
+      phone_number: phoneNumber,
+      gender,
+      dob,
+      role_id,
+      avt_url: avtUrl,
+      isVerified,
+    });
+
     res.status(201).json({
       success: true,
       user: newUser,
       message: "User created successfully",
     });
   } catch (error) {
+    console.error("Error creating user:", error);
     res.status(500).json({
       error: true,
       message: error.message || error,
