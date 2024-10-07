@@ -261,6 +261,7 @@ const findUserByEmailOrUsername = async (req, res) => {
 const getUserData = async (req, res) => {
   try {
     const uid = req.user.user_id;
+    console.log("UID:", uid);
     const user = await UserAccount.findOne({
       attributes: {
         exclude: ["password"],
