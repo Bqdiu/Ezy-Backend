@@ -6,7 +6,86 @@ const {
   CartShop,
   CartSections,
   CartItems,
+  Product,
+  ProductClassify,
 } = require("../models/Assosiations");
+
+const getLimitCartItems = async (req, res) => {
+  try {
+    const { user_id } = req.query;
+    const cartItems = await CartItems.findAll({
+      include: [
+        {
+          model: ProductVarients,
+          include: [
+            {
+              model: Product,
+            },
+            {
+              model: ProductClassify,
+            },
+          ],
+          where: {
+            stock: {
+              [Op.gt]: 0,
+            },
+          },
+        },
+        {
+          model: CartShop,
+          include: [
+            {
+              model: CartSections,
+              where: {
+                user_id: user_id,
+              },
+            },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      limit: 5,
+    });
+
+    const totalItems = await CartItems.count({
+      include: [
+        {
+          model: ProductVarients,
+          where: {
+            stock: {
+              [Op.gt]: 0,
+            },
+          },
+        },
+        {
+          model: CartShop,
+          include: [
+            {
+              model: CartSections,
+              where: {
+                user_id: user_id,
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    if (cartItems) {
+      return res.status(200).json({
+        success: true,
+        cartItems,
+        totalItems,
+      });
+    }
+  } catch (error) {
+    console.error("Lỗi khi lấy danh sách sản phẩm trong giỏ hàng: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
 
 const addToCart = async (req, res) => {
   try {
@@ -123,4 +202,4 @@ const addToCart = async (req, res) => {
   }
 };
 const increaseQuantity = async (req, res) => {};
-module.exports = { addToCart };
+module.exports = { addToCart, getLimitCartItems };
