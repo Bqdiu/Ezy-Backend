@@ -13,6 +13,18 @@ const {
 const getLimitCartItems = async (req, res) => {
   try {
     const { user_id } = req.query;
+    const cartSection = await CartSections.findOne({
+      where: {
+        user_id: user_id,
+      },
+    });
+    if (!cartSection) {
+      return res.status(200).json({
+        success: true,
+        cartItems: [],
+        totalItems: 0,
+      });
+    }
     const cartItems = await CartItems.findAll({
       include: [
         {
@@ -33,14 +45,9 @@ const getLimitCartItems = async (req, res) => {
         },
         {
           model: CartShop,
-          include: [
-            {
-              model: CartSections,
-              where: {
-                user_id: user_id,
-              },
-            },
-          ],
+          where: {
+            cart_id: cartSection.cart_id,
+          },
         },
       ],
       order: [["createdAt", "DESC"]],
@@ -59,14 +66,9 @@ const getLimitCartItems = async (req, res) => {
         },
         {
           model: CartShop,
-          include: [
-            {
-              model: CartSections,
-              where: {
-                user_id: user_id,
-              },
-            },
-          ],
+          where: {
+            cart_id: cartSection.cart_id,
+          },
         },
       ],
     });
