@@ -37,6 +37,7 @@ const {
   getUserData,
   logOut,
   findUserByEmailOrUsername,
+  updateSetupStatus,
 } = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
 const {
@@ -46,6 +47,7 @@ const {
   getShops,
   getShopDetail,
   createShop,
+  getShopByUserID,
 } = require("../controllers/ShopController");
 const {
   getProductClassifyByProductID,
@@ -79,6 +81,7 @@ router.get("/search-shop", getShops);
 router.get("/shop/:shop_username", getShopDetail);
 router.get("/shop_recommendations/:shop_id", getSuggestProductsOfShop);
 router.post("/create-shop", createShop);
+router.get("/get-shop", authenticate, getShopByUserID);
 //------------------Products-----------------------
 router.get("/products", getAllProducts);
 router.get("/product-details/:id", getProductDetailsByID);
@@ -120,6 +123,7 @@ router.get("/check-user", checkUser);
 router.post("/find-user-email-or-username", findUserByEmailOrUsername);
 router.post("/fetch_user_data", authenticate, getUserData);
 router.post("/logout", authenticate, logOut);
+router.post("/update-setup-status", authenticate, updateSetupStatus);
 //-----------------Role-----------------
 router.get("/all-role", getAllRole);
 

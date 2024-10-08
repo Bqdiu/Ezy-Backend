@@ -17,6 +17,7 @@ const {
 const sequelize = require("../config/database");
 const Sequelize = require("sequelize");
 const ImgCustomizeShop = require("../models/ImgCustomizeShop");
+const { database } = require("firebase-admin");
 const Op = Sequelize.Op;
 
 const getShops = async (req, res) => {
@@ -209,4 +210,34 @@ const createShop = async (req, res) => {
   }
 };
 
-module.exports = { getShops, getShopDetail, createShop };
+const getShopByUserID = async (req, res) => {
+  const { user_id } = req.query;
+  try {
+    const shop = await Shop.findOne({
+      where: {
+        user_id: user_id
+      }
+    });
+    
+    if (!shop) {
+      return res.status(404).json({
+        success: false,
+        message: 'Shop not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: shop
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while fetching the shop.',
+      error: error.message
+    });
+  }
+};
+
+
+module.exports = { getShops, getShopDetail, createShop, getShopByUserID };

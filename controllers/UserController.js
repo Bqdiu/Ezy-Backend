@@ -353,6 +353,38 @@ const logOut = async (req, res) => {
     });
   }
 };
+
+const updateSetupStatus = async (req, res) => {
+  const { user_id } = req.body;
+  try {
+    const user = await UserAccount.findOne({
+      where: {
+        user_id: user_id,
+      },
+    });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    user.setup = 1;
+    await user.save();
+    res.status(200).json({
+      success: true,
+      message: "User setup status updated successfully",
+    });
+
+  } catch (error) {
+    console.error("Error updating user setup status:", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+}
+
+
 module.exports = {
   getAllUser,
   checkEmailExists,
@@ -363,4 +395,5 @@ module.exports = {
   getUserData,
   logOut,
   findUserByEmailOrUsername,
+  updateSetupStatus
 };
