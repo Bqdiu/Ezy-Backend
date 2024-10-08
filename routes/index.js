@@ -62,7 +62,11 @@ const {
 } = require("../controllers/ProductSizeController");
 const router = express.Router();
 const authenticate = require("../middleware/authMiddleware");
-const { addOrUpdateCart, addToCart } = require("../controllers/CartController");
+const {
+  addOrUpdateCart,
+  addToCart,
+  getLimitCartItems,
+} = require("../controllers/CartController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -124,4 +128,5 @@ router.get("/all-business-styles", getAllBusinessStyle);
 
 //-----------------Cart-----------------
 router.get("/cart/add_to_cart", addToCart);
+router.get("/cart/limit-items", getLimitCartItems);
 module.exports = router;

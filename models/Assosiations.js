@@ -34,6 +34,8 @@ UserAccount.hasMany(UserAddress, { foreignKey: "user_id" });
 UserAddress.belongsTo(UserAccount, { foreignKey: "user_id" });
 
 UserAccount.belongsTo(Role, { foreignKey: "role_id" });
+UserAccount.hasOne(Shop, { foreignKey: "user_id" });
+Shop.belongsTo(UserAccount, { foreignKey: "user_id" });
 Role.hasMany(UserAccount, { foreignKey: "role_id" });
 
 Category.hasMany(SubCategory, { foreignKey: "category_id" });
@@ -47,9 +49,6 @@ Product.belongsTo(Shop, { foreignKey: "shop_id" });
 
 Shop.belongsTo(BusinessStyle, { foreignKey: "business_style_id" });
 BusinessStyle.hasMany(Shop, { foreignKey: "business_style_id" });
-
-Shop.belongsTo(UserAccount, { foreignKey: "user_id" });
-UserAccount.hasMany(Shop, { foreignKey: "user_id" });
 
 UserOrder.hasMany(UserOrderDetails, { foreignKey: "user_order_id" });
 UserOrderDetails.belongsTo(UserOrder, { foreignKey: "user_order_id" });
@@ -149,9 +148,7 @@ CartShop.belongsTo(CartSections, { foreignKey: "cart_id" });
 
 CartShop.hasMany(CartItems, { foreignKey: "cart_shop_id" });
 CartItems.belongsTo(CartShop, { foreignKey: "cart_shop_id" });
-
-CartItems.hasMany(ProductVarients, { foreignKey: "product_varients_id" });
-ProductVarients.belongsTo(CartItems, { foreignKey: "product_varients_id" });
+CartItems.belongsTo(ProductVarients, { foreignKey: "product_varients_id" });
 
 module.exports = {
   UserAccount,
