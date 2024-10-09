@@ -45,6 +45,11 @@ const getCart = async (req, res) => {
               include: [
                 {
                   model: Product,
+                  include: [
+                    {
+                      model: ProductClassify,
+                    },
+                  ],
                 },
                 {
                   model: ProductClassify,
@@ -58,6 +63,7 @@ const getCart = async (req, res) => {
         },
       ],
     });
+
     res.status(200).json({
       success: true,
       cartShop,
