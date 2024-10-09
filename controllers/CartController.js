@@ -8,7 +8,68 @@ const {
   CartItems,
   Product,
   ProductClassify,
+  Shop,
+  ProductSize,
 } = require("../models/Assosiations");
+
+const getCart = async (req, res) => {
+  try {
+    const { user_id } = req.query;
+
+    const cartSection = await CartSections.findOne({
+      where: {
+        user_id: user_id,
+      },
+    });
+
+    if (!cartSection) {
+      return res.status(200).json({
+        success: true,
+        cartItems: [],
+        totalItems: 0,
+      });
+    }
+    const cartShop = await CartShop.findAll({
+      where: {
+        cart_id: cartSection.cart_id,
+      },
+      include: [
+        {
+          model: Shop,
+        },
+        {
+          model: CartItems,
+          include: [
+            {
+              model: ProductVarients,
+              include: [
+                {
+                  model: Product,
+                },
+                {
+                  model: ProductClassify,
+                },
+                {
+                  model: ProductSize,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    res.status(200).json({
+      success: true,
+      cartShop,
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy giỏ hàng: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
 
 const getLimitCartItems = async (req, res) => {
   try {
@@ -204,4 +265,4 @@ const addToCart = async (req, res) => {
   }
 };
 const increaseQuantity = async (req, res) => {};
-module.exports = { addToCart, getLimitCartItems };
+module.exports = { addToCart, getLimitCartItems, getCart };

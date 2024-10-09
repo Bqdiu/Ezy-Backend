@@ -68,6 +68,7 @@ const {
   addOrUpdateCart,
   addToCart,
   getLimitCartItems,
+  getCart,
 } = require("../controllers/CartController");
 
 //------------------Categories-----------------------
@@ -133,4 +134,5 @@ router.get("/all-business-styles", getAllBusinessStyle);
 //-----------------Cart-----------------
 router.get("/cart/add_to_cart", addToCart);
 router.get("/cart/limit-items", getLimitCartItems);
+router.get("/cart/get-cart", getCart);
 module.exports = router;
