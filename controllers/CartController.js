@@ -60,8 +60,10 @@ const getCart = async (req, res) => {
               ],
             },
           ],
+          order: [["updatedAt", "DESC"]],
         },
       ],
+      order: [["updatedAt", "DESC"]],
     });
 
     res.status(200).json({
@@ -222,6 +224,7 @@ const addToCart = async (req, res) => {
         {
           quantity: newQuantity,
           price: parseFloat(newQuantity) * discount_price,
+          createdAt: new Date(),
           updatedAt: new Date(),
         },
         {
@@ -270,5 +273,121 @@ const addToCart = async (req, res) => {
     });
   }
 };
-const increaseQuantity = async (req, res) => {};
-module.exports = { addToCart, getLimitCartItems, getCart };
+const updateQuantity = async (req, res) => {
+  try {
+    const { cart_item_id, quantity } = req.query;
+    const cartItem = await CartItems.findOne({
+      where: {
+        cart_item_id,
+      },
+    });
+    if (!cartItem) {
+      return res.status(404).json({
+        error: true,
+        message: "Không tìm thấy sản phẩm trong giỏ hàng",
+      });
+    }
+
+    const productVarient = await ProductVarients.findOne({
+      where: {
+        product_varients_id: cartItem.product_varients_id,
+      },
+    });
+
+    if (quantity > productVarient.stock) {
+      return res.status(400).json({
+        error: true,
+        message: "Số lượng sản phẩm không đủ",
+      });
+    }
+
+    cartItem.update({ quantity });
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật số lượng sản phẩm thành công",
+    });
+  } catch (error) {
+    console.log("Lỗi khi cập nhật số lượng sản phẩm trong giỏ hàng: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const updateVarients = async (req, res) => {
+  try {
+    const { cart_item_id, product_varients_id } = req.query;
+
+    const cartItem = await CartItems.findOne({
+      where: {
+        cart_item_id,
+      },
+    });
+
+    const productVarient = await ProductVarients.findOne({
+      where: {
+        product_varients_id,
+      },
+    });
+
+    if (!productVarient) {
+      return res.status(404).json({
+        error: true,
+        message: "Không tìm thấy sản phẩm",
+      });
+    }
+
+    const existingCartItem = await CartItems.findOne({
+      where: {
+        cart_shop_id: cartItem?.cart_shop_id,
+        product_varients_id: product_varients_id,
+      },
+    });
+    if (existingCartItem) {
+      if (
+        existingCartItem.quantity + cartItem?.quantity >
+        productVarient.stock
+      ) {
+        return res.status(400).json({
+          error: true,
+          message: "Số lượng sản phẩm không đủ",
+        });
+      }
+      existingCartItem.quantity += cartItem?.quantity;
+      existingCartItem.updatedAt = new Date();
+      await existingCartItem.save();
+      await cartItem.destroy();
+    } else {
+      if (cartItem.quantity > productVarient.stock) {
+        return res.status(400).json({
+          error: true,
+          message: "Số lượng sản phẩm không đủ",
+        });
+      }
+      cartItem.update({
+        product_varients_id,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật sản phẩm thành công",
+    });
+  } catch (error) {
+    console.error("Lỗi khi cập nhật sản phẩm trong giỏ hàng: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+module.exports = {
+  addToCart,
+  getLimitCartItems,
+  getCart,
+  updateVarients,
+  updateQuantity,
+};
