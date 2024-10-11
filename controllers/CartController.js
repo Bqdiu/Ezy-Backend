@@ -356,6 +356,7 @@ const updateVarients = async (req, res) => {
         });
       }
       existingCartItem.quantity += cartItem?.quantity;
+
       existingCartItem.updatedAt = new Date();
       await existingCartItem.save();
       await cartItem.destroy();
@@ -384,10 +385,140 @@ const updateVarients = async (req, res) => {
   }
 };
 
+const updateSelectedAll = async (req, res) => {
+  try {
+    const { cart_id, selected } = req.query;
+    const cartShop = await CartShop.findOne({
+      where: {
+        cart_id,
+      },
+    });
+    cartShop.update({
+      selected,
+    });
+    if (cartShop) {
+      const cartItems = await CartItems.update(
+        {
+          selected,
+        },
+        {
+          where: {
+            cart_shop_id: cartShop.cart_shop_id,
+          },
+        }
+      );
+      res.status(200).json({
+        success: true,
+        message: "Cập nhật lựa chọn tất cả sản phẩm trong giỏ hàng thành công",
+      });
+    }
+  } catch (error) {
+    console.log(
+      "Lỗi khi cập nhật lựa chọn tất cả sản phẩm trong giỏ hàng: ",
+      error
+    );
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const updateAllItemsOfShop = async (req, res) => {
+  try {
+    const { cart_shop_id, selected } = req.query;
+    const cartShop = await CartShop.findOne({
+      where: {
+        cart_shop_id,
+      },
+    });
+    cartShop.update({
+      selected,
+    });
+
+    const cartItems = await CartItems.update(
+      {
+        selected,
+      },
+      {
+        where: {
+          cart_shop_id,
+        },
+      }
+    );
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật lựa chọn tất cả sản phẩm trong giỏ hàng thành công",
+    });
+  } catch (error) {
+    console.log(
+      "Lỗi khi cập nhật lựa chọn tất cả sản phẩm trong giỏ hàng: ",
+      error
+    );
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+const updateSelectedItem = async (req, res) => {
+  try {
+    const { cart_item_id, selected } = req.query;
+
+    const cartItem = await CartItems.findOne({
+      where: {
+        cart_item_id,
+      },
+    });
+    await cartItem.update({
+      selected,
+    });
+
+    const countItems = await CartItems.count({
+      where: {
+        cart_shop_id: cartItem.cart_shop_id,
+        selected: 1,
+      },
+    });
+
+    if (countItems === 0) {
+      const cartShop = await CartShop.findOne({
+        where: {
+          cart_shop_id: cartItem.cart_shop_id,
+        },
+      });
+      await cartShop.update({
+        selected: 0,
+      });
+    } else {
+      const cartShop = await CartShop.findOne({
+        where: {
+          cart_shop_id: cartItem.cart_shop_id,
+        },
+      });
+      await cartShop.update({
+        selected: 1,
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật lựa chọn sản phẩm thành công",
+    });
+  } catch (error) {
+    console.log("Lỗi khi cập nhật trạng thái sản phẩm trong giỏ hàng: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
 module.exports = {
   addToCart,
   getLimitCartItems,
   getCart,
   updateVarients,
   updateQuantity,
+  updateSelectedAll,
+  updateAllItemsOfShop,
+  updateSelectedItem,
 };
