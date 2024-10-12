@@ -80,8 +80,30 @@ const addProductClassify = async (req, res) => {
   }
 };
 
+
+const getClassifyIDsByProductID = async (req, res) => {
+  const { product_id } = req.query;
+  try {
+    const classifyIDs = await ProductClassify.findAll({
+      where: { product_id: product_id },
+      attributes: ["product_classify_id"],
+    });
+    res.status(200).json({
+      success: true,
+      data: classifyIDs,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+}
+
+
 module.exports = {
   getAllProductClassify,
   getProductClassifyByProductID,
   addProductClassify,
+  getClassifyIDsByProductID
 };

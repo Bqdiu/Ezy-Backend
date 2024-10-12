@@ -53,6 +53,7 @@ const {
   getProductClassifyByProductID,
   getAllProductClassify,
   addProductClassify,
+  getClassifyIDsByProductID,
 } = require("../controllers/ProductClassifyController");
 const { addProductImage } = require("../controllers/ProductImgsController");
 const {
@@ -108,6 +109,8 @@ router.post("/add-product", addProduct);
 router.get("/classify-products", getProductClassifyByProductID);
 router.get("/all-classifies", getAllProductClassify);
 router.post("/add-product-classify", addProductClassify);
+router.get("/get-classify-id", getClassifyIDsByProductID);
+
 //-----------------ProductVarient-------------------
 router.post("/add-product-varient", addProductVarients);
 //-----------------ProductImage-------------------
