@@ -58,6 +58,9 @@ const getCart = async (req, res) => {
                   model: ProductSize,
                 },
               ],
+              where: {
+                stock: { [Op.gt]: 0 },
+              },
             },
           ],
           order: [["updatedAt", "DESC"]],
@@ -65,10 +68,39 @@ const getCart = async (req, res) => {
       ],
       order: [["updatedAt", "DESC"]],
     });
-
+    const invalidItems = await CartItems.findAll({
+      where: {
+        cart_shop_id: cartShop.map((item) => item.cart_shop_id),
+      },
+      include: [
+        {
+          model: ProductVarients,
+          include: [
+            {
+              model: Product,
+              include: [
+                {
+                  model: ProductClassify,
+                },
+              ],
+            },
+            {
+              model: ProductClassify,
+            },
+            {
+              model: ProductSize,
+            },
+          ],
+          where: {
+            stock: { [Op.lte]: 0 },
+          },
+        },
+      ],
+    });
     res.status(200).json({
       success: true,
       cartShop,
+      invalidItems,
     });
   } catch (error) {
     console.log("Lỗi khi lấy giỏ hàng: ", error);
@@ -512,6 +544,47 @@ const updateSelectedItem = async (req, res) => {
     });
   }
 };
+
+const removeAllItems = async (req, res) => {
+  try {
+    const { cart_id } = req.query;
+    const cartSection = await CartSections.findOne({
+      cart_id,
+    });
+    cartSection.destroy();
+    res.status(200).json({
+      success: true,
+      message: "Xóa tất cả sản phẩm trong giỏ hàng thành công",
+    });
+  } catch (error) {
+    console.log("Lỗi khi xóa tất cả sản phẩm trong giỏ hàng: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+const removeItem = async (req, res) => {
+  try {
+    const { cart_item_id } = req.query;
+    const cartItem = await CartItems.findOne({
+      where: {
+        cart_item_id,
+      },
+    });
+    cartItem.destroy();
+    res.status(200).json({
+      success: true,
+      message: "Xóa sản phẩm trong giỏ hàng thành công",
+    });
+  } catch (error) {
+    console.log("Lỗi khi xóa sản phẩm trong giỏ hàng: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
 module.exports = {
   addToCart,
   getLimitCartItems,
@@ -521,4 +594,6 @@ module.exports = {
   updateSelectedAll,
   updateAllItemsOfShop,
   updateSelectedItem,
+  removeAllItems,
+  removeItem,
 };

@@ -74,6 +74,8 @@ const {
   updateSelectedAll,
   updateAllItemsOfShop,
   updateSelectedItem,
+  removeAllItems,
+  removeItem,
 } = require("../controllers/CartController");
 
 //------------------Categories-----------------------
@@ -145,4 +147,6 @@ router.post("/cart/update-quantity", updateQuantity);
 router.post("/cart/update-selected-all", updateSelectedAll);
 router.post("/cart/update-all-items-of-shop", updateAllItemsOfShop);
 router.post("/cart/update-selected-item", updateSelectedItem);
+router.post("/cart/destroy-cart", removeAllItems);
+router.post("/cart/remove-item", removeItem);
 module.exports = router;
