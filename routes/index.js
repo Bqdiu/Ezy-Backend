@@ -109,7 +109,7 @@ router.post("/add-product", addProduct);
 router.get("/classify-products", getProductClassifyByProductID);
 router.get("/all-classifies", getAllProductClassify);
 router.post("/add-product-classify", addProductClassify);
-router.get("/get-classify-id", getClassifyIDsByProductID);
+router.get("/get-classifies-id", getClassifyIDsByProductID);
 
 //-----------------ProductVarient-------------------
 router.post("/add-product-varient", addProductVarients);
