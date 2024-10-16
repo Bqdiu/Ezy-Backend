@@ -11,6 +11,7 @@ const {
   getAllCategoriesWithSubCategories,
   getSubCategories,
   getCategoriesName,
+  addCategory,
 } = require("../controllers/CategoryController");
 const {
   getAllProducts,
@@ -75,6 +76,7 @@ router.get("/categories", getAllCategories);
 router.get("/categories_name/:category_id", getCategoriesName);
 router.get("/categories-sub", getAllCategoriesWithSubCategories);
 router.get("/sub-categories/:category_id", getSubCategories);
+router.post("/add-category", addCategory);
 //------------------Shop--------------------------------
 router.get("/shop-products", getAllProductsOfShop);
 router.get("/search-shop", getShops);
