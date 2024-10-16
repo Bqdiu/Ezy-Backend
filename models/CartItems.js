@@ -33,6 +33,11 @@ const CartItems = sequelize.define(
       type: DataTypes.BIGINT,
       allowNull: false,
     },
+    selected: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
+      defaultValue: true,
+    },
   },
   {
     tableName: "cart_items",

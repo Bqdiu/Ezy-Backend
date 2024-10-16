@@ -1,6 +1,7 @@
 const { UserAccount, Role } = require("../models/Assosiations");
 const { Op } = require("sequelize");
 const admin = require("../firebase/firebaseAdmin");
+const bcryptjs = require("bcryptjs");
 const getAllUser = async (req, res) => {
   try {
     const users = await UserAccount.findAll({
@@ -358,6 +359,9 @@ const updateSetupStatus = async (req, res) => {
   const { user_id } = req.body;
   try {
     const user = await UserAccount.findOne({
+      attributes: {
+        exclude: ["password"],
+      },
       where: {
         user_id: user_id,
       },
@@ -374,7 +378,6 @@ const updateSetupStatus = async (req, res) => {
       success: true,
       message: "User setup status updated successfully",
     });
-
   } catch (error) {
     console.error("Error updating user setup status:", error);
     res.status(500).json({
@@ -382,8 +385,120 @@ const updateSetupStatus = async (req, res) => {
       message: error.message || error,
     });
   }
-}
+};
 
+const updateProfile = async (req, res) => {
+  try {
+    const { user_id, full_name, phone_number, gender, dob, avt_url } = req.body;
+
+    const user = await UserAccount.findOne({
+      where: {
+        user_id: user_id,
+      },
+    });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
+
+    const result = await user.update({
+      full_name,
+      phone_number,
+      gender,
+      dob,
+      avt_url,
+    });
+
+    if (result) {
+      return res.status(200).json({
+        success: true,
+        data: user,
+        message: "Cập nhật thông tin thành công",
+      });
+    }
+  } catch (error) {
+    console.log("Error updating profile:", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const registerOTP = async (req, res) => {
+  try {
+    const { user_id, otp } = req.body;
+    const user = await UserAccount.findOne({
+      where: {
+        user_id: user_id,
+      },
+    });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
+
+    const hashedPassword = await bcryptjs.hash(otp, 10);
+
+    const result = await user.update({
+      security_password: hashedPassword,
+    });
+
+    if (result) {
+      return res.status(200).json({
+        success: true,
+        data: user,
+        message: "Đăng ký Mật Khẩu Cấp 2 thành công",
+      });
+    }
+  } catch (error) {
+    console.log("Lỗi khi đăng ký OTP: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const checkOTP = async (req, res) => {
+  try {
+    const { user_id, otp } = req.body;
+    const user = await UserAccount.findOne({
+      where: {
+        user_id: user_id,
+      },
+    });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
+    const isMatch = await bcryptjs.compare(otp, user.security_password);
+    if (isMatch) {
+      return res.status(200).json({
+        success: true,
+        data: user,
+        message: "Xác thực Mật Khẩu Cấp 2 Thành Công",
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu Cấp 2 không chính xác",
+      });
+    }
+  } catch (error) {
+    console.log("Lỗi khi kiểm tra OTP: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
 
 module.exports = {
   getAllUser,
@@ -395,5 +510,8 @@ module.exports = {
   getUserData,
   logOut,
   findUserByEmailOrUsername,
-  updateSetupStatus
+  updateSetupStatus,
+  updateProfile,
+  registerOTP,
+  checkOTP,
 };

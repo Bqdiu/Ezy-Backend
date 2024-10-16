@@ -11,7 +11,7 @@ const addProductVarients = async (req, res) => {
         stock,
         sale_percents,
         height,
-        lenght,
+        length,
         width,
         weight,
     } = req.body;
@@ -24,7 +24,7 @@ const addProductVarients = async (req, res) => {
             stock: stock,
             sale_percents: sale_percents,
             height: height,
-            lenght: lenght,
+            length: length,
             width: width,
             weight: weight
         });

@@ -7,6 +7,7 @@ const getSizeOfProduct = async (req, res) => {
         const { product_id } = req.query;
         const product_size = await ProductSize.findAll({
             where: { product_id: product_id },
+            attributes: ["product_size_id"],
         });
         res.status(200).json({
             success: true,

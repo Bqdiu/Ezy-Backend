@@ -39,6 +39,9 @@ const {
   logOut,
   findUserByEmailOrUsername,
   updateSetupStatus,
+  updateProfile,
+  registerOTP,
+  checkOTP,
 } = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
 const {
@@ -54,6 +57,7 @@ const {
   getProductClassifyByProductID,
   getAllProductClassify,
   addProductClassify,
+  getClassifyIDsByProductID,
 } = require("../controllers/ProductClassifyController");
 const { addProductImage } = require("../controllers/ProductImgsController");
 const {
@@ -69,6 +73,14 @@ const {
   addOrUpdateCart,
   addToCart,
   getLimitCartItems,
+  getCart,
+  updateVarients,
+  updateQuantity,
+  updateSelectedAll,
+  updateAllItemsOfShop,
+  updateSelectedItem,
+  removeAllItems,
+  removeItem,
 } = require("../controllers/CartController");
 
 //------------------Categories-----------------------
@@ -102,6 +114,8 @@ router.post("/add-product", addProduct);
 router.get("/classify-products", getProductClassifyByProductID);
 router.get("/all-classifies", getAllProductClassify);
 router.post("/add-product-classify", addProductClassify);
+router.get("/get-classifies-id", getClassifyIDsByProductID);
+
 //-----------------ProductVarient-------------------
 router.post("/add-product-varient", addProductVarients);
 //-----------------ProductImage-------------------
@@ -123,6 +137,9 @@ router.post("/seller-register", sellerRegister);
 router.post("/buyer-register", buyerRegister);
 router.get("/check-user", checkUser);
 router.post("/find-user-email-or-username", findUserByEmailOrUsername);
+router.post("/update-profile", updateProfile);
+router.post("/register-otp", registerOTP);
+router.post("/check-otp", checkOTP);
 router.post("/fetch_user_data", authenticate, getUserData);
 router.post("/logout", authenticate, logOut);
 router.post("/update-setup-status", authenticate, updateSetupStatus);
@@ -135,4 +152,12 @@ router.get("/all-business-styles", getAllBusinessStyle);
 //-----------------Cart-----------------
 router.get("/cart/add_to_cart", addToCart);
 router.get("/cart/limit-items", getLimitCartItems);
+router.get("/cart/get-cart", getCart);
+router.post("/cart/update-varients", updateVarients);
+router.post("/cart/update-quantity", updateQuantity);
+router.post("/cart/update-selected-all", updateSelectedAll);
+router.post("/cart/update-all-items-of-shop", updateAllItemsOfShop);
+router.post("/cart/update-selected-item", updateSelectedItem);
+router.post("/cart/destroy-cart", removeAllItems);
+router.post("/cart/remove-item", removeItem);
 module.exports = router;

@@ -42,7 +42,7 @@ const Product = sequelize.define(
       allowNull: true,
     },
     description: {
-      type: DataTypes.TEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: true,
     },
     gender_object: {
