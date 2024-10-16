@@ -97,9 +97,28 @@ const getCategoriesName = async (req, res) => {
   }
 };
 
+const addCategory = async (req, res) => {
+  const { category_name, thumbnail } = req.body;
+  try {
+    const newCategory = await Category.create({ 
+      category_name, 
+      thumbnail,
+    });
+    res.status(201).json({ 
+      success: true, 
+      data: newCategory,
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      error: true, 
+      message: error.message || error,
+    });
+  }
+}
 module.exports = {
   getAllCategories,
   getAllCategoriesWithSubCategories,
   getSubCategories,
   getCategoriesName,
+  addCategory,
 };
