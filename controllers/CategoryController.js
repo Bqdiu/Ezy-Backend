@@ -101,8 +101,8 @@ const addCategory = async (req, res) => {
   const { category_name, thumbnail } = req.body;
   try {
     const newCategory = await Category.create({ 
-      category_name, 
-      thumbnail,
+      category_name: category_name, 
+      thumbnail: thumbnail,
     });
     res.status(201).json({ 
       success: true, 
