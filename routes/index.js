@@ -42,6 +42,7 @@ const {
   updateProfile,
   registerOTP,
   checkOTP,
+  updateEmail,
 } = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
 const {
@@ -138,6 +139,7 @@ router.post("/buyer-register", buyerRegister);
 router.get("/check-user", checkUser);
 router.post("/find-user-email-or-username", findUserByEmailOrUsername);
 router.post("/update-profile", updateProfile);
+router.post("/update-email", updateEmail);
 router.post("/register-otp", registerOTP);
 router.post("/check-otp", checkOTP);
 router.post("/fetch_user_data", authenticate, getUserData);

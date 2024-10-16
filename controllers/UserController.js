@@ -43,12 +43,14 @@ const checkEmailExists = async (req, res) => {
     console.log("User:", user);
     if (user) {
       return res.status(200).json({
+        success: true,
         message: "User exists",
         user: user,
         email: email,
       });
     } else {
       return res.status(404).json({
+        error: true,
         message: "User not found",
       });
     }
@@ -78,12 +80,14 @@ const checkUsernameExists = async (req, res) => {
     console.log("User:", user);
     if (user) {
       return res.status(200).json({
+        success: true,
         message: "User exists",
         user: user,
         username: username,
       });
     } else {
       return res.status(404).json({
+        error: true,
         message: "User not found",
       });
     }
@@ -500,6 +504,37 @@ const checkOTP = async (req, res) => {
   }
 };
 
+const updateEmail = async (req, res) => {
+  const { user_id, email } = req.body;
+  try {
+    const user = await UserAccount.findOne({
+      where: {
+        user_id: user_id,
+      },
+    });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
+    await user.update({
+      email,
+    });
+    return res.status(200).json({
+      success: true,
+      data: user,
+      message: "Cập nhật email thành công",
+    });
+  } catch (error) {
+    console.log("Lỗi update email:", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
 module.exports = {
   getAllUser,
   checkEmailExists,
@@ -514,4 +549,5 @@ module.exports = {
   updateProfile,
   registerOTP,
   checkOTP,
+  updateEmail,
 };
