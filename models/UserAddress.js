@@ -41,6 +41,11 @@ const UserAddress = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    isDefault: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "user_address",
