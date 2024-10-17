@@ -26,6 +26,7 @@ const {
   getSuggestProductsOfShop,
   getProductBySubCategory,
   addProduct,
+  getShopProducts,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
 const {
@@ -97,6 +98,8 @@ router.get("/shop/:shop_username", getShopDetail);
 router.get("/shop_recommendations/:shop_id", getSuggestProductsOfShop);
 router.post("/create-shop", createShop);
 router.get("/get-shop", authenticate, getShopByUserID);
+router.get("/shop-products-status", getShopProducts);
+
 //------------------Products-----------------------
 router.get("/products", getAllProducts);
 router.get("/product-details/:id", getProductDetailsByID);

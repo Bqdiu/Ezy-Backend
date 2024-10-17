@@ -83,6 +83,10 @@ const Product = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    product_status: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: true,
