@@ -44,6 +44,11 @@ const {
   registerOTP,
   checkOTP,
   updateEmail,
+  addAddress,
+  updateAddress,
+  setDefaultAddress,
+  removeAddress,
+  getAddresses,
 } = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
 const {
@@ -148,6 +153,12 @@ router.post("/check-otp", checkOTP);
 router.post("/fetch_user_data", authenticate, getUserData);
 router.post("/logout", authenticate, logOut);
 router.post("/update-setup-status", authenticate, updateSetupStatus);
+//-----------------Address-----------------
+router.get("/address/get-address", getAddresses);
+router.post("/address/add-address", addAddress);
+router.post("/address/update-address", updateAddress);
+router.post("/address/set-default-address", setDefaultAddress);
+router.post("/address/remove-address", removeAddress);
 //-----------------Role-----------------
 router.get("/all-role", getAllRole);
 

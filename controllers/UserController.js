@@ -1,4 +1,4 @@
-const { UserAccount, Role } = require("../models/Assosiations");
+const { UserAccount, Role, UserAddress } = require("../models/Assosiations");
 const { Op } = require("sequelize");
 const admin = require("../firebase/firebaseAdmin");
 const bcryptjs = require("bcryptjs");
@@ -535,6 +535,237 @@ const updateEmail = async (req, res) => {
   }
 };
 
+const getAddresses = async (req, res) => {
+  try {
+    const { user_id } = req.query;
+    const addresses = await UserAddress.findAll({
+      where: {
+        user_id,
+      },
+      order: [["isDefault", "DESC"]],
+    });
+    return res.status(200).json({
+      success: true,
+      data: addresses,
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy địa chỉ: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const addAddress = async (req, res) => {
+  let {
+    user_id,
+    full_name,
+    phone_number,
+    province_id,
+    district_id,
+    ward_code,
+    address,
+    isDefault,
+  } = req.body;
+  try {
+    const user = await UserAccount.findOne({
+      where: {
+        user_id,
+      },
+    });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
+    const userAddress = await UserAddress.count({
+      where: {
+        user_id,
+        isDefault: 1,
+      },
+    });
+    console.log("User Address:", userAddress);
+    if (userAddress === 0) {
+      isDefault = 1;
+    } else {
+      if (isDefault === 1) {
+        if (userAddress === 1) {
+          await UserAddress.update(
+            {
+              isDefault: 0,
+            },
+            {
+              where: {
+                user_id,
+              },
+            }
+          );
+        }
+      }
+    }
+
+    console.log("Is Default:", isDefault);
+    const result = await UserAddress.create({
+      user_id,
+      full_name,
+      phone_number,
+      province_id,
+      district_id,
+      ward_code,
+      address,
+      isDefault,
+    });
+    if (result) {
+      return res.status(200).json({
+        success: true,
+        data: result,
+        message: "Thêm địa chỉ thành công",
+      });
+    }
+  } catch (error) {
+    console.log("Lỗi khi thêm địa chỉ: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const updateAddress = async (req, res) => {
+  try {
+    const {
+      user_address_id,
+      full_name,
+      phone_number,
+      province_id,
+      district_id,
+      ward_code,
+      address,
+      isDefault,
+    } = req.body;
+    const userAddress = await UserAddress.findOne({
+      where: {
+        user_address_id,
+      },
+    });
+    if (!userAddress) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy địa chỉ",
+      });
+    }
+    if (isDefault === 1) {
+      await UserAddress.update(
+        {
+          isDefault: 0,
+        },
+        {
+          where: {
+            user_id: userAddress.user_id,
+            user_address_id: {
+              [Op.ne]: user_address_id,
+            },
+          },
+        }
+      );
+    }
+    const result = await userAddress.update({
+      full_name,
+      phone_number,
+      province_id,
+      district_id,
+      ward_code,
+      address,
+      isDefault,
+    });
+    if (result) {
+      return res.status(200).json({
+        success: true,
+        data: result,
+        message: "Cập nhật địa chỉ thành công",
+      });
+    }
+  } catch (error) {
+    console.log("Lỗi khi cập nhật địa chỉ: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const setDefaultAddress = async (req, res) => {
+  try {
+    const { user_address_id, user_id } = req.body;
+    const userAddress = await UserAddress.findOne({
+      where: {
+        user_address_id,
+        user_id,
+      },
+    });
+    if (!userAddress) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy địa chỉ",
+      });
+    }
+    await UserAddress.update(
+      {
+        isDefault: 0,
+      },
+      {
+        where: {
+          user_id,
+        },
+      }
+    );
+    const result = await userAddress.update({
+      isDefault: 1,
+    });
+    if (result) {
+      return res.status(200).json({
+        success: true,
+        data: result,
+        message: "Cập nhật địa chỉ mặc định thành công",
+      });
+    }
+  } catch (error) {
+    console.log("Lỗi khi cập nhật địa chỉ mặc định: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+const removeAddress = async (req, res) => {
+  try {
+    const { user_address_id } = req.body;
+    const address = await UserAddress.findOne({
+      where: {
+        user_address_id,
+      },
+    });
+    if (!address) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy địa chỉ",
+      });
+    }
+    await address.destroy();
+    return res.status(200).json({
+      success: true,
+      message: "Xóa địa chỉ thành công",
+    });
+  } catch (error) {
+    console.log("Lỗi khi xóa địa chỉ: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
 module.exports = {
   getAllUser,
   checkEmailExists,
@@ -550,4 +781,9 @@ module.exports = {
   registerOTP,
   checkOTP,
   updateEmail,
+  getAddresses,
+  addAddress,
+  updateAddress,
+  setDefaultAddress,
+  removeAddress,
 };
