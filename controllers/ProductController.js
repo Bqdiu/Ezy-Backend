@@ -901,6 +901,67 @@ const addProduct = async (req, res) => {
     });
   }
 };
+
+const getShopProducts = async (req, res) => {
+  const { shop_id, product_status, page = 1, limit = 5 } = req.query; // Set default page to 1 and limit to 10
+
+  try {
+    const offset = (page - 1) * limit; 
+
+    const products = await Product.findAndCountAll({ 
+      where: {
+        shop_id: shop_id,
+        product_status: product_status,
+      },
+      attributes: {
+        exclude: ["hasVarient"],
+      },
+      include: [
+        {
+          model: ProductImgs,
+        },
+        {
+          model: ProductVarients,
+          include: [
+            {
+              model: ProductSize,
+            },
+            {
+              model: ProductClassify,
+            },
+          ],
+        },
+      ],
+      limit: parseInt(limit), // Limit the number of results returned
+      offset: parseInt(offset), // Skip the number of records based on page
+    });
+
+    if (products.count === 0) { // Check if any products were found
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy sản phẩm",
+      });
+    }
+
+    // Calculate total pages
+    const totalPages = Math.ceil(products.count / limit);
+
+    res.status(200).json({
+      success: true,
+      data: products.rows,
+      totalCount: products.count,
+      totalPages: totalPages,
+      currentPage: parseInt(page),
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy dữ liệu sản phẩm của shop: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
 module.exports = {
   getAllProducts,
   getProductDetailsByID,
@@ -914,4 +975,5 @@ module.exports = {
   getSuggestProductsOfShop,
   getProductBySubCategory,
   addProduct,
+  getShopProducts
 };
