@@ -88,6 +88,11 @@ const Shop = sequelize.define(
         key: "user_id",
       },
     },
+    shop_status: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+    },
   },
   {
     updatedAt: false,

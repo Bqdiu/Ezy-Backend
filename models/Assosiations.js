@@ -53,9 +53,6 @@ BusinessStyle.hasMany(Shop, { foreignKey: "business_style_id" });
 UserOrder.hasMany(UserOrderDetails, { foreignKey: "user_order_id" });
 UserOrderDetails.belongsTo(UserOrder, { foreignKey: "user_order_id" });
 
-UserOrder.belongsTo(UserAddress, { foreignKey: "user_address_id" });
-UserAddress.hasMany(UserOrder, { foreignKey: "user_address_id" });
-
 UserOrder.belongsTo(OrderStatus, { foreignKey: "order_status_id" });
 OrderStatus.hasMany(UserOrder, { foreignKey: "order_status_id" });
 

@@ -13,10 +13,6 @@ const UserAccount = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
-    password: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
     security_password: {
       type: DataTypes.STRING,
       allowNull: true,
