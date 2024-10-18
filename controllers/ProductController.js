@@ -901,14 +901,23 @@ const addProduct = async (req, res) => {
     });
   }
 };
-
 const getShopProducts = async (req, res) => {
-  const { shop_id, product_status, page = 1, limit = 5 } = req.query; // Set default page to 1 and limit to 10
+  const { shop_id, product_status, page = 1, limit = 5 } = req.query;
+
+  if (!shop_id || !product_status) {
+    return res.status(400).json({
+      success: false,
+      message: "shop_id và product_status là bắt buộc",
+    });
+  }
 
   try {
-    const offset = (page - 1) * limit; 
+    // Parse page and limit as integers
+    const parsedPage = parseInt(page, 10);
+    const parsedLimit = parseInt(limit, 10);
 
-    const products = await Product.findAndCountAll({ 
+    const offset = (parsedPage - 1) * parsedLimit;
+    const products = await Product.findAll({
       where: {
         shop_id: shop_id,
         product_status: product_status,
@@ -932,26 +941,21 @@ const getShopProducts = async (req, res) => {
           ],
         },
       ],
-      limit: parseInt(limit), // Limit the number of results returned
-      offset: parseInt(offset), // Skip the number of records based on page
+      limit: parsedLimit,
+      offset: offset,
     });
 
-    if (products.count === 0) { // Check if any products were found
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy sản phẩm",
-      });
-    }
-
-    // Calculate total pages
-    const totalPages = Math.ceil(products.count / limit);
-
+    const totalProducts = await Product.count({
+      where: {
+        shop_id: shop_id,
+        product_status: product_status,
+      },
+    });
     res.status(200).json({
       success: true,
-      data: products.rows,
-      totalCount: products.count,
-      totalPages: totalPages,
-      currentPage: parseInt(page),
+      data: products,
+      totalPages: Math.ceil(totalProducts / parsedLimit),
+      totalItems: totalProducts,
     });
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu sản phẩm của shop: ", error);
@@ -961,7 +965,6 @@ const getShopProducts = async (req, res) => {
     });
   }
 };
-
 module.exports = {
   getAllProducts,
   getProductDetailsByID,
