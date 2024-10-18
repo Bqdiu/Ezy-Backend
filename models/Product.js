@@ -42,7 +42,7 @@ const Product = sequelize.define(
       allowNull: true,
     },
     description: {
-      type: DataTypes.TEXT('long'),
+      type: DataTypes.TEXT("long"),
       allowNull: true,
     },
     gender_object: {
@@ -73,11 +73,6 @@ const Product = sequelize.define(
     sold: {
       type: DataTypes.BIGINT,
       allowNull: true,
-    },
-    hasVarient: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
     },
     visited: {
       type: DataTypes.INTEGER,

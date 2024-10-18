@@ -74,6 +74,10 @@ const UserAccount = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    email_history: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   },
   {
     tableName: "user_account",

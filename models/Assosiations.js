@@ -30,6 +30,7 @@ const CartSections = require("./CartSections");
 const CartShop = require("./CartShop");
 const CartItems = require("./CartItems");
 const PaymentMethod = require("./PaymentMethod");
+const OrderStatusHistory = require("./OrderStatusHistory");
 // Thiết lập mối quan hệ
 UserAccount.hasMany(UserAddress, { foreignKey: "user_id" });
 UserAddress.belongsTo(UserAccount, { foreignKey: "user_id" });
@@ -54,8 +55,11 @@ BusinessStyle.hasMany(Shop, { foreignKey: "business_style_id" });
 UserOrder.hasMany(UserOrderDetails, { foreignKey: "user_order_id" });
 UserOrderDetails.belongsTo(UserOrder, { foreignKey: "user_order_id" });
 
-UserOrder.belongsTo(OrderStatus, { foreignKey: "order_status_id" });
-OrderStatus.hasMany(UserOrder, { foreignKey: "order_status_id" });
+UserOrder.hasMany(OrderStatusHistory, { foreignKey: "user_order_id" });
+OrderStatusHistory.belongsTo(UserOrder, { foreignKey: "user_order_id" });
+
+OrderStatus.hasMany(OrderStatusHistory, { foreignKey: "order_status_id" });
+OrderStatusHistory.belongsTo(OrderStatus, { foreignKey: "order_status_id" });
 
 UserAccount.hasMany(HistorySearch, { foreignKey: "user_id" });
 HistorySearch.belongsTo(UserAccount, { foreignKey: "user_id" });
@@ -162,6 +166,7 @@ module.exports = {
   BusinessStyle,
   UserOrder,
   UserOrderDetails,
+  OrderStatusHistory,
   OrderStatus,
   HistorySearch,
   ProductReview,

@@ -21,14 +21,6 @@ const UserOrder = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    order_status_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: "order_status",
-        key: "order_status_id",
-      },
-    },
     total_quantity: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -52,6 +44,10 @@ const UserOrder = sequelize.define(
         model: "payment_method",
         key: "payment_method_id",
       },
+    },
+    order_note: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     created_at: {
       type: DataTypes.DATE,
