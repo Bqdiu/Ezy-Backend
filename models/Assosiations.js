@@ -29,6 +29,7 @@ const ImgCustomizeShop = require("./ImgCustomizeShop");
 const CartSections = require("./CartSections");
 const CartShop = require("./CartShop");
 const CartItems = require("./CartItems");
+const PaymentMethod = require("./PaymentMethod");
 // Thiết lập mối quan hệ
 UserAccount.hasMany(UserAddress, { foreignKey: "user_id" });
 UserAddress.belongsTo(UserAccount, { foreignKey: "user_id" });
@@ -147,6 +148,9 @@ CartShop.hasMany(CartItems, { foreignKey: "cart_shop_id" });
 CartItems.belongsTo(CartShop, { foreignKey: "cart_shop_id" });
 CartItems.belongsTo(ProductVarients, { foreignKey: "product_varients_id" });
 
+PaymentMethod.hasMany(UserOrder, { foreignKey: "payment_method_id" });
+UserOrder.belongsTo(PaymentMethod, { foreignKey: "payment_method_id" });
+
 module.exports = {
   UserAccount,
   UserAddress,
@@ -179,4 +183,5 @@ module.exports = {
   ImgCustomizeShop,
   CartSections,
   CartShop,
+  PaymentMethod,
 };

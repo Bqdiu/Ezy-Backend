@@ -37,6 +37,22 @@ const UserOrder = sequelize.define(
       type: DataTypes.BIGINT,
       allowNull: false,
     },
+    shipping_fee: {
+      type: DataTypes.BIGINT,
+      allowNull: false,
+    },
+    discount_shipping_fee: {
+      type: DataTypes.BIGINT,
+      allowNull: false,
+    },
+    payment_method_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "payment_method",
+        key: "payment_method_id",
+      },
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,
