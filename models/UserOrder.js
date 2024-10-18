@@ -37,6 +37,10 @@ const UserOrder = sequelize.define(
       type: DataTypes.BIGINT,
       allowNull: false,
     },
+    discount_price: {
+      type: DataTypes.BIGINT,
+      allowNull: false,
+    },
     payment_method_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
