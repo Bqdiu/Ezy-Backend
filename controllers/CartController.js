@@ -420,30 +420,36 @@ const updateVarients = async (req, res) => {
 const updateSelectedAll = async (req, res) => {
   try {
     const { cart_id, selected } = req.query;
-    const cartShop = await CartShop.findOne({
+    const cartShop = await CartShop.findAll({
       where: {
         cart_id,
       },
     });
-    cartShop.update({
-      selected,
-    });
-    if (cartShop) {
-      const cartItems = await CartItems.update(
-        {
-          selected,
+    await CartShop.update(
+      {
+        selected,
+      },
+      {
+        where: {
+          cart_id,
         },
-        {
-          where: {
-            cart_shop_id: cartShop.cart_shop_id,
-          },
-        }
-      );
-      res.status(200).json({
-        success: true,
-        message: "Cập nhật lựa chọn tất cả sản phẩm trong giỏ hàng thành công",
-      });
-    }
+      }
+    );
+    await CartItems.update(
+      {
+        selected,
+      },
+      {
+        where: {
+          cart_shop_id: cartShop.map((item) => item.cart_shop_id),
+        },
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật lựa chọn tất cả sản phẩm trong giỏ hàng thành công",
+    });
   } catch (error) {
     console.log(
       "Lỗi khi cập nhật lựa chọn tất cả sản phẩm trong giỏ hàng: ",

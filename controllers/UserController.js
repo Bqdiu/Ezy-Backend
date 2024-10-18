@@ -766,6 +766,36 @@ const removeAddress = async (req, res) => {
     });
   }
 };
+
+const getDefaultAddress = async (req, res) => {
+  try {
+    const { user_id } = req.query;
+    const address = await UserAddress.findOne({
+      where: {
+        user_id: user_id,
+        isDefault: 1,
+      },
+    });
+
+    if (!address) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy địa chỉ mặc định",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      data: address,
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy địa chỉ mặc định: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
 module.exports = {
   getAllUser,
   checkEmailExists,
@@ -786,4 +816,5 @@ module.exports = {
   updateAddress,
   setDefaultAddress,
   removeAddress,
+  getDefaultAddress,
 };

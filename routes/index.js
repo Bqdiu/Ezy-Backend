@@ -49,6 +49,7 @@ const {
   setDefaultAddress,
   removeAddress,
   getAddresses,
+  getDefaultAddress,
 } = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
 const {
@@ -159,6 +160,7 @@ router.post("/address/add-address", addAddress);
 router.post("/address/update-address", updateAddress);
 router.post("/address/set-default-address", setDefaultAddress);
 router.post("/address/remove-address", removeAddress);
+router.get("/address/get-default-address", getDefaultAddress);
 //-----------------Role-----------------
 router.get("/all-role", getAllRole);
 
