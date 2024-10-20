@@ -12,6 +12,7 @@ const {
   getSubCategories,
   getCategoriesName,
   addCategory,
+  getCategoriesByShop,
 } = require("../controllers/CategoryController");
 const {
   getAllProducts,
@@ -27,6 +28,7 @@ const {
   getProductBySubCategory,
   addProduct,
   getShopProducts,
+  searchShopProducts,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
 const {
@@ -97,6 +99,8 @@ router.get("/categories_name/:category_id", getCategoriesName);
 router.get("/categories-sub", getAllCategoriesWithSubCategories);
 router.get("/sub-categories/:category_id", getSubCategories);
 router.post("/add-category", addCategory);
+router.get("/shop-categories", getCategoriesByShop);
+
 //------------------Shop--------------------------------
 router.get("/shop-products", getAllProductsOfShop);
 router.get("/search-shop", getShops);
@@ -117,6 +121,7 @@ router.get(
 );
 router.get("/suggest-products-name", getSuggestProductsNameBySearch);
 router.get("/search", getProductAndShopBySearch);
+router.get("/search-shop-products", searchShopProducts);
 
 router.post("/add-product", addProduct);
 

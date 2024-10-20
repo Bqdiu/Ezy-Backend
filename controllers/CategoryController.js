@@ -1,5 +1,5 @@
 const { model } = require("mongoose");
-const { SubCategory, Category } = require("../models/Assosiations");
+const { SubCategory, Category, Product } = require("../models/Assosiations");
 const sequelize = require("../config/database");
 
 const getAllCategories = async (req, res) => {
@@ -74,7 +74,7 @@ const getAllCategoriesWithSubCategories = async (req, res) => {
       data: categories,
     });
   } catch (error) {
-    res.status(200).json({
+    res.status(500).json({
       error: true,
       message: error.message || error,
     });
@@ -100,25 +100,66 @@ const getCategoriesName = async (req, res) => {
 const addCategory = async (req, res) => {
   const { category_name, thumbnail } = req.body;
   try {
-    const newCategory = await Category.create({ 
-      category_name: category_name, 
+    const newCategory = await Category.create({
+      category_name: category_name,
       thumbnail: thumbnail,
     });
-    res.status(201).json({ 
-      success: true, 
+    res.status(201).json({
+      success: true,
       data: newCategory,
     });
   } catch (error) {
-    res.status(500).json({ 
-      error: true, 
+    res.status(500).json({
+      error: true,
       message: error.message || error,
     });
   }
 }
+
+const getCategoriesByShop = async (req, res) => {
+  const { shop_id } = req.query;
+  try {
+    const categories = await Category.findAll({
+      attributes: {
+        exclude: ["thumbnail"],
+      },
+      include: [
+        {
+          model: SubCategory,
+          required: true,
+          include: [
+            {
+              model: Product,
+              where: {
+                shop_id: shop_id,
+              },
+            },
+          ]
+        },
+      ],
+    });
+    if (categories.length === 0) {
+      res.status(404).json({
+        success: false,
+        message: "No categories found",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      data: categories,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
 module.exports = {
   getAllCategories,
   getAllCategoriesWithSubCategories,
   getSubCategories,
   getCategoriesName,
   addCategory,
+  getCategoriesByShop
 };
