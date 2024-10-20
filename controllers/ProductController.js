@@ -903,25 +903,109 @@ const addProduct = async (req, res) => {
 };
 const getShopProducts = async (req, res) => {
   const { shop_id, product_status, page = 1, limit = 5 } = req.query;
+  const parsedPage = parseInt(page, 10);
+  const parsedLimit = parseInt(limit, 10);
 
-  if (!shop_id || !product_status) {
+  const offset = (parsedPage - 1) * parsedLimit;
+
+  if (!shop_id) {
     return res.status(400).json({
       success: false,
-      message: "shop_id và product_status là bắt buộc",
+      message: "shop_id is required",
     });
+  }
+  // if product status is not provided, get all products
+  const whereCondition = {
+    shop_id: shop_id,
+  };
+  if (product_status) {
+    whereCondition.product_status = product_status;
   }
 
   try {
-    // Parse page and limit as integers
-    const parsedPage = parseInt(page, 10);
-    const parsedLimit = parseInt(limit, 10);
-
-    const offset = (parsedPage - 1) * parsedLimit;
     const products = await Product.findAll({
-      where: {
-        shop_id: shop_id,
-        product_status: product_status,
+      where: whereCondition,
+      attributes: {
+        exclude: ["hasVarient"],
       },
+      include: [
+        {
+          model: ProductImgs,
+        },
+        {
+          model: SubCategory
+        },
+        {
+          model: ProductVarients,
+          include: [
+            {
+              model: ProductSize,
+            },
+            {
+              model: ProductClassify,
+            },
+          ],
+        },
+      ],
+      limit: parsedLimit,
+      offset: offset,
+    });
+
+    const totalProducts = await Product.count({
+      where: whereCondition,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: products,
+      totalPages: Math.ceil(totalProducts / parsedLimit),
+      totalItems: totalProducts,
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy dữ liệu sản phẩm của shop: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const searchShopProducts = async (req, res) => {
+  const { shop_id, product_status, product_name, sub_category_id, page = 1, limit = 5 } = req.query;
+  const parsedPage = parseInt(page, 10);
+  const parsedLimit = parseInt(limit, 10);
+  const offset = (parsedPage - 1) * parsedLimit;
+
+  if (!shop_id) {
+    return res.status(400).json({
+      success: false,
+      message: "shop_id is required",
+    });
+  }
+
+  // Build where condition
+  const whereCondition = {
+    shop_id: shop_id,
+  };
+
+  if (product_status) {
+    whereCondition.product_status = product_status;
+  }
+
+  if (product_name) {
+    // Use LIKE for partial matching of product_name
+    whereCondition.product_name = {
+      [Op.like]: `%${product_name}%`,
+    };
+  }
+
+  if (sub_category_id) {
+    whereCondition.sub_category_id = sub_category_id;
+  }
+
+  try {
+    const products = await Product.findAll({
+      where: whereCondition,
       attributes: {
         exclude: ["hasVarient"],
       },
@@ -946,11 +1030,15 @@ const getShopProducts = async (req, res) => {
     });
 
     const totalProducts = await Product.count({
-      where: {
-        shop_id: shop_id,
-        product_status: product_status,
-      },
+      where: whereCondition,
     });
+
+    if(products.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No products found",
+      });
+    }
     res.status(200).json({
       success: true,
       data: products,
@@ -958,13 +1046,15 @@ const getShopProducts = async (req, res) => {
       totalItems: totalProducts,
     });
   } catch (error) {
-    console.log("Lỗi khi lấy dữ liệu sản phẩm của shop: ", error);
+    console.log("Error getting products: ", error);
     res.status(500).json({
       error: true,
       message: error.message || error,
     });
   }
 };
+
+
 module.exports = {
   getAllProducts,
   getProductDetailsByID,
@@ -978,5 +1068,6 @@ module.exports = {
   getSuggestProductsOfShop,
   getProductBySubCategory,
   addProduct,
-  getShopProducts
+  getShopProducts,
+  searchShopProducts,
 };
