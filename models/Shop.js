@@ -7,7 +7,6 @@ const Shop = sequelize.define(
     shop_id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
-      autoIncrement: true,
     },
     shop_name: {
       type: DataTypes.STRING,

@@ -24,7 +24,6 @@ const UserWallet = require("./UserWallet");
 const WalletTransaction = require("./WalletTransaction");
 const ShippingProvider = require("./ShippingProvider");
 const ShippingOrder = require("./ShippingOrder");
-const ProductVarientsService = require("./ProductVarientsService");
 const ImgCustomizeShop = require("./ImgCustomizeShop");
 const CartSections = require("./CartSections");
 const CartShop = require("./CartShop");
@@ -135,13 +134,6 @@ ShippingOrder.belongsTo(UserOrder, { foreignKey: "user_order_id" });
 Shop.hasMany(ShippingOrder, { foreignKey: "shop_id" });
 ShippingOrder.belongsTo(Shop, { foreignKey: "shop_id" });
 
-ProductVarients.hasMany(ProductVarientsService, {
-  foreignKey: "product_varients_id",
-});
-ProductVarientsService.belongsTo(ProductVarients, {
-  foreignKey: "product_varients_id",
-});
-
 UserAccount.hasOne(CartSections, { foreignKey: "user_id" });
 CartSections.belongsTo(UserAccount, { foreignKey: "user_id" });
 CartSections.hasMany(CartShop, { foreignKey: "cart_id" });
@@ -183,7 +175,6 @@ module.exports = {
   WalletTransaction,
   ShippingProvider,
   ShippingOrder,
-  ProductVarientsService,
   CartItems,
   ImgCustomizeShop,
   CartSections,
