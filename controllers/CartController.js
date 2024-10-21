@@ -10,6 +10,9 @@ const {
   ProductClassify,
   Shop,
   ProductSize,
+  UserAccount,
+  SubCategory,
+  Category,
 } = require("../models/Assosiations");
 
 const getCart = async (req, res) => {
@@ -36,6 +39,11 @@ const getCart = async (req, res) => {
       include: [
         {
           model: Shop,
+          include: [
+            {
+              model: UserAccount,
+            },
+          ],
         },
         {
           model: CartItems,
@@ -48,6 +56,14 @@ const getCart = async (req, res) => {
                   include: [
                     {
                       model: ProductClassify,
+                    },
+                    {
+                      model: SubCategory,
+                      include: [
+                        {
+                          model: Category,
+                        },
+                      ],
                     },
                   ],
                 },
