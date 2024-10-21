@@ -79,6 +79,11 @@ const Shop = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    phone_number: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    }
+    ,
     user_id: {
       type: DataTypes.STRING,
       allowNull: false,

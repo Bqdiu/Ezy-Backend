@@ -168,6 +168,7 @@ const getShopDetail = async (req, res) => {
 
 const createShop = async (req, res) => {
   const {
+    shop_id,
     shop_name,
     logo_url,
     shop_description,
@@ -180,10 +181,12 @@ const createShop = async (req, res) => {
     shop_address,
     citizen_number,
     full_name,
+    phone_number,
     user_id,
   } = req.body;
   try {
     const new_shop = await Shop.create({
+      shop_id,
       shop_name,
       logo_url,
       shop_description,
@@ -196,6 +199,7 @@ const createShop = async (req, res) => {
       shop_address,
       citizen_number,
       full_name,
+      phone_number,
       user_id,
     });
     res.status(200).json({
