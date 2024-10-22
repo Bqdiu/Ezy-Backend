@@ -92,6 +92,7 @@ const {
   removeAllItems,
   removeItem,
 } = require("../controllers/CartController");
+const { getVoucherList } = require("../controllers/DiscountVoucherController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -183,4 +184,7 @@ router.post("/cart/update-all-items-of-shop", updateAllItemsOfShop);
 router.post("/cart/update-selected-item", updateSelectedItem);
 router.post("/cart/destroy-cart", removeAllItems);
 router.post("/cart/remove-item", removeItem);
+
+//-----------------DiscountVoucher-----------------
+router.get("/voucher-list", getVoucherList);
 module.exports = router;

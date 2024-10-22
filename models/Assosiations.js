@@ -30,6 +30,7 @@ const CartShop = require("./CartShop");
 const CartItems = require("./CartItems");
 const PaymentMethod = require("./PaymentMethod");
 const OrderStatusHistory = require("./OrderStatusHistory");
+const DiscountVoucherType = require("./DiscountVoucherType");
 // Thiết lập mối quan hệ
 UserAccount.hasMany(UserAddress, { foreignKey: "user_id" });
 UserAddress.belongsTo(UserAccount, { foreignKey: "user_id" });
@@ -108,6 +109,13 @@ ProductReview.belongsTo(ProductVarients, { foreignKey: "product_varients_id" });
 SaleEvents.hasMany(DiscountVoucher, { foreignKey: "sale_events_id" });
 DiscountVoucher.belongsTo(SaleEvents, { foreignKey: "sale_events_id" });
 
+DiscountVoucherType.hasMany(DiscountVoucher, {
+  foreignKey: "discount_voucher_type_id",
+});
+DiscountVoucher.belongsTo(DiscountVoucherType, {
+  foreignKey: "discount_voucher_type_id",
+});
+
 UserAccount.hasMany(SaleEventsUser, { foreignKey: "user_id" });
 SaleEventsUser.belongsTo(UserAccount, { foreignKey: "user_id" });
 
@@ -169,6 +177,7 @@ module.exports = {
   ProductSize,
   SaleEvents,
   DiscountVoucher,
+  DiscountVoucherType,
   SaleEventsUser,
   SaleEventsOnCategories,
   UserWallet,

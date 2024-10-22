@@ -17,6 +17,18 @@ const DiscountVoucher = sequelize.define(
         key: "sale_events_id",
       },
     },
+    discount_voucher_type_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "discount_voucher_type",
+        key: "discount_voucher_type_id",
+      },
+    },
+    discount_voucher_code: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     discount_voucher_name: {
       type: DataTypes.STRING,
       allowNull: false,
