@@ -26,7 +26,8 @@ const calculateMaxVoucherValue = (voucher) => {
 
 const getVoucherList = async (req, res) => {
   try {
-    const { user_id } = req.query;
+    // const { user_id } = req.query;
+    const { user_id, totalPayment, cart } = req.body;
 
     const validEvents = await SaleEvents.findAll({
       where: {
@@ -80,15 +81,57 @@ const getVoucherList = async (req, res) => {
       });
     }
 
-    const sortVouchers = validVouchers.sort((a, b) => {
+    const vouchersWithValidity = validVouchers.map((voucher) => {
+      const isOrderValueValid =
+        totalPayment?.totalPrice >= voucher.min_order_value;
+      const validCategories = voucher.SaleEvent.SaleEventsOnCategories.map(
+        (category) => category.category_id
+      );
+      const hasValidCategory = cart.some((cartItem) =>
+        cartItem?.CartItems?.some((item) =>
+          validCategories.includes(
+            item?.ProductVarient?.Product?.SubCategory?.category_id
+          )
+        )
+      );
+
+      const isVoucherValid = isOrderValueValid && hasValidCategory;
+
+      return {
+        ...voucher.dataValues,
+        isVoucherValid,
+      };
+    });
+
+    console.log("Vouchers with validity: ", vouchersWithValidity);
+
+    const sortVouchers = vouchersWithValidity.sort((a, b) => {
+      if (a.isVoucherValid && !b.isVoucherValid) {
+        return -1;
+      }
+      if (!a.isVoucherValid && b.isVoucherValid) {
+        return 1;
+      }
+
       const valueA = calculateMaxVoucherValue(a);
       const valueB = calculateMaxVoucherValue(b);
       return valueB - valueA;
     });
 
+    const voucherFreeShip = sortVouchers.filter(
+      (voucher) => voucher.discount_voucher_type_id === 1
+    );
+
+    const voucherDiscount = sortVouchers.filter(
+      (voucher) => voucher.discount_voucher_type_id === 2
+    );
+
     res.status(200).json({
       success: true,
-      data: sortVouchers,
+      data: {
+        voucherFreeShip,
+        voucherDiscount,
+      },
     });
   } catch (error) {
     console.log("Lỗi fetch voucher: ", error);
