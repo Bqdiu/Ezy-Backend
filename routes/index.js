@@ -62,6 +62,7 @@ const {
   getShopDetail,
   createShop,
   getShopByUserID,
+  updateShopProfile,
 } = require("../controllers/ShopController");
 const {
   getProductClassifyByProductID,
@@ -110,6 +111,8 @@ router.get("/shop_recommendations/:shop_id", getSuggestProductsOfShop);
 router.post("/create-shop", createShop);
 router.get("/get-shop", authenticate, getShopByUserID);
 router.get("/shop-products-status", getShopProducts);
+router.post("/update-shop-profile", updateShopProfile);
+
 
 //------------------Products-----------------------
 router.get("/products", getAllProducts);
