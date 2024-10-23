@@ -186,5 +186,6 @@ router.post("/cart/destroy-cart", removeAllItems);
 router.post("/cart/remove-item", removeItem);
 
 //-----------------DiscountVoucher-----------------
-router.get("/voucher-list", getVoucherList);
+router.post("/voucher/voucher-list", getVoucherList);
+
 module.exports = router;
