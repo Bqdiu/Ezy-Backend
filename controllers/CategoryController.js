@@ -155,11 +155,111 @@ const getCategoriesByShop = async (req, res) => {
     });
   }
 };
+const deleteCategory = async (req, res) => {
+  const { category_id } = req.params;
+
+  try {
+    const subCategories = await SubCategory.findAll({
+      where: {
+        category_id: category_id
+      }
+    });
+
+    if (subCategories.length > 0) {
+      return res.status(400).json({
+        error: true,
+        message: "Danh mục đang được sử dụng không thể xóa."
+      });
+    }
+
+    const deletedCategory = await Category.destroy({
+      where: {
+        category_id: category_id
+      }
+    });
+
+    if (!deletedCategory) {
+      return res.status(404).json({
+        error: true,
+        message: "Danh mục không tồn tại."
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Danh mục đã được xóa thành công."
+    });
+
+  } catch (error) {
+    console.error("Error deleting category: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+const updateCategory = async (req, res) => {
+  const { category_id } = req.params;
+  const { category_name, thumbnail } = req.body;
+
+  console.log('Update category request:', req.body);
+
+  if (!category_name) {
+    return res.status(400).json({
+      error: true,
+      message: "Tên danh mục là bắt buộc.",
+    });
+  }
+
+  try {
+    const category = await Category.findOne({
+      where: { category_id: category_id },
+    });
+
+    if (!category) {
+      return res.status(404).json({
+        error: true,
+        message: "Danh mục không tồn tại.",
+      });
+    }
+
+    const updatedData = {
+      category_name: category_name,
+    };
+
+    if (thumbnail) {
+      updatedData.thumbnail = thumbnail;
+    }
+
+    await category.update(updatedData);
+    const updatedCategory = await category.reload();
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật danh mục thành công.",
+      data: updatedCategory,
+    });
+  } catch (error) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({
+        error: true,
+        message: "Tên danh mục đã tồn tại.",
+      });
+    }
+    console.error("Error updating category: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || 'Có lỗi xảy ra khi cập nhật danh mục.',
+    });
+  }
+};
 module.exports = {
   getAllCategories,
   getAllCategoriesWithSubCategories,
   getSubCategories,
   getCategoriesName,
   addCategory,
-  getCategoriesByShop
+  getCategoriesByShop,
+  deleteCategory,
+  updateCategory
 };
