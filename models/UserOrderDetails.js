@@ -25,8 +25,16 @@ const UserOrderDetails = sequelize.define(
         key: "product_varients_id",
       },
     },
+    varient_name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     quantity: {
       type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    discount_price: {
+      type: DataTypes.BIGINT,
       allowNull: false,
     },
     totalPrice: {

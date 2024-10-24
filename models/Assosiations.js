@@ -22,8 +22,6 @@ const SaleEventsUser = require("./SaleEventsUser");
 const SaleEventsOnCategories = require("./SaleEventsOnCategories");
 const UserWallet = require("./UserWallet");
 const WalletTransaction = require("./WalletTransaction");
-const ShippingProvider = require("./ShippingProvider");
-const ShippingOrder = require("./ShippingOrder");
 const ImgCustomizeShop = require("./ImgCustomizeShop");
 const CartSections = require("./CartSections");
 const CartShop = require("./CartShop");
@@ -31,6 +29,9 @@ const CartItems = require("./CartItems");
 const PaymentMethod = require("./PaymentMethod");
 const OrderStatusHistory = require("./OrderStatusHistory");
 const DiscountVoucherType = require("./DiscountVoucherType");
+const ShopRegisterEvents = require("./ShopRegisterEvents");
+const FlashSales = require("./FlashSales");
+const ShopRegisterFlashSales = require("./ShopRegisterFlashSales");
 // Thiết lập mối quan hệ
 UserAccount.hasMany(UserAddress, { foreignKey: "user_id" });
 UserAddress.belongsTo(UserAccount, { foreignKey: "user_id" });
@@ -109,6 +110,12 @@ ProductReview.belongsTo(ProductVarients, { foreignKey: "product_varients_id" });
 SaleEvents.hasMany(DiscountVoucher, { foreignKey: "sale_events_id" });
 DiscountVoucher.belongsTo(SaleEvents, { foreignKey: "sale_events_id" });
 
+SaleEvents.hasMany(ShopRegisterEvents, { foreignKey: "sale_events_id" });
+ShopRegisterEvents.belongsTo(SaleEvents, { foreignKey: "sale_events_id" });
+
+Shop.hasMany(ShopRegisterEvents, { foreignKey: "shop_id" });
+ShopRegisterEvents.belongsTo(Shop, { foreignKey: "shop_id" });
+
 DiscountVoucherType.hasMany(DiscountVoucher, {
   foreignKey: "discount_voucher_type_id",
 });
@@ -134,14 +141,6 @@ UserWallet.belongsTo(UserAccount, { foreignKey: "user_id" });
 UserWallet.hasMany(WalletTransaction, { foreignKey: "user_wallet_id" });
 WalletTransaction.belongsTo(UserWallet, { foreignKey: "user_wallet_id" });
 
-ShippingProvider.hasMany(ShippingOrder, { foreignKey: "provider_id" });
-ShippingOrder.belongsTo(ShippingProvider, { foreignKey: "provider_id" });
-
-UserOrder.hasMany(ShippingOrder, { foreignKey: "user_order_id" });
-ShippingOrder.belongsTo(UserOrder, { foreignKey: "user_order_id" });
-Shop.hasMany(ShippingOrder, { foreignKey: "shop_id" });
-ShippingOrder.belongsTo(Shop, { foreignKey: "shop_id" });
-
 UserAccount.hasOne(CartSections, { foreignKey: "user_id" });
 CartSections.belongsTo(UserAccount, { foreignKey: "user_id" });
 CartSections.hasMany(CartShop, { foreignKey: "cart_id" });
@@ -154,6 +153,15 @@ CartItems.belongsTo(ProductVarients, { foreignKey: "product_varients_id" });
 
 PaymentMethod.hasMany(UserOrder, { foreignKey: "payment_method_id" });
 UserOrder.belongsTo(PaymentMethod, { foreignKey: "payment_method_id" });
+
+FlashSales.hasMany(ShopRegisterFlashSales, { foreignKey: "flash_sales_id" });
+ShopRegisterFlashSales.belongsTo(FlashSales, { foreignKey: "flash_sales_id" });
+
+Shop.hasMany(ShopRegisterFlashSales, { foreignKey: "shop_id" });
+ShopRegisterFlashSales.belongsTo(Shop, { foreignKey: "shop_id" });
+
+Product.hasMany(ShopRegisterFlashSales, { foreignKey: "product_id" });
+ShopRegisterFlashSales.belongsTo(Product, { foreignKey: "product_id" });
 
 module.exports = {
   UserAccount,
@@ -176,17 +184,18 @@ module.exports = {
   ProductClassify,
   ProductSize,
   SaleEvents,
+  ShopRegisterEvents,
   DiscountVoucher,
   DiscountVoucherType,
   SaleEventsUser,
   SaleEventsOnCategories,
   UserWallet,
   WalletTransaction,
-  ShippingProvider,
-  ShippingOrder,
   CartItems,
   ImgCustomizeShop,
   CartSections,
   CartShop,
   PaymentMethod,
+  FlashSales,
+  ShopRegisterFlashSales,
 };

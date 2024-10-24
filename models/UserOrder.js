@@ -49,6 +49,10 @@ const UserOrder = sequelize.define(
         key: "payment_method_id",
       },
     },
+    transaction_code: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     order_note: {
       type: DataTypes.STRING,
       allowNull: true,
