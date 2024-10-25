@@ -96,7 +96,12 @@ const {
   removeItem,
 } = require("../controllers/CartController");
 const { getVoucherList } = require("../controllers/DiscountVoucherController");
-const { checkout } = require("../controllers/PaymentController");
+const {
+  checkoutWithCOD,
+  checkoutWithMomo,
+  checkoutWithVNPay,
+  checkoutWithEzyWallet,
+} = require("../controllers/PaymentController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -196,6 +201,9 @@ router.post("/cart/remove-item", removeItem);
 router.post("/voucher/voucher-list", getVoucherList);
 
 //-----------------Checkout-----------------
-router.post("/checkout", checkout);
+router.post("/checkout/cod", checkoutWithCOD);
+router.post("/checkout/momo", checkoutWithMomo);
+router.post("/checkout/vnpay", checkoutWithVNPay);
+router.post("/checkout/ezywallet", checkoutWithEzyWallet);
 
 module.exports = router;

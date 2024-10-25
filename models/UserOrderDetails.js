@@ -29,11 +29,19 @@ const UserOrderDetails = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    thumbnail: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    classify: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     quantity: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    discount_price: {
+    discountPrice: {
       type: DataTypes.BIGINT,
       allowNull: false,
     },
