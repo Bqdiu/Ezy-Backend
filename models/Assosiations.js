@@ -135,7 +135,7 @@ SaleEventsOnCategories.belongsTo(SaleEvents, { foreignKey: "sale_events_id" });
 Category.hasMany(SaleEventsOnCategories, { foreignKey: "category_id" });
 SaleEventsOnCategories.belongsTo(Category, { foreignKey: "category_id" });
 
-UserAccount.hasMany(UserWallet, { foreignKey: "user_id" });
+UserAccount.hasOne(UserWallet, { foreignKey: "user_id" });
 UserWallet.belongsTo(UserAccount, { foreignKey: "user_id" });
 
 UserWallet.hasMany(WalletTransaction, { foreignKey: "user_wallet_id" });

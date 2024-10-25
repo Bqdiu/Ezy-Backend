@@ -96,6 +96,7 @@ const {
   removeItem,
 } = require("../controllers/CartController");
 const { getVoucherList } = require("../controllers/DiscountVoucherController");
+const { checkout } = require("../controllers/PaymentController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -104,8 +105,8 @@ router.get("/categories-sub", getAllCategoriesWithSubCategories);
 router.get("/sub-categories/:category_id", getSubCategories);
 router.post("/add-category", addCategory);
 router.get("/shop-categories", getCategoriesByShop);
-router.delete('/delete-category/:category_id', deleteCategory);
-router.put('/update-category/:category_id', updateCategory);
+router.delete("/delete-category/:category_id", deleteCategory);
+router.put("/update-category/:category_id", updateCategory);
 
 //------------------Shop--------------------------------
 router.get("/shop-products", getAllProductsOfShop);
@@ -116,7 +117,6 @@ router.post("/create-shop", createShop);
 router.get("/get-shop", authenticate, getShopByUserID);
 router.get("/shop-products-status", getShopProducts);
 router.post("/update-shop-profile", updateShopProfile);
-
 
 //------------------Products-----------------------
 router.get("/products", getAllProducts);
@@ -194,5 +194,8 @@ router.post("/cart/remove-item", removeItem);
 
 //-----------------DiscountVoucher-----------------
 router.post("/voucher/voucher-list", getVoucherList);
+
+//-----------------Checkout-----------------
+router.post("/checkout", checkout);
 
 module.exports = router;

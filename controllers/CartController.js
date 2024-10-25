@@ -84,6 +84,14 @@ const getCart = async (req, res) => {
       ],
       order: [["updatedAt", "DESC"]],
     });
+
+    const filteredCartShop = cartShop.filter((shop) => {
+      const allItemsOutOfStock = shop.CartItems.every(
+        (item) => item.isOutOfStock === 1
+      );
+      return !allItemsOutOfStock;
+    });
+
     const invalidItems = await CartItems.findAll({
       where: {
         cart_shop_id: cartShop.map((item) => item.cart_shop_id),
@@ -115,7 +123,7 @@ const getCart = async (req, res) => {
     });
     res.status(200).json({
       success: true,
-      cartShop,
+      cartShop: filteredCartShop,
       invalidItems,
     });
   } catch (error) {

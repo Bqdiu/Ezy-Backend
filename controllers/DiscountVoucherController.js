@@ -1,4 +1,3 @@
-const { model } = require("mongoose");
 const sequelize = require("../config/database");
 const { Op } = require("sequelize");
 
@@ -9,6 +8,7 @@ const {
   SaleEvents,
   SaleEventsUser,
   SaleEventsOnCategories,
+  ShopRegisterEvents,
 } = require("../models/Assosiations");
 
 const calculateMaxVoucherValue = (voucher) => {
@@ -68,26 +68,32 @@ const getVoucherList = async (req, res) => {
         },
         {
           model: SaleEvents,
-          include: {
-            model: SaleEventsOnCategories,
-          },
+          include: [
+            {
+              model: SaleEventsOnCategories,
+            },
+            {
+              model: ShopRegisterEvents,
+            },
+          ],
         },
       ],
     });
+
     if (validVouchers.length === 0) {
       return res.status(404).json({
         error: true,
         message: "Không có voucher hợp lệ cho sự kiện này",
       });
     }
-
+    let cartSelected = cart.filter((item) => item.selected === 1);
     const vouchersWithValidity = validVouchers.map((voucher) => {
       const isOrderValueValid =
         totalPayment?.totalPrice >= voucher.min_order_value;
       const validCategories = voucher.SaleEvent.SaleEventsOnCategories.map(
         (category) => category.category_id
       );
-      const hasValidCategory = cart.some((cartItem) =>
+      const hasValidCategory = cartSelected.some((cartItem) =>
         cartItem?.CartItems?.some((item) =>
           validCategories.includes(
             item?.ProductVarient?.Product?.SubCategory?.category_id
@@ -95,15 +101,20 @@ const getVoucherList = async (req, res) => {
         )
       );
 
-      const isVoucherValid = isOrderValueValid && hasValidCategory;
+      const shopParticipatesInEvent = cartSelected.every((cartItem) => {
+        return voucher.SaleEvent.ShopRegisterEvents.some(
+          (shopEvent) => shopEvent.shop_id === cartItem.Shop.shop_id
+        );
+      });
+
+      const isVoucherValid =
+        isOrderValueValid && hasValidCategory && shopParticipatesInEvent;
 
       return {
         ...voucher.dataValues,
         isVoucherValid,
       };
     });
-
-    console.log("Vouchers with validity: ", vouchersWithValidity);
 
     const sortVouchers = vouchersWithValidity.sort((a, b) => {
       if (a.isVoucherValid && !b.isVoucherValid) {

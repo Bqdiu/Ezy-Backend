@@ -1,4 +1,9 @@
-const { UserAccount, Role, UserAddress } = require("../models/Assosiations");
+const {
+  UserAccount,
+  Role,
+  UserAddress,
+  UserWallet,
+} = require("../models/Assosiations");
 const { Op } = require("sequelize");
 const admin = require("../firebase/firebaseAdmin");
 const bcryptjs = require("bcryptjs");
@@ -318,6 +323,11 @@ const getUserData = async (req, res) => {
       attributes: {
         exclude: ["password"],
       },
+      include: [
+        {
+          model: UserWallet,
+        },
+      ],
       where: {
         user_id: uid,
       },
@@ -702,7 +712,6 @@ const setDefaultAddress = async (req, res) => {
     const userAddress = await UserAddress.findOne({
       where: {
         user_address_id,
-        user_id,
       },
     });
     if (!userAddress) {
@@ -718,6 +727,9 @@ const setDefaultAddress = async (req, res) => {
       {
         where: {
           user_id,
+          user_address_id: {
+            [Op.ne]: user_address_id,
+          },
         },
       }
     );
