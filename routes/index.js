@@ -97,6 +97,10 @@ const {
 } = require("../controllers/CartController");
 const { getVoucherList } = require("../controllers/DiscountVoucherController");
 const { checkout } = require("../controllers/PaymentController");
+const { 
+  getAllSaleEvents,
+  addSaleEvent,
+ } = require("../controllers/SaleEventController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -197,5 +201,9 @@ router.post("/voucher/voucher-list", getVoucherList);
 
 //-----------------Checkout-----------------
 router.post("/checkout", checkout);
+
+//-----------------SaleEvent-----------------
+router.get('/sale-events/get-event', getAllSaleEvents);
+router.post('/sale-events/add-event', addSaleEvent);
 
 module.exports = router;
