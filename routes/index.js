@@ -31,6 +31,7 @@ const {
   addProduct,
   getShopProducts,
   searchShopProducts,
+  updateProductStatus,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
 const {
@@ -132,6 +133,8 @@ router.get("/search", getProductAndShopBySearch);
 router.get("/search-shop-products", searchShopProducts);
 
 router.post("/add-product", addProduct);
+router.post("/update-product-status", updateProductStatus);
+
 
 //-----------------ProductClassify-------------------
 router.get("/classify-products", getProductClassifyByProductID);

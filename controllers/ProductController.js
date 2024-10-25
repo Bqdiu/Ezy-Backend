@@ -1054,6 +1054,45 @@ const searchShopProducts = async (req, res) => {
   }
 };
 
+const updateProductStatus = async (req, res) => {
+  const { product_id, product_status } = req.query;
+
+  if(!product_id || !product_status) {
+    return res.status(400).json({
+      success: false,
+      message: "product_id and product_status are required",
+    });
+  }
+  try {
+    const product = await Product.findOne({
+      where: {
+        product_id: product_id,
+      },
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    product.product_status = product_status;
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      data: product,
+    });
+  } catch (error) {
+    console.log("Error updating product status: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+}
+
 
 module.exports = {
   getAllProducts,
@@ -1070,4 +1109,5 @@ module.exports = {
   addProduct,
   getShopProducts,
   searchShopProducts,
+  updateProductStatus
 };
