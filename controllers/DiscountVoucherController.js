@@ -61,6 +61,9 @@ const getVoucherList = async (req, res) => {
         sale_events_id: {
           [Op.in]: validEventIds,
         },
+        quantity: {
+          [Op.gt]: 0,
+        },
       },
       include: [
         {
