@@ -1,5 +1,6 @@
 const {
-    SaleEvents
+    SaleEvents,
+    SaleEventsOnCategories,
 } = require("../models/Assosiations");
 const sequelize = require("../config/database");
 const getAllSaleEvents = async (req, res) => {
@@ -17,11 +18,11 @@ const getAllSaleEvents = async (req, res) => {
     }
 }
 const addSaleEvent = async (req, res) => {
-    const { 
-            sale_events_name, 
-            thumbnail, 
-            started_at, 
-            ended_at 
+    const {
+        sale_events_name,
+        thumbnail,
+        started_at,
+        ended_at
     } = req.body;
 
     try {
@@ -48,8 +49,69 @@ const addSaleEvent = async (req, res) => {
         });
     }
 }
+const deleteSaleEvent = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const saleEvent = await SaleEvents.findOne({ where: { sale_events_id: id } });
 
+        if (!saleEvent) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sự kiện không tìm thấy'
+            });
+        }
+
+        await SaleEvents.destroy({ where: { sale_events_id: id } });
+
+        res.status(200).json({
+            success: true,
+            message: 'Xóa sự kiện thành công'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi xóa sự kiện',
+            error: error.message,
+        });
+    }
+}
+const addCategoriesToEvent = async (req, res) => {
+    const { id } = req.params; // ID của sự kiện
+    const { category_ids } = req.body; // Danh sách ID danh mục
+
+    try {
+        const saleEvent = await SaleEvents.findOne({ where: { sale_events_id: id } });
+
+        if (!saleEvent) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sự kiện không tìm thấy'
+            });
+        }
+
+        if (category_ids && category_ids.length > 0) {
+            const categoriesToAdd = category_ids.map(category_id => ({
+                sale_events_id: id,
+                category_id
+            }));
+            await SaleEventsOnCategories.bulkCreate(categoriesToAdd);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Cài đặt danh mục cho sự kiện thành công'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi cài đặt danh mục cho sự kiện',
+            error: error.message,
+        });
+    }
+}
 module.exports = {
     getAllSaleEvents,
     addSaleEvent,
+    deleteSaleEvent,
+    addCategoriesToEvent,
 }
