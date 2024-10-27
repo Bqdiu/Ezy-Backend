@@ -1055,7 +1055,7 @@ const searchShopProducts = async (req, res) => {
 };
 
 const updateProductStatus = async (req, res) => {
-  const { product_id, product_status } = req.body; 
+  const { product_id, product_status } = req.body;
 
   if (!product_id || product_status === undefined || product_status === null) {
     return res.status(400).json({
@@ -1063,7 +1063,7 @@ const updateProductStatus = async (req, res) => {
       message: "product_id and product_status are required",
     });
   }
-  
+
   try {
     const product = await Product.findOne({
       where: {
@@ -1094,6 +1094,49 @@ const updateProductStatus = async (req, res) => {
   }
 }
 
+const getProductByID = async (req, res) => {
+  try {
+    const { product_id } = req.query;
+    const product = await Product.findOne({
+      where: { product_id },
+      include: [
+        {
+          model: SubCategory,
+        },
+        {
+          model: ProductImgs,
+        },
+        {
+          model: ProductVarients,
+          include: [
+            {
+              model: ProductSize,
+            },
+            {
+              model: ProductClassify,
+            },
+          ],
+        }
+      ],
+    });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      })
+    }
+    res.status(200).json({
+      success: true,
+      data: product,
+    })
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    })
+  }
+}
+
 
 module.exports = {
   getAllProducts,
@@ -1110,5 +1153,6 @@ module.exports = {
   addProduct,
   getShopProducts,
   searchShopProducts,
-  updateProductStatus
+  updateProductStatus,
+  getProductByID
 };

@@ -32,6 +32,7 @@ const {
   getShopProducts,
   searchShopProducts,
   updateProductStatus,
+  getProductByID,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
 const {
@@ -129,6 +130,7 @@ router.post("/create-shop", createShop);
 router.get("/get-shop", authenticate, getShopByUserID);
 router.get("/shop-products-status", getShopProducts);
 router.post("/update-shop-profile", updateShopProfile);
+router.get("/get-product", getProductByID);
 
 //------------------Products-----------------------
 router.get("/products", getAllProducts);
