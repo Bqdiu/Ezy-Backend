@@ -105,6 +105,7 @@ const {
   checkoutWithMomo,
   checkoutWithVNPay,
   checkoutWithEzyWallet,
+  vnPayIPN,
 } = require("../controllers/PaymentController");
 
 const {
@@ -112,6 +113,7 @@ const {
   addSaleEvent,
   deleteSaleEvent,
   addCategoriesToEvent,
+  getAllCategoryIdsForEvent,
 } = require("../controllers/SaleEventController");
 const { ro } = require("translate-google/languages");
 
@@ -152,7 +154,6 @@ router.get("/search-shop-products", searchShopProducts);
 
 router.post("/add-product", addProduct);
 router.post("/update-product-status", updateProductStatus);
-
 
 //-----------------ProductClassify-------------------
 router.get("/classify-products", getProductClassifyByProductID);
@@ -221,10 +222,11 @@ router.post("/checkout/cod", checkoutWithCOD);
 router.post("/checkout/momo", checkoutWithMomo);
 router.post("/checkout/vnpay", checkoutWithVNPay);
 router.post("/checkout/ezywallet", checkoutWithEzyWallet);
-
+router.get("/vnpay-ipn", vnPayIPN);
 //-----------------SaleEvent-----------------
 router.get("/sale-events/get-event", getAllSaleEvents);
 router.post("/sale-events/add-event", addSaleEvent);
 router.delete("/sale-events/delete-event/:id", deleteSaleEvent);
 router.post("/sale-events/set-categories/:id", addCategoriesToEvent);
+router.get("/sale-events/get-categories/:id", getAllCategoryIdsForEvent);
 module.exports = router;
