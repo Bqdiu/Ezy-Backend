@@ -29,6 +29,8 @@ const getVoucherList = async (req, res) => {
     // const { user_id } = req.query;
     const { user_id, totalPayment, cart } = req.body;
 
+    console.log("totalPayment: ", totalPayment);
+
     const validEvents = await SaleEvents.findAll({
       where: {
         started_at: {
@@ -64,6 +66,12 @@ const getVoucherList = async (req, res) => {
         quantity: {
           [Op.gt]: 0,
         },
+        started_at: {
+          [Op.lte]: new Date(),
+        },
+        ended_at: {
+          [Op.gt]: new Date(),
+        },
       },
       include: [
         {
@@ -93,9 +101,13 @@ const getVoucherList = async (req, res) => {
     const vouchersWithValidity = validVouchers.map((voucher) => {
       const isOrderValueValid =
         totalPayment?.totalPrice >= voucher.min_order_value;
+      console.log("totalPayment: ", totalPayment);
+      console.log(voucher.min_order_value);
+      console.log("isOrderValueValid: ", isOrderValueValid);
       const validCategories = voucher.SaleEvent.SaleEventsOnCategories.map(
         (category) => category.category_id
       );
+
       const hasValidCategory = cartSelected.some((cartItem) =>
         cartItem?.CartItems?.some((item) =>
           validCategories.includes(
@@ -104,15 +116,19 @@ const getVoucherList = async (req, res) => {
         )
       );
 
-      const shopParticipatesInEvent = cartSelected.every((cartItem) => {
-        return voucher.SaleEvent.ShopRegisterEvents.some(
-          (shopEvent) => shopEvent.shop_id === cartItem.Shop.shop_id
-        );
-      });
+      console.log("hasValidCategory: ", hasValidCategory);
+
+      const shopParticipatesInEvent = cartSelected.some((cartItem) =>
+        voucher.SaleEvent.ShopRegisterEvents.some(
+          (event) => event.shop_id === cartItem.shop_id
+        )
+      );
+
+      console.log("shopParticipatesInEvent: ", shopParticipatesInEvent);
 
       const isVoucherValid =
         isOrderValueValid && hasValidCategory && shopParticipatesInEvent;
-
+      console.log("isVoucherValid: ", isVoucherValid);
       return {
         ...voucher.dataValues,
         isVoucherValid,

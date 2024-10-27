@@ -20,6 +20,8 @@ const {
   IpnSuccess,
 } = require("vnpay");
 const dateFormat = require("dateformat");
+const { io } = require("../socket");
+const { timeStamp } = require("console");
 const reserveStock = async (validCart) => {
   for (const shop of validCart) {
     for (const item of shop.CartItems) {
@@ -590,6 +592,11 @@ const checkoutWithVNPay = async (req, res) => {
             cart_item_id: item.cart_item_id,
           },
         });
+        io.emit("newOrder", {
+          orderID: order.user_order_id,
+          selectedVoucher: voucher,
+          timeStamp: new Date(),
+        });
       }
     } else if (validCart.length > 1) {
       {
@@ -656,6 +663,11 @@ const checkoutWithVNPay = async (req, res) => {
                 cart_item_id: item.cart_item_id,
               },
             });
+            io.emit("newOrder", {
+              orderID: order.user_order_id,
+              selectedVoucher: voucher,
+              timeStamp: new Date(),
+            });
           }
         }
       }
@@ -695,12 +707,8 @@ const checkoutWithVNPay = async (req, res) => {
 const vnPayIPN = async (req, res) => {
   try {
     const verify = vnpay.verifyIpnCall(req.query);
-    if (!verify.isVerified) {
-      return res.json(IpnFailChecksum);
-    }
-    if (!verify.isSuccess) {
-      return res.json(IpnOrderNotFound);
-    }
+    console.log("IPN Fail: ", verify);
+
     const foundOrderByTransactionCode = await UserOrder.findAll({
       where: {
         transaction_code: verify.vnp_TxnRef,
@@ -712,21 +720,104 @@ const vnPayIPN = async (req, res) => {
       ],
     });
 
-    foundOrderByTransactionCode.forEach(async (order) => {
-      if (
-        order.OrderStatusHistories[order.OrderStatusHistories.length - 1]
-          .order_status_id === 1
-      ) {
-        await OrderStatusHistory.create({
-          user_order_id: order.user_order_id,
-          order_status_id: 2,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-      }
-    });
+    if (verify.isVerified && verify.isSuccess)
+      foundOrderByTransactionCode.forEach(async (order) => {
+        if (
+          order.OrderStatusHistories[order.OrderStatusHistories.length - 1]
+            .order_status_id === 1
+        ) {
+          await OrderStatusHistory.create({
+            user_order_id: order.user_order_id,
+            order_status_id: 2,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+      });
+    switch (verify.vnp_ResponseCode) {
+      case "00":
+        // Giao dịch thành công
 
-    return res.json(IpnSuccess);
+        return res.json({
+          status: "success",
+          message: "Giao dịch thành công",
+        });
+      case "07":
+        // Giao dịch bị nghi ngờ
+        return res.json({
+          status: "warning",
+          message:
+            "Giao dịch bị nghi ngờ (liên quan tới lừa đảo, giao dịch bất thường)",
+        });
+      case "09":
+        return res.json({
+          status: "fail",
+          message:
+            "Thẻ/Tài khoản của khách hàng chưa đăng ký dịch vụ InternetBanking tại ngân hàng",
+        });
+      case "10":
+        return res.json({
+          status: "fail",
+          message:
+            "Khách hàng xác thực thông tin thẻ/tài khoản không đúng quá 3 lần",
+        });
+      case "11":
+        return res.json({
+          status: "fail",
+          message:
+            "Đã hết hạn chờ thanh toán. Xin quý khách vui lòng thực hiện lại giao dịch",
+        });
+      case "12":
+        return res.json({
+          status: "fail",
+          message: "Thẻ/Tài khoản của khách hàng bị khóa",
+        });
+      case "13":
+        return res.json({
+          status: "fail",
+          message:
+            "Quý khách nhập sai mật khẩu xác thực giao dịch (OTP). Xin quý khách vui lòng thực hiện lại giao dịch",
+        });
+      case "24":
+        return res.json({
+          status: "fail",
+          message: "Khách hàng hủy giao dịch",
+        });
+      case "51":
+        return res.json({
+          status: "fail",
+          message:
+            "Tài khoản của quý khách không đủ số dư để thực hiện giao dịch",
+        });
+      case "65":
+        return res.json({
+          status: "fail",
+          message:
+            "Tài khoản của Quý khách đã vượt quá hạn mức giao dịch trong ngày",
+        });
+      case "75":
+        return res.json({
+          status: "fail",
+          message: "Ngân hàng thanh toán đang bảo trì",
+        });
+      case "79":
+        return res.json({
+          status: "fail",
+          message:
+            "KH nhập sai mật khẩu thanh toán quá số lần quy định. Xin quý khách vui lòng thực hiện lại giao dịch",
+        });
+      case "99":
+        return res.json({
+          status: "fail",
+          message:
+            "Các lỗi khác (lỗi còn lại, không có trong danh sách mã lỗi đã liệt kê)",
+        });
+      default:
+        return res.json({
+          status: "fail",
+          message: "Mã phản hồi không xác định",
+        });
+    }
   } catch (error) {
     console.log("Error in vnPayIPN: ", error);
     return res.json(IpnUnknownError);
