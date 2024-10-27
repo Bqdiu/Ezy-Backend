@@ -247,6 +247,32 @@ const updateCategory = async (req, res) => {
     });
   }
 };
+
+const getSubCategoriesByID = async (req, res) => {
+  const { sub_category_id } = req.params;
+  try {
+    const subCategories = await SubCategory.findOne({
+      where: {
+        sub_category_id,
+      },
+    });
+    if(!subCategories) {
+      return res.status(404).json({
+        error: true,
+        message: "Not found sub category"
+      });
+    }
+    res.status(200).json({
+      success: true,
+      data: subCategories,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+}
 module.exports = {
   getAllCategories,
   getAllCategoriesWithSubCategories,
@@ -255,5 +281,6 @@ module.exports = {
   addCategory,
   getCategoriesByShop,
   deleteCategory,
-  updateCategory
+  updateCategory,
+  getSubCategoriesByID
 };
