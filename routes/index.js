@@ -104,6 +104,7 @@ const {
   checkoutWithMomo,
   checkoutWithVNPay,
   checkoutWithEzyWallet,
+  vnPayIPN,
 } = require("../controllers/PaymentController");
 
 const {
@@ -150,7 +151,6 @@ router.get("/search-shop-products", searchShopProducts);
 
 router.post("/add-product", addProduct);
 router.post("/update-product-status", updateProductStatus);
-
 
 //-----------------ProductClassify-------------------
 router.get("/classify-products", getProductClassifyByProductID);
@@ -219,7 +219,7 @@ router.post("/checkout/cod", checkoutWithCOD);
 router.post("/checkout/momo", checkoutWithMomo);
 router.post("/checkout/vnpay", checkoutWithVNPay);
 router.post("/checkout/ezywallet", checkoutWithEzyWallet);
-
+router.get("/vnpay-ipn", vnPayIPN);
 //-----------------SaleEvent-----------------
 router.get("/sale-events/get-event", getAllSaleEvents);
 router.post("/sale-events/add-event", addSaleEvent);

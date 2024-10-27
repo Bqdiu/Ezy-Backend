@@ -1,5 +1,5 @@
 const sequelize = require("../config/database");
-const { Op } = require("sequelize");
+const { Op, json } = require("sequelize");
 const {
   UserAccount,
   ProductVarients,
@@ -9,7 +9,17 @@ const {
   CartItems,
   DiscountVoucher,
 } = require("../models/Assosiations");
-
+const vnpay = require("../services/vnpayService");
+const {
+  ProductCode,
+  VnpLocale,
+  IpnUnknownError,
+  IpnFailChecksum,
+  IpnOrderNotFound,
+  IpnInvalidAmount,
+  IpnSuccess,
+} = require("vnpay");
+const dateFormat = require("dateformat");
 const reserveStock = async (validCart) => {
   for (const shop of validCart) {
     for (const item of shop.CartItems) {
@@ -19,10 +29,11 @@ const reserveStock = async (validCart) => {
         },
       });
       if (!productVarient || item.quantity > productVarient.stock) {
-        throw new Error("Sản phẩm hiện không đủ tồn kho");
+        return false;
       }
       productVarient.stock -= item.quantity;
       await productVarient.save();
+      return true;
     }
   }
 };
@@ -63,8 +74,8 @@ const momoPayment = async (amount) => {
     var secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
     var partnerCode = "MOMO";
     var orderInfo = "pay with MoMo";
-    var redirectUrl = "https://webhook.site/your-redirect-url";
-    var ipnUrl = "https://webhook.site/your-ipn-url";
+    var redirectUrl = "http://localhost:3000/cart/checkout/result";
+    var ipnUrl = "http://localhost:3000/cart/checkout/result";
     var requestType = "payWithMethod";
     var orderId = partnerCode + new Date().getTime();
     var requestId = orderId;
@@ -130,7 +141,8 @@ const momoPayment = async (amount) => {
 };
 const checkoutWithMomo = async (req, res) => {
   try {
-    const { user_id, totalPayment, validCart } = req.body;
+    const { user_id, address, totalPayment, validCart, voucher, totalPerItem } =
+      req.body;
     const user = await UserAccount.findOne({
       where: {
         user_id,
@@ -142,13 +154,317 @@ const checkoutWithMomo = async (req, res) => {
         .json({ error: true, message: "Không tìm thấy người dùng" });
     }
 
-    await reserveStock(validCart);
+    const isValidVoucher = await checkVoucher(voucher);
+    if (!isValidVoucher) {
+      return res.status(400).json({
+        error: true,
+        message: "Voucher không hợp lệ",
+      });
+    }
+    const reserve = await reserveStock(validCart);
+    if (!reserve) {
+      return res.status(400).json({
+        error: true,
+        message: "Sản phẩm hiện không đủ tồn kho",
+      });
+    }
 
     const response = await momoPayment(totalPayment.final);
-
-    if (response.error) {
-      return res.status(400).json(response);
+    console.log(response);
+    if (response.success) {
     }
+    // if (response.error) {
+    //   if (validCart.length === 1) {
+    //     const order = await UserOrder.create({
+    //       user_id,
+    //       shop_id: validCart[0].shop_id,
+    //       user_address_id: address.user_address_id,
+    //       total_quantity: validCart[0].total_quantity,
+    //       total_price: validCart[0].total_price,
+    //       final_price: totalPayment.final,
+    //       shipping_fee: totalPayment.shippingFee,
+    //       discount_shipping_fee: totalPayment.discountShippingFee,
+    //       discount_price: totalPayment.discountPrice,
+    //       payment_method_id: 1,
+    //       transaction_code: "",
+    //       order_note: validCart[0].orderNote || "",
+    //     });
+    //     await OrderStatusHistory.create({
+    //       user_order_id: order.user_order_id,
+    //       order_status_id: 2,
+    //       createdAt: new Date(),
+    //       updatedAt: new Date(),
+    //     });
+
+    //     for (const item of validCart[0].CartItems) {
+    //       await UserOrderDetails.create({
+    //         user_order_id: order.user_order_id,
+    //         product_varients_id: item.product_varients_id,
+    //         varient_name: item.ProductVarient.Product.product_name,
+    //         quantity: item.quantity,
+    //         totalPrice: item.price,
+    //         discountPrice:
+    //           item.ProductVarient.sale_percents > 0
+    //             ? item.price * (1 - item.ProductVarient.sale_percents / 100)
+    //             : 0,
+    //         is_reviewed: false,
+    //         thumbnail:
+    //           item.ProductVarient.ProductClassify.thumbnail !== null ||
+    //           item.ProductVarient.ProductClassify.thumbnail !== "" ||
+    //           item.ProductVarient.ProductClassify.thumbnail !== undefined
+    //             ? item.ProductVarient.ProductClassify.thumbnail
+    //             : item.ProductVarient.Product.thumbnail,
+    //         classify:
+    //           item.ProductVarient.ProductSize != null &&
+    //           item.ProductVarient.classify !== null
+    //             ? item.ProductVarient.ProductClassify.product_classify_name +
+    //               " " +
+    //               item.ProductVarient.ProductSize.product_size_name
+    //             : item.ProductVarient.ProductSize === null &&
+    //               item.ProductVarient.ProductClassiy !== null
+    //             ? item.ProductVarient.ProductClassify.product_classify_name
+    //             : "",
+    //       });
+
+    //       await CartItems.destroy({
+    //         where: {
+    //           cart_item_id: item.cart_item_id,
+    //         },
+    //       });
+    //     }
+    //   } else if (validCart.length > 1) {
+    //     {
+    //       for (const shop of validCart) {
+    //         const total = totalPerItem.find(
+    //           (item) => item.shop_id === shop.shop_id
+    //         );
+    //         const order = await UserOrder.create({
+    //           user_id,
+    //           shop_id: shop.shop_id,
+    //           user_address_id: address.user_address_id,
+    //           total_quantity: shop.total_quantity,
+    //           total_price: shop.total_price,
+    //           final_price: total.totalPrice,
+    //           shipping_fee: total.shippingFee,
+    //           discount_shipping_fee: total.discountShippingFee,
+    //           discount_price: total.discountPrice,
+    //           payment_method_id: 1,
+    //           transaction_code: "",
+    //           order_note: shop.orderNote || "",
+    //         });
+    //         await OrderStatusHistory.create({
+    //           user_order_id: order.user_order_id,
+    //           order_status_id: 1,
+    //           createdAt: new Date(),
+    //           updatedAt: new Date(),
+    //         });
+    //         for (const item of shop.CartItems) {
+    //           await UserOrderDetails.create({
+    //             user_order_id: order.user_order_id,
+    //             product_varients_id: item.product_varients_id,
+    //             varient_name: item.ProductVarient.Product.product_name,
+    //             quantity: item.quantity,
+    //             totalPrice: item.price,
+    //             discountPrice:
+    //               item.ProductVarient.sale_percents > 0
+    //                 ? item.price * (1 - item.ProductVarient.sale_percents / 100)
+    //                 : 0,
+    //             is_reviewed: false,
+    //             thumbnail:
+    //               item.ProductVarient.ProductClassify.thumbnail !== null ||
+    //               item.ProductVarient.ProductClassify.thumbnail !== "" ||
+    //               item.ProductVarient.ProductClassify.thumbnail !== undefined
+    //                 ? item.ProductVarient.ProductClassify.thumbnail
+    //                 : item.ProductVarient.Product.thumbnail,
+    //             classify:
+    //               item.ProductVarient.ProductSize != null &&
+    //               item.ProductVarient.classify !== null
+    //                 ? item.ProductVarient.ProductClassify
+    //                     .product_classify_name +
+    //                   " " +
+    //                   item.ProductVarient.ProductSize.product_size_name
+    //                 : item.ProductVarient.ProductSize === null &&
+    //                   item.ProductVarient.ProductClassiy !== null
+    //                 ? item.ProductVarient.ProductClassify.product_classify_name
+    //                 : "",
+    //           });
+    //           await CartItems.destroy({
+    //             where: {
+    //               cart_item_id: item.cart_item_id,
+    //             },
+    //           });
+    //         }
+    //       }
+    //     }
+    //   }
+
+    //   if (voucher.discountVoucher) {
+    //     const discountVoucher = await DiscountVoucher.findOne({
+    //       where: {
+    //         discount_voucher_id: voucher.discountVoucher.discount_voucher_id,
+    //       },
+    //     });
+    //     discountVoucher.quantity -= 1;
+    //     await discountVoucher.save();
+    //   }
+    //   if (voucher.shippingVoucher) {
+    //     const shippingVoucher = await DiscountVoucher.findOne({
+    //       where: {
+    //         discount_voucher_id: voucher.shippingVoucher.discount_voucher_id,
+    //       },
+    //     });
+    //     shippingVoucher.quantity -= 1;
+    //     await shippingVoucher.save();
+    //   }
+    //   return res.status(400).json(response);
+    // } else {
+    //   if (validCart.length === 1) {
+    //     const order = await UserOrder.create({
+    //       user_id,
+    //       shop_id: validCart[0].shop_id,
+    //       user_address_id: address.user_address_id,
+    //       total_quantity: validCart[0].total_quantity,
+    //       total_price: validCart[0].total_price,
+    //       final_price: totalPayment.final,
+    //       shipping_fee: totalPayment.shippingFee,
+    //       discount_shipping_fee: totalPayment.discountShippingFee,
+    //       discount_price: totalPayment.discountPrice,
+    //       payment_method_id: 1,
+    //       transaction_code: "",
+    //       order_note: validCart[0].orderNote || "",
+    //     });
+    //     await OrderStatusHistory.create({
+    //       user_order_id: order.user_order_id,
+    //       order_status_id: 2,
+    //       createdAt: new Date(),
+    //       updatedAt: new Date(),
+    //     });
+
+    //     for (const item of validCart[0].CartItems) {
+    //       await UserOrderDetails.create({
+    //         user_order_id: order.user_order_id,
+    //         product_varients_id: item.product_varients_id,
+    //         varient_name: item.ProductVarient.Product.product_name,
+    //         quantity: item.quantity,
+    //         totalPrice: item.price,
+    //         discountPrice:
+    //           item.ProductVarient.sale_percents > 0
+    //             ? item.price * (1 - item.ProductVarient.sale_percents / 100)
+    //             : 0,
+    //         is_reviewed: false,
+    //         thumbnail:
+    //           item.ProductVarient.ProductClassify.thumbnail !== null ||
+    //           item.ProductVarient.ProductClassify.thumbnail !== "" ||
+    //           item.ProductVarient.ProductClassify.thumbnail !== undefined
+    //             ? item.ProductVarient.ProductClassify.thumbnail
+    //             : item.ProductVarient.Product.thumbnail,
+    //         classify:
+    //           item.ProductVarient.ProductSize != null &&
+    //           item.ProductVarient.classify !== null
+    //             ? item.ProductVarient.ProductClassify.product_classify_name +
+    //               " " +
+    //               item.ProductVarient.ProductSize.product_size_name
+    //             : item.ProductVarient.ProductSize === null &&
+    //               item.ProductVarient.ProductClassiy !== null
+    //             ? item.ProductVarient.ProductClassify.product_classify_name
+    //             : "",
+    //       });
+
+    //       await CartItems.destroy({
+    //         where: {
+    //           cart_item_id: item.cart_item_id,
+    //         },
+    //       });
+    //     }
+    //   } else if (validCart.length > 1) {
+    //     {
+    //       for (const shop of validCart) {
+    //         const total = totalPerItem.find(
+    //           (item) => item.shop_id === shop.shop_id
+    //         );
+    //         const order = await UserOrder.create({
+    //           user_id,
+    //           shop_id: shop.shop_id,
+    //           user_address_id: address.user_address_id,
+    //           total_quantity: shop.total_quantity,
+    //           total_price: shop.total_price,
+    //           final_price: total.totalPrice,
+    //           shipping_fee: total.shippingFee,
+    //           discount_shipping_fee: total.discountShippingFee,
+    //           discount_price: total.discountPrice,
+    //           payment_method_id: 1,
+    //           transaction_code: "",
+    //           order_note: shop.orderNote || "",
+    //         });
+    //         await OrderStatusHistory.create({
+    //           user_order_id: order.user_order_id,
+    //           order_status_id: 2,
+    //           createdAt: new Date(),
+    //           updatedAt: new Date(),
+    //         });
+    //         for (const item of shop.CartItems) {
+    //           await UserOrderDetails.create({
+    //             user_order_id: order.user_order_id,
+    //             product_varients_id: item.product_varients_id,
+    //             varient_name: item.ProductVarient.Product.product_name,
+    //             quantity: item.quantity,
+    //             totalPrice: item.price,
+    //             discountPrice:
+    //               item.ProductVarient.sale_percents > 0
+    //                 ? item.price * (1 - item.ProductVarient.sale_percents / 100)
+    //                 : 0,
+    //             is_reviewed: false,
+    //             thumbnail:
+    //               item.ProductVarient.ProductClassify.thumbnail !== null ||
+    //               item.ProductVarient.ProductClassify.thumbnail !== "" ||
+    //               item.ProductVarient.ProductClassify.thumbnail !== undefined
+    //                 ? item.ProductVarient.ProductClassify.thumbnail
+    //                 : item.ProductVarient.Product.thumbnail,
+    //             classify:
+    //               item.ProductVarient.ProductSize != null &&
+    //               item.ProductVarient.classify !== null
+    //                 ? item.ProductVarient.ProductClassify
+    //                     .product_classify_name +
+    //                   " " +
+    //                   item.ProductVarient.ProductSize.product_size_name
+    //                 : item.ProductVarient.ProductSize === null &&
+    //                   item.ProductVarient.ProductClassiy !== null
+    //                 ? item.ProductVarient.ProductClassify.product_classify_name
+    //                 : "",
+    //           });
+    //           await CartItems.destroy({
+    //             where: {
+    //               cart_item_id: item.cart_item_id,
+    //             },
+    //           });
+    //         }
+    //       }
+    //     }
+    //   }
+
+    //   if (voucher.discountVoucher) {
+    //     const discountVoucher = await DiscountVoucher.findOne({
+    //       where: {
+    //         discount_voucher_id: voucher.discountVoucher.discount_voucher_id,
+    //       },
+    //     });
+    //     discountVoucher.quantity -= 1;
+    //     await discountVoucher.save();
+    //   }
+    //   if (voucher.shippingVoucher) {
+    //     const shippingVoucher = await DiscountVoucher.findOne({
+    //       where: {
+    //         discount_voucher_id: voucher.shippingVoucher.discount_voucher_id,
+    //       },
+    //     });
+    //     shippingVoucher.quantity -= 1;
+    //     await shippingVoucher.save();
+    //   }
+    //   return res.status(200).json({
+    //     success: true,
+    //     message: "Thanh toán thành công",
+    //   });
+    // }
   } catch (error) {
     console.log("Error in checkoutWithMomo: ", error);
     return res
@@ -159,12 +475,261 @@ const checkoutWithMomo = async (req, res) => {
 
 const checkoutWithVNPay = async (req, res) => {
   try {
-    const { user_id, totalPayment, validCart } = req.body;
+    const { user_id, address, totalPayment, validCart, voucher, totalPerItem } =
+      req.body;
+    console.log(req.body);
+    const user = await UserAccount.findOne({
+      where: {
+        user_id,
+      },
+    });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ error: true, message: "Không tìm thấy người dùng" });
+    }
+
+    const isValidVoucher = await checkVoucher(voucher);
+    if (!isValidVoucher) {
+      return res.status(400).json({
+        error: true,
+        message: "Voucher không hợp lệ",
+      });
+    }
+    const reserve = await reserveStock(validCart);
+    if (!reserve) {
+      return res.status(400).json({
+        error: true,
+        message: "Sản phẩm hiện không đủ tồn kho",
+      });
+    }
+
+    const date = new Date();
+    const createdDate = dateFormat(date, "yyyymmddHHMMss");
+    const tommorow = new Date(date.setDate(date.getDate() + 1));
+    const expiredDate = dateFormat(tommorow, "yyyymmddHHMMss");
+
+    const ref = `EzyEcommerce_${user_id}_${createdDate}_${expiredDate}`;
+
+    const paymentUrl = await vnpay.buildPaymentUrl({
+      vnp_Amount: totalPayment.final,
+      vnp_IpAddr: req.ip,
+      vnp_TxnRef: ref,
+      vnp_OrderInfo: "Thanh toán đơn hàng",
+      vnp_OrderType: ProductCode.Other,
+      vnp_ReturnUrl: "http://localhost:3000/cart/checkout/result",
+      vnp_Locale: VnpLocale.VN,
+      vnp_CreateDate: createdDate,
+      vnp_ExpireDate: expiredDate,
+    });
+    if (!paymentUrl) {
+      return res.status(400).json({
+        error: true,
+        message: "Không thể tạo URL thanh toán",
+      });
+    }
+
+    if (validCart.length === 1) {
+      const order = await UserOrder.create({
+        user_id,
+        shop_id: validCart[0].shop_id,
+        user_address_id: address.user_address_id,
+        total_quantity: validCart[0].total_quantity,
+        total_price: validCart[0].total_price,
+        final_price: totalPayment.final,
+        shipping_fee: totalPayment.shippingFee,
+        discount_shipping_fee: totalPayment.discountShippingFee,
+        discount_price: totalPayment.discountPrice,
+        payment_method_id: 3,
+        transaction_code: ref,
+        order_note: validCart[0].orderNote || "",
+      });
+      await OrderStatusHistory.create({
+        user_order_id: order.user_order_id,
+        order_status_id: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      for (const item of validCart[0].CartItems) {
+        await UserOrderDetails.create({
+          user_order_id: order.user_order_id,
+          product_varients_id: item.product_varients_id,
+          varient_name: item.ProductVarient.Product.product_name,
+          quantity: item.quantity,
+          totalPrice: item.price,
+          discountPrice:
+            item.ProductVarient.sale_percents > 0
+              ? item.price * (1 - item.ProductVarient.sale_percents / 100)
+              : 0,
+          is_reviewed: false,
+          thumbnail:
+            item.ProductVarient.ProductClassify !== null &&
+            (item.ProductVarient.ProductClassify?.thumbnail !== null ||
+              item.ProductVarient.ProductClassify?.thumbnail !== "" ||
+              item.ProductVarient.ProductClassify?.thumbnail !== undefined)
+              ? item.ProductVarient.ProductClassify.thumbnail
+              : item.ProductVarient.Product.thumbnail,
+
+          classify:
+            item.ProductVarient.ProductClassify !== null
+              ? item.ProductVarient.ProductSize != null &&
+                item.ProductVarient.classify !== null
+                ? item.ProductVarient.ProductClassify.product_classify_name +
+                  " " +
+                  item.ProductVarient.ProductSize.product_size_name
+                : item.ProductVarient.ProductSize === null &&
+                  item.ProductVarient.ProductClassiy !== null
+                ? item.ProductVarient.ProductClassify.product_classify_name
+                : ""
+              : "",
+        });
+
+        await CartItems.destroy({
+          where: {
+            cart_item_id: item.cart_item_id,
+          },
+        });
+      }
+    } else if (validCart.length > 1) {
+      {
+        for (const shop of validCart) {
+          const total = totalPerItem.find(
+            (item) => item.shop_id === shop.shop_id
+          );
+          const order = await UserOrder.create({
+            user_id,
+            shop_id: shop.shop_id,
+            user_address_id: address.user_address_id,
+            total_quantity: shop.total_quantity,
+            total_price: shop.total_price,
+            final_price: total.totalPrice,
+            shipping_fee: total.shippingFee,
+            discount_shipping_fee: total.discountShippingFee,
+            discount_price: total.discountPrice,
+            payment_method_id: 1,
+            transaction_code: "",
+            order_note: shop.orderNote || "",
+          });
+          await OrderStatusHistory.create({
+            user_order_id: order.user_order_id,
+            order_status_id: 2,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          for (const item of shop.CartItems) {
+            await UserOrderDetails.create({
+              user_order_id: order.user_order_id,
+              product_varients_id: item.product_varients_id,
+              varient_name: item.ProductVarient.Product.product_name,
+              quantity: item.quantity,
+              totalPrice: item.price,
+              discountPrice:
+                item.ProductVarient.sale_percents > 0
+                  ? item.price * (1 - item.ProductVarient.sale_percents / 100)
+                  : 0,
+              is_reviewed: false,
+              thumbnail:
+                item.ProductVarient.ProductClassify !== null &&
+                (item.ProductVarient.ProductClassify?.thumbnail !== null ||
+                  item.ProductVarient.ProductClassify?.thumbnail !== "" ||
+                  item.ProductVarient.ProductClassify?.thumbnail !== undefined)
+                  ? item.ProductVarient.ProductClassify.thumbnail
+                  : item.ProductVarient.Product.thumbnail,
+
+              classify:
+                item.ProductVarient.ProductClassify !== null
+                  ? item.ProductVarient.ProductSize != null &&
+                    item.ProductVarient.classify !== null
+                    ? item.ProductVarient.ProductClassify
+                        .product_classify_name +
+                      " " +
+                      item.ProductVarient.ProductSize.product_size_name
+                    : item.ProductVarient.ProductSize === null &&
+                      item.ProductVarient.ProductClassiy !== null
+                    ? item.ProductVarient.ProductClassify.product_classify_name
+                    : ""
+                  : "",
+            });
+            await CartItems.destroy({
+              where: {
+                cart_item_id: item.cart_item_id,
+              },
+            });
+          }
+        }
+      }
+    }
+
+    if (voucher.discountVoucher) {
+      const discountVoucher = await DiscountVoucher.findOne({
+        where: {
+          discount_voucher_id: voucher.discountVoucher.discount_voucher_id,
+        },
+      });
+      discountVoucher.quantity -= 1;
+      await discountVoucher.save();
+    }
+    if (voucher.shippingVoucher) {
+      const shippingVoucher = await DiscountVoucher.findOne({
+        where: {
+          discount_voucher_id: voucher.shippingVoucher.discount_voucher_id,
+        },
+      });
+      shippingVoucher.quantity -= 1;
+      await shippingVoucher.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      paymentUrl,
+    });
   } catch (error) {
     console.log("Error in checkoutWithVNPay: ", error);
     return res
       .status(500)
       .json({ error: true, message: error.message || error });
+  }
+};
+
+const vnPayIPN = async (req, res) => {
+  try {
+    const verify = vnpay.verifyIpnCall(req.query);
+    if (!verify.isVerified) {
+      return res.json(IpnFailChecksum);
+    }
+    if (!verify.isSuccess) {
+      return res.json(IpnOrderNotFound);
+    }
+    const foundOrderByTransactionCode = await UserOrder.findAll({
+      where: {
+        transaction_code: verify.vnp_TxnRef,
+      },
+      include: [
+        {
+          model: OrderStatusHistory,
+        },
+      ],
+    });
+
+    foundOrderByTransactionCode.forEach(async (order) => {
+      if (
+        order.OrderStatusHistories[order.OrderStatusHistories.length - 1]
+          .order_status_id === 1
+      ) {
+        await OrderStatusHistory.create({
+          user_order_id: order.user_order_id,
+          order_status_id: 2,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    });
+
+    return res.json(IpnSuccess);
+  } catch (error) {
+    console.log("Error in vnPayIPN: ", error);
+    return res.json(IpnUnknownError);
   }
 };
 
@@ -271,20 +836,24 @@ const checkoutWithCOD = async (req, res) => {
               : 0,
           is_reviewed: false,
           thumbnail:
-            item.ProductVarient.ProductClassify.thumbnail !== null ||
-            item.ProductVarient.ProductClassify.thumbnail !== "" ||
-            item.ProductVarient.ProductClassify.thumbnail !== undefined
+            item.ProductVarient.ProductClassify !== null &&
+            (item.ProductVarient.ProductClassify?.thumbnail !== null ||
+              item.ProductVarient.ProductClassify?.thumbnail !== "" ||
+              item.ProductVarient.ProductClassify?.thumbnail !== undefined)
               ? item.ProductVarient.ProductClassify.thumbnail
               : item.ProductVarient.Product.thumbnail,
+
           classify:
-            item.ProductVarient.ProductSize != null &&
-            item.ProductVarient.classify !== null
-              ? item.ProductVarient.ProductClassify.product_classify_name +
-                " " +
-                item.ProductVarient.ProductSize.product_size_name
-              : item.ProductVarient.ProductSize === null &&
-                item.ProductVarient.ProductClassiy !== null
-              ? item.ProductVarient.ProductClassify.product_classify_name
+            item.ProductVarient.ProductClassify !== null
+              ? item.ProductVarient.ProductSize != null &&
+                item.ProductVarient.classify !== null
+                ? item.ProductVarient.ProductClassify.product_classify_name +
+                  " " +
+                  item.ProductVarient.ProductSize.product_size_name
+                : item.ProductVarient.ProductSize === null &&
+                  item.ProductVarient.ProductClassiy !== null
+                ? item.ProductVarient.ProductClassify.product_classify_name
+                : ""
               : "",
         });
 
@@ -395,4 +964,5 @@ module.exports = {
   checkoutWithEzyWallet,
   checkoutWithVNPay,
   checkoutWithMomo,
+  vnPayIPN,
 };
