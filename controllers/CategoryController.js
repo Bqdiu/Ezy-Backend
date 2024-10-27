@@ -204,12 +204,6 @@ const updateCategory = async (req, res) => {
 
   console.log('Update category request:', req.body);
 
-  if (!category_name) {
-    return res.status(400).json({
-      error: true,
-      message: "Tên danh mục là bắt buộc.",
-    });
-  }
 
   try {
     const category = await Category.findOne({

@@ -789,10 +789,11 @@ const getProductAndShopBySearch = async (req, res) => {
 const getProductBySubCategory = async (req, res) => {
   try {
     const { sub_category_id } = req.params;
-    const { pageNumbers = 1, limit = 28, sortBy } = req.query;
+    const { shop_id, pageNumbers = 1, limit = 28, sortBy } = req.query;
     const offset = (pageNumbers - 1) * limit;
 
     let whereConditions = {
+      shop_id,
       stock: { [Sequelize.Op.gt]: 0 },
     };
     if (sub_category_id != -1) {
@@ -933,7 +934,7 @@ const getShopProducts = async (req, res) => {
           model: ProductImgs,
         },
         {
-          model: SubCategory
+          model: SubCategory,
         },
         {
           model: ProductVarients,
@@ -971,7 +972,14 @@ const getShopProducts = async (req, res) => {
 };
 
 const searchShopProducts = async (req, res) => {
-  const { shop_id, product_status, product_name, sub_category_id, page = 1, limit = 5 } = req.query;
+  const {
+    shop_id,
+    product_status,
+    product_name,
+    sub_category_id,
+    page = 1,
+    limit = 5,
+  } = req.query;
   const parsedPage = parseInt(page, 10);
   const parsedLimit = parseInt(limit, 10);
   const offset = (parsedPage - 1) * parsedLimit;

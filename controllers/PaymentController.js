@@ -7,6 +7,7 @@ const {
   UserOrderDetails,
   OrderStatusHistory,
   CartItems,
+  DiscountVoucher,
 } = require("../models/Assosiations");
 
 const reserveStock = async (validCart) => {
@@ -178,9 +179,36 @@ const checkoutWithEzyWallet = async (req, res) => {
   }
 };
 
+const checkVoucher = async (selectedVoucher) => {
+  if (selectedVoucher.discountVoucher) {
+    const discountVoucher = await DiscountVoucher.findOne({
+      where: {
+        discount_voucher_id:
+          selectedVoucher.discountVoucher.discount_voucher_id,
+      },
+    });
+    if (!discountVoucher || discountVoucher.quantity === 0) {
+      return false;
+    }
+  }
+  if (selectedVoucher.shippingVoucher) {
+    const shippingVoucher = await DiscountVoucher.findOne({
+      where: {
+        discount_voucher_id:
+          selectedVoucher.shippingVoucher.discount_voucher_id,
+      },
+    });
+    if (!shippingVoucher || shippingVoucher.quantity === 0) {
+      return false;
+    }
+  }
+  return true;
+};
+
 const checkoutWithCOD = async (req, res) => {
   try {
-    const { user_id, address, totalPayment, validCart } = req.body;
+    const { user_id, address, totalPayment, validCart, voucher, totalPerItem } =
+      req.body;
 
     const user = await UserAccount.findOne({
       where: {
@@ -200,6 +228,14 @@ const checkoutWithCOD = async (req, res) => {
         message: "Sản phẩm hiện không đủ tồn kho",
       });
     }
+    const isValidVoucher = await checkVoucher(voucher);
+    if (!isValidVoucher) {
+      return res.status(400).json({
+        error: true,
+        message: "Voucher không hợp lệ",
+      });
+    }
+
     if (validCart.length === 1) {
       const order = await UserOrder.create({
         user_id,
@@ -261,22 +297,26 @@ const checkoutWithCOD = async (req, res) => {
     } else if (validCart.length > 1) {
       {
         for (const shop of validCart) {
+          const total = totalPerItem.find(
+            (item) => item.shop_id === shop.shop_id
+          );
           const order = await UserOrder.create({
             user_id,
             shop_id: shop.shop_id,
-            address: user.address,
-            total_quantity: shop.totalQuantity,
-            total_price: shop.totalPrice,
-            shipping_fee: shop.shippingFee,
-            discount_shipping_fee: shop.discountShippingFee,
-            discount_price: shop.discountPrice,
+            user_address_id: address.user_address_id,
+            total_quantity: shop.total_quantity,
+            total_price: shop.total_price,
+            final_price: total.totalPrice,
+            shipping_fee: total.shippingFee,
+            discount_shipping_fee: total.discountShippingFee,
+            discount_price: total.discountPrice,
             payment_method_id: 1,
             transaction_code: "",
-            order_note: shop.orderNote,
+            order_note: shop.orderNote || "",
           });
           await OrderStatusHistory.create({
             user_order_id: order.user_order_id,
-            user_status_id: 2,
+            order_status_id: 2,
             createdAt: new Date(),
             updatedAt: new Date(),
           });
@@ -309,9 +349,33 @@ const checkoutWithCOD = async (req, res) => {
                   ? item.ProductVarient.ProductClassify.product_classify_name
                   : "",
             });
+            await CartItems.destroy({
+              where: {
+                cart_item_id: item.cart_item_id,
+              },
+            });
           }
         }
       }
+    }
+
+    if (voucher.discountVoucher) {
+      const discountVoucher = await DiscountVoucher.findOne({
+        where: {
+          discount_voucher_id: voucher.discountVoucher.discount_voucher_id,
+        },
+      });
+      discountVoucher.quantity -= 1;
+      await discountVoucher.save();
+    }
+    if (voucher.shippingVoucher) {
+      const shippingVoucher = await DiscountVoucher.findOne({
+        where: {
+          discount_voucher_id: voucher.shippingVoucher.discount_voucher_id,
+        },
+      });
+      shippingVoucher.quantity -= 1;
+      await shippingVoucher.save();
     }
 
     return res.status(200).json({

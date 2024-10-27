@@ -109,7 +109,10 @@ const {
 const {
   getAllSaleEvents,
   addSaleEvent,
+  deleteSaleEvent,
+  addCategoriesToEvent,
 } = require("../controllers/SaleEventController");
+const { ro } = require("translate-google/languages");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -220,5 +223,6 @@ router.post("/checkout/ezywallet", checkoutWithEzyWallet);
 //-----------------SaleEvent-----------------
 router.get("/sale-events/get-event", getAllSaleEvents);
 router.post("/sale-events/add-event", addSaleEvent);
-
+router.delete("/sale-events/delete-event/:id", deleteSaleEvent);
+router.post("/sale-events/set-categories/:id", addCategoriesToEvent);
 module.exports = router;

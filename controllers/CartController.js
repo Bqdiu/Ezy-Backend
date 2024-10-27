@@ -231,7 +231,7 @@ const addToCart = async (req, res) => {
     if (quantity > productVarient.stock) {
       return res.status(400).json({
         error: true,
-        message: "Số lượng sản phẩm không đủ",
+        message: "Số lượng sản phẩm thêm vào giỏ hàng hiện không đủ",
       });
     }
 
@@ -581,7 +581,7 @@ const removeAllItems = async (req, res) => {
     const cartSection = await CartSections.findOne({
       cart_id,
     });
-    cartSection.destroy();
+    await cartSection.destroy();
     res.status(200).json({
       success: true,
       message: "Xóa tất cả sản phẩm trong giỏ hàng thành công",
@@ -602,7 +602,7 @@ const removeItem = async (req, res) => {
         cart_item_id,
       },
     });
-    cartItem.destroy();
+    await cartItem.destroy();
     res.status(200).json({
       success: true,
       message: "Xóa sản phẩm trong giỏ hàng thành công",
