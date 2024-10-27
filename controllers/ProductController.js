@@ -1100,7 +1100,51 @@ const updateProductStatus = async (req, res) => {
       message: error.message || error,
     });
   }
-};
+}
+
+const getProductByID = async (req, res) => {
+  try {
+    const { product_id } = req.query;
+    const product = await Product.findOne({
+      where: { product_id },
+      include: [
+        {
+          model: SubCategory,
+        },
+        {
+          model: ProductImgs,
+        },
+        {
+          model: ProductVarients,
+          include: [
+            {
+              model: ProductSize,
+            },
+            {
+              model: ProductClassify,
+            },
+          ],
+        }
+      ],
+    });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      })
+    }
+    res.status(200).json({
+      success: true,
+      data: product,
+    })
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    })
+  }
+}
+
 
 module.exports = {
   getAllProducts,
@@ -1118,4 +1162,5 @@ module.exports = {
   getShopProducts,
   searchShopProducts,
   updateProductStatus,
+  getProductByID
 };
