@@ -111,6 +111,7 @@ const {
   addSaleEvent,
   deleteSaleEvent,
   addCategoriesToEvent,
+  getAllCategoryIdsForEvent,
 } = require("../controllers/SaleEventController");
 const { ro } = require("translate-google/languages");
 
@@ -225,4 +226,5 @@ router.get("/sale-events/get-event", getAllSaleEvents);
 router.post("/sale-events/add-event", addSaleEvent);
 router.delete("/sale-events/delete-event/:id", deleteSaleEvent);
 router.post("/sale-events/set-categories/:id", addCategoriesToEvent);
+router.get("/sale-events/get-categories/:id", getAllCategoryIdsForEvent);
 module.exports = router;
