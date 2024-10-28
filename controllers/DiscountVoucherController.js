@@ -153,6 +153,70 @@ const getVoucherList = async (req, res) => {
   }
 };
 
+const getAllVouchers = async (req, res) => {
+  try {
+    const vouchers = await DiscountVoucher.findAll();
+    res.status(200).json({ success: true, vouchers });
+
+  } catch (error) {
+    console.log("Lỗi fetch voucher: ", error);
+    res.status(500).json({ error: true, message: error.message || error });
+    
+  }
+};
+
+const addVoucher = async (req, res) => {
+  try {
+    const {
+      sale_events_id,
+      discount_voucher_type_id,
+      discount_voucher_code,
+      discount_voucher_name,
+      description,
+      discount_type,
+      min_order_value,
+      discount_value,
+      discount_max_value,
+      quantity,
+      started_at,
+      ended_at,
+    } = req.body;
+
+    const newVoucher = await DiscountVoucher.create({
+      sale_events_id,
+      discount_voucher_type_id,
+      discount_voucher_code,
+      discount_voucher_name,
+      description,
+      discount_type,
+      min_order_value,
+      discount_value,
+      discount_max_value,
+      quantity,
+      started_at,
+      ended_at,
+    });
+
+    res.status(201).json({ success: true, voucher: newVoucher });
+  } catch (error) {
+    console.error("Error adding voucher: ", error);
+    res.status(500).json({ error: true, message: error.message || "Server error" });
+  }
+};
+
+const getAllDiscountVoucherType = async (req, res) => {
+  try {
+    const voucherTypes = await DiscountVoucherType.findAll();
+    res.status(200).json({ success: true, voucherTypes });
+  } catch (error) {
+    console.error("Error fetching voucher types: ", error);
+    res.status(500).json({ error: true, message: error.message || "Server error" });
+  }
+}
+
 module.exports = {
   getVoucherList,
+  getAllVouchers,
+  addVoucher,
+  getAllDiscountVoucherType,
 };
