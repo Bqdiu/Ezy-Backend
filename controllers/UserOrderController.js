@@ -15,13 +15,13 @@ const checkPaid = async (orderId) => {
       where: {
         user_order_id: orderId,
       },
+      order: [["createdAt", "DESC"]],
     });
 
-    if (orderStatusHistory[0].order_status_id === 1) {
-      return true;
-    } else {
-      return false;
-    }
+    const isPendingOnly = orderStatusHistory.every(
+      (status) => status.order_status_id === 1
+    );
+    return isPendingOnly;
   } catch (error) {
     console.log("Lỗi khi lấy trạng thái đơn hàng: ", error);
   }
@@ -62,9 +62,9 @@ const deleteOrder = async (orderId, selectedVoucher) => {
           }
         );
       }
-      order.UserOrderDetails.forEach(async (product) => {
-        console.log("order: ", product);
 
+      order.UserOrderDetails.forEach(async (product) => {
+        console.log("order: ", product.quantity);
         await ProductVarients.increment(
           { stock: product.quantity },
           {

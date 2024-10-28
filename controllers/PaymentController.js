@@ -33,8 +33,6 @@ const reserveStock = async (validCart) => {
       if (!productVarient || item.quantity > productVarient.stock) {
         return false;
       }
-      productVarient.stock -= item.quantity;
-      await productVarient.save();
       return true;
     }
   }

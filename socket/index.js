@@ -34,14 +34,18 @@ io.on("connection", (socket) => {
       const timeLeft = Date.now() - timeStampMs;
 
       console.log("timeLeft: ", timeLeft);
-      if (timeLeft >= 10 * 60 * 1000) {
+      if (timeLeft >= 2 * 60 * 1000) {
         const isNotPaid = await checkPaid(orderID);
 
         if (isNotPaid) {
           clearInterval(interval);
           await deleteOrder(orderID, selectedVoucher);
+          console.log(
+            `Đơn hàng ${orderID} đã bị xóa do chưa thanh toán và chỉ có trạng thái "Chờ thanh toán".`
+          );
         } else {
           clearInterval(interval);
+          console.log(`Đơn hàng ${orderID} đã có trạng thái khác, không xóa.`);
         }
       }
     }, 60000); // Lặp lại mỗi phút
