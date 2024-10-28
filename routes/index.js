@@ -98,7 +98,12 @@ const {
   removeAllItems,
   removeItem,
 } = require("../controllers/CartController");
-const { getVoucherList } = require("../controllers/DiscountVoucherController");
+const { 
+  getVoucherList,
+  getAllVouchers,
+  addVoucher,
+  getAllDiscountVoucherType,
+} = require("../controllers/DiscountVoucherController");
 
 const {
   checkoutWithCOD,
@@ -216,6 +221,9 @@ router.post("/cart/remove-item", removeItem);
 
 //-----------------DiscountVoucher-----------------
 router.post("/voucher/voucher-list", getVoucherList);
+router.get("/voucher/get-all-voucher", getAllVouchers);
+router.post("/voucher/add-voucher", addVoucher);
+router.get("/voucher/types", getAllDiscountVoucherType);
 
 //-----------------Checkout-----------------
 router.post("/checkout/cod", checkoutWithCOD);
