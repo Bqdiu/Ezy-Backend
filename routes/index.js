@@ -57,6 +57,7 @@ const {
   removeAddress,
   getAddresses,
   getDefaultAddress,
+  getUserDataByUserId,
 } = require("../controllers/UserController");
 const { getAllRole } = require("../controllers/RoleController");
 const {
@@ -98,7 +99,7 @@ const {
   removeAllItems,
   removeItem,
 } = require("../controllers/CartController");
-const { 
+const {
   getVoucherList,
   getAllVouchers,
   addVoucher,
@@ -121,6 +122,7 @@ const {
   getAllCategoryIdsForEvent,
 } = require("../controllers/SaleEventController");
 const { ro } = require("translate-google/languages");
+const { getOrderStatus } = require("../controllers/OrderStatusController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -181,6 +183,7 @@ router.get("/suggest-products-limit", getLimitSuggestProducts);
 router.get("/suggest-products", getSuggestProducts);
 //-----------------UserAccount-----------------
 router.get("/all-user", getAllUser);
+router.get("/get-user-by-id", getUserDataByUserId);
 router.get("/check-email", checkEmailExists);
 router.get("/check-username", checkUsernameExists);
 router.post("/seller-register", sellerRegister);
@@ -237,4 +240,7 @@ router.post("/sale-events/add-event", addSaleEvent);
 router.delete("/sale-events/delete-event/:id", deleteSaleEvent);
 router.post("/sale-events/set-categories/:id", addCategoriesToEvent);
 router.get("/sale-events/get-categories/:id", getAllCategoryIdsForEvent);
+
+//-----------------Order-----------------
+router.get("/order/order-status", getOrderStatus);
 module.exports = router;

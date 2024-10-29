@@ -3,6 +3,7 @@ const {
   Role,
   UserAddress,
   UserWallet,
+  Shop,
 } = require("../models/Assosiations");
 const { Op } = require("sequelize");
 const admin = require("../firebase/firebaseAdmin");
@@ -343,6 +344,36 @@ const getUserData = async (req, res) => {
         message: "User not found",
       });
     }
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const getUserDataByUserId = async (req, res) => {
+  try {
+    const { user_id } = req.query;
+    const user = await UserAccount.findOne({
+      where: { user_id: user_id },
+      include: [
+        {
+          model: Shop,
+        },
+      ],
+    });
+    if (!user) {
+      return res.status(404).json({
+        error: true,
+        message: "Không tìm thấy người dùng",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      user,
+    });
   } catch (error) {
     console.error("Error fetching user data:", error);
     res.status(500).json({
@@ -829,4 +860,5 @@ module.exports = {
   setDefaultAddress,
   removeAddress,
   getDefaultAddress,
+  getUserDataByUserId,
 };
