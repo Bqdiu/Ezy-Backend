@@ -246,7 +246,7 @@ const updateCategory = async (req, res) => {
       message: error.message || 'Có lỗi xảy ra khi cập nhật danh mục.',
     });
   }
-};
+}
 
 const getSubCategoriesByID = async (req, res) => {
   const { sub_category_id } = req.params;
@@ -273,6 +273,121 @@ const getSubCategoriesByID = async (req, res) => {
     });
   }
 }
+const addSubCategory = async (req, res) => {
+  const { category_id } = req.params;
+  const { sub_category_name } = req.body;
+
+  try {
+    // Validate that category_id and sub_category_name are provided
+    if (!category_id || !sub_category_name) {
+      return res.status(400).json({
+        error: true,
+        message: "category_id và sub_category_name là bắt buộc.",
+      });
+    }
+
+    // Create a new subcategory
+    const newSubCategory = await SubCategory.create({
+      category_id,
+      sub_category_name,
+    });
+
+    res.status(201).json({
+      success: true,
+      data: newSubCategory,
+    });
+  } catch (error) {
+    console.error("Lổi khi thêm danh mục con: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+}
+
+const updateSubCategory = async (req, res) => {
+  const { sub_category_id } = req.params; 
+  const { sub_category_name } = req.body;
+
+  try {
+    // Check if the subcategory exists
+    const subCategory = await SubCategory.findOne({
+      where: { sub_category_id },
+    });
+
+    if (!subCategory) {
+      return res.status(404).json({
+        error: true,
+        message: "Danh mục không tồn tại.",
+      });
+    }
+
+    // Update subcategory
+    if (sub_category_name) {
+      await subCategory.update({ sub_category_name });
+    }
+
+    const updatedSubCategory = await subCategory.reload();
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật danh mục thành công.",
+      data: updatedSubCategory,
+    });
+  } catch (error) {
+    console.error("Lổi khi cập nhật danh mục: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+}
+
+const deleteSubCategory = async (req, res) => {
+  const { sub_category_id } = req.params;
+
+  try {
+    // Check if any products are associated with the subcategory
+    const products = await Product.findAll({
+      where: {
+        sub_category_id: sub_category_id
+      }
+    });
+
+    if (products.length > 0) {
+      return res.status(400).json({
+        error: true,
+        message: "Danh mục con đang được sử dụng không thể xóa."
+      });
+    }
+
+    const deletedSubCategory = await SubCategory.destroy({
+      where: {
+        sub_category_id: sub_category_id
+      }
+    });
+
+    if (!deletedSubCategory) {
+      return res.status(404).json({
+        error: true,
+        message: "Danh mục không tồn tại."
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Xóa danh mục thành công."
+    });
+
+  } catch (error) {
+    console.error("Lổi khi xóa danh mục: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+}
+
 module.exports = {
   getAllCategories,
   getAllCategoriesWithSubCategories,
@@ -282,5 +397,8 @@ module.exports = {
   getCategoriesByShop,
   deleteCategory,
   updateCategory,
-  getSubCategoriesByID
+  getSubCategoriesByID,
+  addSubCategory,
+  updateSubCategory,
+  deleteSubCategory,
 };

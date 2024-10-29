@@ -16,6 +16,9 @@ const {
   deleteCategory,
   updateCategory,
   getSubCategoriesByID,
+  addSubCategory,
+  updateSubCategory,
+  deleteSubCategory,
 } = require("../controllers/CategoryController");
 const {
   getAllProducts,
@@ -134,6 +137,9 @@ router.get("/shop-categories", getCategoriesByShop);
 router.delete("/delete-category/:category_id", deleteCategory);
 router.put("/update-category/:category_id", updateCategory);
 router.get("/get-sub-categories/:sub_category_id", getSubCategoriesByID);
+router.post("/add-sub-category/:category_id", addSubCategory);
+router.put("/update-sub-category/:sub_category_id", updateSubCategory);
+router.delete("/delete-sub-category/:sub_category_id", deleteSubCategory);
 
 //------------------Shop--------------------------------
 router.get("/shop-products", getAllProductsOfShop);
