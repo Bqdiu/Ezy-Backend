@@ -529,166 +529,15 @@ const checkoutWithVNPay = async (req, res) => {
       });
     }
 
-    if (validCart.length === 1) {
-      const order = await UserOrder.create({
-        user_id,
-        shop_id: validCart[0].shop_id,
-        user_address_id: address.user_address_id,
-        total_quantity: validCart[0].total_quantity,
-        total_price: validCart[0].total_price,
-        final_price: totalPayment.final,
-        shipping_fee: totalPayment.shippingFee,
-        discount_shipping_fee: totalPayment.discountShippingFee,
-        discount_price: totalPayment.discountPrice,
-        payment_method_id: 3,
-        transaction_code: ref,
-        order_note: validCart[0].orderNote || "",
-      });
-      await OrderStatusHistory.create({
-        user_order_id: order.user_order_id,
-        order_status_id: 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      for (const item of validCart[0].CartItems) {
-        await UserOrderDetails.create({
-          user_order_id: order.user_order_id,
-          product_varients_id: item.product_varients_id,
-          varient_name: item.ProductVarient.Product.product_name,
-          quantity: item.quantity,
-          totalPrice: item.price,
-          discountPrice:
-            item.ProductVarient.sale_percents > 0
-              ? item.price * (1 - item.ProductVarient.sale_percents / 100)
-              : 0,
-          is_reviewed: false,
-          thumbnail:
-            item.ProductVarient.ProductClassify !== null &&
-            (item.ProductVarient.ProductClassify?.thumbnail !== null ||
-              item.ProductVarient.ProductClassify?.thumbnail !== "" ||
-              item.ProductVarient.ProductClassify?.thumbnail !== undefined)
-              ? item.ProductVarient.ProductClassify.thumbnail
-              : item.ProductVarient.Product.thumbnail,
-
-          classify:
-            item.ProductVarient.ProductClassify !== null
-              ? item.ProductVarient.ProductSize != null &&
-                item.ProductVarient.classify !== null
-                ? item.ProductVarient.ProductClassify.product_classify_name +
-                  " " +
-                  item.ProductVarient.ProductSize.product_size_name
-                : item.ProductVarient.ProductSize === null &&
-                  item.ProductVarient.ProductClassiy !== null
-                ? item.ProductVarient.ProductClassify.product_classify_name
-                : ""
-              : "",
-        });
-
-        await CartItems.destroy({
-          where: {
-            cart_item_id: item.cart_item_id,
-          },
-        });
-        io.emit("newOrder", {
-          orderID: order.user_order_id,
-          selectedVoucher: voucher,
-          timeStamp: new Date(),
-        });
-      }
-    } else if (validCart.length > 1) {
-      {
-        for (const shop of validCart) {
-          const total = totalPerItem.find(
-            (item) => item.shop_id === shop.shop_id
-          );
-          const order = await UserOrder.create({
-            user_id,
-            shop_id: shop.shop_id,
-            user_address_id: address.user_address_id,
-            total_quantity: shop.total_quantity,
-            total_price: shop.total_price,
-            final_price: total.totalPrice,
-            shipping_fee: total.shippingFee,
-            discount_shipping_fee: total.discountShippingFee,
-            discount_price: total.discountPrice,
-            payment_method_id: 1,
-            transaction_code: "",
-            order_note: shop.orderNote || "",
-          });
-          await OrderStatusHistory.create({
-            user_order_id: order.user_order_id,
-            order_status_id: 2,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-          for (const item of shop.CartItems) {
-            await UserOrderDetails.create({
-              user_order_id: order.user_order_id,
-              product_varients_id: item.product_varients_id,
-              varient_name: item.ProductVarient.Product.product_name,
-              quantity: item.quantity,
-              totalPrice: item.price,
-              discountPrice:
-                item.ProductVarient.sale_percents > 0
-                  ? item.price * (1 - item.ProductVarient.sale_percents / 100)
-                  : 0,
-              is_reviewed: false,
-              thumbnail:
-                item.ProductVarient.ProductClassify !== null &&
-                (item.ProductVarient.ProductClassify?.thumbnail !== null ||
-                  item.ProductVarient.ProductClassify?.thumbnail !== "" ||
-                  item.ProductVarient.ProductClassify?.thumbnail !== undefined)
-                  ? item.ProductVarient.ProductClassify.thumbnail
-                  : item.ProductVarient.Product.thumbnail,
-
-              classify:
-                item.ProductVarient.ProductClassify !== null
-                  ? item.ProductVarient.ProductSize != null &&
-                    item.ProductVarient.classify !== null
-                    ? item.ProductVarient.ProductClassify
-                        .product_classify_name +
-                      " " +
-                      item.ProductVarient.ProductSize.product_size_name
-                    : item.ProductVarient.ProductSize === null &&
-                      item.ProductVarient.ProductClassiy !== null
-                    ? item.ProductVarient.ProductClassify.product_classify_name
-                    : ""
-                  : "",
-            });
-            await CartItems.destroy({
-              where: {
-                cart_item_id: item.cart_item_id,
-              },
-            });
-            io.emit("newOrder", {
-              orderID: order.user_order_id,
-              selectedVoucher: voucher,
-              timeStamp: new Date(),
-            });
-          }
-        }
-      }
-    }
-
-    if (voucher.discountVoucher) {
-      const discountVoucher = await DiscountVoucher.findOne({
-        where: {
-          discount_voucher_id: voucher.discountVoucher.discount_voucher_id,
-        },
-      });
-      discountVoucher.quantity -= 1;
-      await discountVoucher.save();
-    }
-    if (voucher.shippingVoucher) {
-      const shippingVoucher = await DiscountVoucher.findOne({
-        where: {
-          discount_voucher_id: voucher.shippingVoucher.discount_voucher_id,
-        },
-      });
-      shippingVoucher.quantity -= 1;
-      await shippingVoucher.save();
-    }
+    await saveOrder(
+      validCart,
+      voucher,
+      address,
+      totalPayment,
+      totalPerItem,
+      3,
+      1
+    );
 
     return res.status(200).json({
       success: true,
@@ -874,7 +723,6 @@ const checkoutWithCOD = async (req, res) => {
         .status(404)
         .json({ error: true, message: "Không tìm thấy người dùng" });
     }
-
     const isEnoughStock = await checkStock(validCart);
     if (!isEnoughStock) {
       return res.status(400).json({
@@ -889,152 +737,15 @@ const checkoutWithCOD = async (req, res) => {
         message: "Voucher không hợp lệ",
       });
     }
-
-    if (validCart.length === 1) {
-      const order = await UserOrder.create({
-        user_id,
-        shop_id: validCart[0].shop_id,
-        user_address_id: address.user_address_id,
-        total_quantity: validCart[0].total_quantity,
-        total_price: validCart[0].total_price,
-        final_price: totalPayment.final,
-        shipping_fee: totalPayment.shippingFee,
-        discount_shipping_fee: totalPayment.discountShippingFee,
-        discount_price: totalPayment.discountPrice,
-        payment_method_id: 1,
-        transaction_code: "",
-        order_note: validCart[0].orderNote || "",
-      });
-      await OrderStatusHistory.create({
-        user_order_id: order.user_order_id,
-        order_status_id: 2,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      for (const item of validCart[0].CartItems) {
-        await UserOrderDetails.create({
-          user_order_id: order.user_order_id,
-          product_varients_id: item.product_varients_id,
-          varient_name: item.ProductVarient.Product.product_name,
-          quantity: item.quantity,
-          totalPrice: item.price,
-          discountPrice:
-            item.ProductVarient.sale_percents > 0
-              ? item.price * (1 - item.ProductVarient.sale_percents / 100)
-              : 0,
-          is_reviewed: false,
-          thumbnail:
-            item.ProductVarient.ProductClassify !== null &&
-            (item.ProductVarient.ProductClassify?.thumbnail !== null ||
-              item.ProductVarient.ProductClassify?.thumbnail !== "" ||
-              item.ProductVarient.ProductClassify?.thumbnail !== undefined)
-              ? item.ProductVarient.ProductClassify.thumbnail
-              : item.ProductVarient.Product.thumbnail,
-
-          classify:
-            item.ProductVarient.ProductClassify !== null
-              ? item.ProductVarient.ProductSize != null &&
-                item.ProductVarient.classify !== null
-                ? item.ProductVarient.ProductClassify.product_classify_name +
-                  " " +
-                  item.ProductVarient.ProductSize.product_size_name
-                : item.ProductVarient.ProductSize === null &&
-                  item.ProductVarient.ProductClassiy !== null
-                ? item.ProductVarient.ProductClassify.product_classify_name
-                : ""
-              : "",
-        });
-
-        await CartItems.destroy({
-          where: {
-            cart_item_id: item.cart_item_id,
-          },
-        });
-      }
-    } else if (validCart.length > 1) {
-      {
-        for (const shop of validCart) {
-          const total = totalPerItem.find(
-            (item) => item.shop_id === shop.shop_id
-          );
-          const order = await UserOrder.create({
-            user_id,
-            shop_id: shop.shop_id,
-            user_address_id: address.user_address_id,
-            total_quantity: shop.total_quantity,
-            total_price: shop.total_price,
-            final_price: total.totalPrice,
-            shipping_fee: total.shippingFee,
-            discount_shipping_fee: total.discountShippingFee,
-            discount_price: total.discountPrice,
-            payment_method_id: 1,
-            transaction_code: "",
-            order_note: shop.orderNote || "",
-          });
-          await OrderStatusHistory.create({
-            user_order_id: order.user_order_id,
-            order_status_id: 2,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-          for (const item of shop.CartItems) {
-            await UserOrderDetails.create({
-              user_order_id: order.user_order_id,
-              product_varients_id: item.product_varients_id,
-              varient_name: item.ProductVarient.Product.product_name,
-              quantity: item.quantity,
-              totalPrice: item.price,
-              discountPrice:
-                item.ProductVarient.sale_percents > 0
-                  ? item.price * (1 - item.ProductVarient.sale_percents / 100)
-                  : 0,
-              is_reviewed: false,
-              thumbnail:
-                item.ProductVarient.ProductClassify.thumbnail !== null ||
-                item.ProductVarient.ProductClassify.thumbnail !== "" ||
-                item.ProductVarient.ProductClassify.thumbnail !== undefined
-                  ? item.ProductVarient.ProductClassify.thumbnail
-                  : item.ProductVarient.Product.thumbnail,
-              classify:
-                item.ProductVarient.ProductSize != null &&
-                item.ProductVarient.classify !== null
-                  ? item.ProductVarient.ProductClassify.product_classify_name +
-                    " " +
-                    item.ProductVarient.ProductSize.product_size_name
-                  : item.ProductVarient.ProductSize === null &&
-                    item.ProductVarient.ProductClassiy !== null
-                  ? item.ProductVarient.ProductClassify.product_classify_name
-                  : "",
-            });
-            await CartItems.destroy({
-              where: {
-                cart_item_id: item.cart_item_id,
-              },
-            });
-          }
-        }
-      }
-    }
-
-    if (voucher.discountVoucher) {
-      const discountVoucher = await DiscountVoucher.findOne({
-        where: {
-          discount_voucher_id: voucher.discountVoucher.discount_voucher_id,
-        },
-      });
-      discountVoucher.quantity -= 1;
-      await discountVoucher.save();
-    }
-    if (voucher.shippingVoucher) {
-      const shippingVoucher = await DiscountVoucher.findOne({
-        where: {
-          discount_voucher_id: voucher.shippingVoucher.discount_voucher_id,
-        },
-      });
-      shippingVoucher.quantity -= 1;
-      await shippingVoucher.save();
-    }
+    await saveOrder(
+      validCart,
+      voucher,
+      address,
+      totalPayment,
+      totalPerItem,
+      1,
+      2
+    );
 
     return res.status(200).json({
       success: true,
@@ -1045,6 +756,162 @@ const checkoutWithCOD = async (req, res) => {
     return res
       .status(500)
       .json({ error: true, message: error.message || error });
+  }
+};
+
+const saveOrder = async (
+  validCart,
+  voucher,
+  address,
+  totalPayment,
+  totalPerItem,
+  payment_method_id,
+  order_status_id
+) => {
+  if (validCart.length === 1) {
+    const order = await UserOrder.create({
+      user_id,
+      shop_id: validCart[0].shop_id,
+      user_address_string: address.address,
+      total_quantity: validCart[0].total_quantity,
+      total_price: validCart[0].total_price,
+      final_price: totalPayment.final,
+      shipping_fee: totalPayment.shippingFee,
+      discount_shipping_fee: totalPayment.discountShippingFee,
+      discount_price: totalPayment.discountPrice,
+      payment_method_id: payment_method_id,
+      transaction_code: "",
+      order_note: validCart[0].orderNote || "",
+    });
+    await OrderStatusHistory.create({
+      user_order_id: order.user_order_id,
+      order_status_id: order_status_id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    for (const item of validCart[0].CartItems) {
+      await UserOrderDetails.create({
+        user_order_id: order.user_order_id,
+        product_varients_id: item.product_varients_id,
+        varient_name: item.ProductVarient.Product.product_name,
+        quantity: item.quantity,
+        totalPrice: item.price,
+        discountPrice:
+          item.ProductVarient.sale_percents > 0
+            ? item.price * (1 - item.ProductVarient.sale_percents / 100)
+            : 0,
+        is_reviewed: false,
+        thumbnail:
+          item.ProductVarient.ProductClassify !== null &&
+          (item.ProductVarient.ProductClassify?.thumbnail !== null ||
+            item.ProductVarient.ProductClassify?.thumbnail !== "" ||
+            item.ProductVarient.ProductClassify?.thumbnail !== undefined)
+            ? item.ProductVarient.ProductClassify.thumbnail
+            : item.ProductVarient.Product.thumbnail,
+
+        classify:
+          item.ProductVarient.ProductClassify !== null
+            ? item.ProductVarient.ProductSize != null &&
+              item.ProductVarient.classify !== null
+              ? item.ProductVarient.ProductClassify.product_classify_name +
+                " " +
+                item.ProductVarient.ProductSize.product_size_name
+              : item.ProductVarient.ProductSize === null &&
+                item.ProductVarient.ProductClassiy !== null
+              ? item.ProductVarient.ProductClassify.product_classify_name
+              : ""
+            : "",
+      });
+
+      await CartItems.destroy({
+        where: {
+          cart_item_id: item.cart_item_id,
+        },
+      });
+    }
+  } else if (validCart.length > 1) {
+    {
+      for (const shop of validCart) {
+        const total = totalPerItem.find(
+          (item) => item.shop_id === shop.shop_id
+        );
+        const order = await UserOrder.create({
+          user_id,
+          shop_id: shop.shop_id,
+          user_address_string: address.address,
+          total_quantity: shop.total_quantity,
+          total_price: shop.total_price,
+          final_price: total.totalPrice,
+          shipping_fee: total.shippingFee,
+          discount_shipping_fee: total.discountShippingFee,
+          discount_price: total.discountPrice,
+          payment_method_id: payment_method_id,
+          transaction_code: "",
+          order_note: shop.orderNote || "",
+        });
+        await OrderStatusHistory.create({
+          user_order_id: order.user_order_id,
+          order_status_id: order_status_id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+        for (const item of shop.CartItems) {
+          await UserOrderDetails.create({
+            user_order_id: order.user_order_id,
+            product_varients_id: item.product_varients_id,
+            varient_name: item.ProductVarient.Product.product_name,
+            quantity: item.quantity,
+            totalPrice: item.price,
+            discountPrice:
+              item.ProductVarient.sale_percents > 0
+                ? item.price * (1 - item.ProductVarient.sale_percents / 100)
+                : 0,
+            is_reviewed: false,
+            thumbnail:
+              item.ProductVarient.ProductClassify.thumbnail !== null ||
+              item.ProductVarient.ProductClassify.thumbnail !== "" ||
+              item.ProductVarient.ProductClassify.thumbnail !== undefined
+                ? item.ProductVarient.ProductClassify.thumbnail
+                : item.ProductVarient.Product.thumbnail,
+            classify:
+              item.ProductVarient.ProductSize != null &&
+              item.ProductVarient.classify !== null
+                ? item.ProductVarient.ProductClassify.product_classify_name +
+                  " " +
+                  item.ProductVarient.ProductSize.product_size_name
+                : item.ProductVarient.ProductSize === null &&
+                  item.ProductVarient.ProductClassiy !== null
+                ? item.ProductVarient.ProductClassify.product_classify_name
+                : "",
+          });
+          await CartItems.destroy({
+            where: {
+              cart_item_id: item.cart_item_id,
+            },
+          });
+        }
+      }
+    }
+  }
+
+  if (voucher.discountVoucher) {
+    const discountVoucher = await DiscountVoucher.findOne({
+      where: {
+        discount_voucher_id: voucher.discountVoucher.discount_voucher_id,
+      },
+    });
+    discountVoucher.quantity -= 1;
+    await discountVoucher.save();
+  }
+  if (voucher.shippingVoucher) {
+    const shippingVoucher = await DiscountVoucher.findOne({
+      where: {
+        discount_voucher_id: voucher.shippingVoucher.discount_voucher_id,
+      },
+    });
+    shippingVoucher.quantity -= 1;
+    await shippingVoucher.save();
   }
 };
 

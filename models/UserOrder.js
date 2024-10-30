@@ -25,13 +25,9 @@ const UserOrder = sequelize.define(
         key: "shop_id",
       },
     },
-    user_address_id: {
-      type: DataTypes.INTEGER,
+    user_address_string: {
+      type: DataTypes.STRING,
       allowNull: false,
-      references: {
-        model: "user_address",
-        key: "user_address_id",
-      },
     },
     total_quantity: {
       type: DataTypes.INTEGER,
