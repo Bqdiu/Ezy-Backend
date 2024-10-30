@@ -530,6 +530,7 @@ const checkoutWithVNPay = async (req, res) => {
     }
 
     await saveOrder(
+      user_id,
       validCart,
       voucher,
       address,
@@ -738,6 +739,7 @@ const checkoutWithCOD = async (req, res) => {
       });
     }
     await saveOrder(
+      user_id,
       validCart,
       voucher,
       address,
@@ -760,6 +762,7 @@ const checkoutWithCOD = async (req, res) => {
 };
 
 const saveOrder = async (
+  user_id,
   validCart,
   voucher,
   address,
