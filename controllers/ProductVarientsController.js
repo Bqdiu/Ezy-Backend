@@ -40,6 +40,58 @@ const addProductVarients = async (req, res) => {
     }
 }
 
+const findProductVarients = async (req, res) => {
+    const { product_id } = req.query;
+    if (!product_id) {
+        res.status(400).json({
+            error: true,
+            message: "Product ID is required"
+        });
+    }
+    try {
+        const product_varients = await ProductVarients.findOne({
+            where: { product_id: product_id }
+        });
+        res.status(200).json({
+            success: true,
+            data: product_varients
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: true,
+            message: error.message || error
+        });
+    }
+}
+
+const deleteProductVarients = async (req, res) => {
+    const { product_varients_id } = req.body;
+    try {
+        await ProductVarients.destroy({
+            where: { product_varients_id: product_varients_id }
+        });
+        res.status(200).json({
+            success: true,
+            message: "Delete product varient successfully"
+        });
+    } catch (error) {
+        if (error.original && error.original.errno === 1451) {
+            res.status(400).json({
+                error: true,
+                message: "Cannot delete product varient as it is referenced by other records."
+            });
+        } else {
+            res.status(500).json({
+                error: true,
+                message: error.message || error
+            });
+        }
+    }
+}
+
+
 module.exports = {
     addProductVarients,
+    findProductVarients,
+    deleteProductVarients
 }
