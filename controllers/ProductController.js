@@ -1145,6 +1145,43 @@ const getProductByID = async (req, res) => {
   }
 }
 
+const resetProductStock = async (req, res) => {
+  const { product_id } = req.body;
+  if (!product_id) {
+    return res.status(400).json({
+      success: false,
+      message: "product_id is required",
+    });
+  }
+  try {
+    const product = await Product.findOne({
+      where: {
+        product_id: product_id,
+      },
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    product.stock = 0;
+    await product.save();
+    res.status(200).json({
+      success: true,
+      data: product,
+    });
+  } catch (error) {
+    console.log("Error updating product stock: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+}
+
 
 module.exports = {
   getAllProducts,
@@ -1162,5 +1199,6 @@ module.exports = {
   getShopProducts,
   searchShopProducts,
   updateProductStatus,
-  getProductByID
+  getProductByID,
+  resetProductStock
 };
