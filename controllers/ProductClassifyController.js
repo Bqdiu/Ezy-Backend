@@ -100,10 +100,130 @@ const getClassifyIDsByProductID = async (req, res) => {
   }
 }
 
+const updateProductClassify = async (req, res) => {
+  const { product_classify_id, product_classify_name, type_name, thumbnail } = req.body;
+
+  if (!product_classify_id) {
+    return res.status(400).json({
+      success: false,
+      message: "product_classify_id is required",
+    });
+  }
+
+  try {
+    const [updated] = await ProductClassify.update(
+      {
+        product_classify_name,
+        type_name,
+        thumbnail,
+      },
+      { where: { product_classify_id } }
+    );
+
+    if (updated) {
+      const updatedProductClassify = await ProductClassify.findOne({ where: { product_classify_id } });
+      return res.status(200).json({
+        success: true,
+        data: updatedProductClassify,
+      });
+    }
+
+    res.status(404).json({
+      success: false,
+      message: "product classify not found",
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: error.message || "Some error occurred while updating product classify.",
+    });
+  }
+};
+
+const deleteProductClassify = async (req, res) => {
+  const { product_classify_id } = req.body;
+
+  if (!product_classify_id) {
+    return res.status(400).json({
+      success: false,
+      message: "Product classify ID is required.",
+    });
+  }
+
+  try {
+    const deleted = await ProductClassify.destroy({
+      where: { product_classify_id },
+    });
+
+    if (deleted) {
+      return res.status(200).json({
+        success: true,
+        message: "Product classify deleted successfully.",
+      });
+    }
+
+    return res.status(404).json({
+      success: false,
+      message: "Product classify not found.",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "An error occurred while deleting the product classify.",
+    });
+  }
+};
+
+const deleteSomeProductClassify = async (req, res) => {
+  const { product_classify_ids } = req.body;
+
+  if (!Array.isArray(product_classify_ids) || product_classify_ids.length === 0) {
+    return res.status(400).json({ message: "product_classify_ids invalid." });
+  }
+  const transaction = await ProductClassify.sequelize.transaction();
+  try {
+    const deleteCount = await ProductClassify.destroy({
+      where: { product_classify_id: product_classify_ids },
+      transaction
+    });
+
+    if (deleteCount === 0) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "No product classifies found to delete"
+      });
+    }
+
+    await transaction.commit();
+    res.status(200).json({
+      success: true,
+      message: "Delete all product classify successfully"
+    });
+  } catch (error) {
+    await transaction.rollback();
+
+    if (error.original && error.original.errno === 1451) {
+      res.status(400).json({
+        error: true,
+        message: "Cannot delete product classify as it is referenced by other records."
+      });
+    } else {
+      res.status(500).json({
+        error: true,
+        message: error.message || error
+      });
+    }
+  }
+}
+
 
 module.exports = {
   getAllProductClassify,
   getProductClassifyByProductID,
   addProductClassify,
-  getClassifyIDsByProductID
+  getClassifyIDsByProductID,
+  updateProductClassify,
+  deleteProductClassify,
+  deleteSomeProductClassify
 };
