@@ -191,6 +191,11 @@ const sellerRegister = async (req, res) => {
       avt_url: avtUrl,
       isVerified,
     });
+    await UserWallet.create({
+      user_id: newUser.user_id,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
 
     res.status(201).json({
       success: true,
@@ -255,6 +260,11 @@ const buyerRegister = async (req, res) => {
       role_id,
       avt_url: avtUrl,
       isVerified,
+    });
+    await UserWallet.create({
+      user_id: newUser.user_id,
+      created_at: new Date(),
+      updated_at: new Date(),
     });
 
     res.status(201).json({
@@ -324,11 +334,6 @@ const getUserData = async (req, res) => {
       attributes: {
         exclude: ["password"],
       },
-      include: [
-        {
-          model: UserWallet,
-        },
-      ],
       where: {
         user_id: uid,
       },

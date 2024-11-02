@@ -22,7 +22,7 @@ const WalletTransaction = sequelize.define(
       allowNull: false,
     },
     amount: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.BIGINT,
       allowNull: false,
     },
     transaction_date: {

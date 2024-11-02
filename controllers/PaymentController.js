@@ -8,6 +8,8 @@ const {
   OrderStatusHistory,
   CartItems,
   DiscountVoucher,
+  UserWallet,
+  WalletTransaction,
 } = require("../models/Assosiations");
 const vnpay = require("../services/vnpayService");
 const {
@@ -22,6 +24,8 @@ const {
 const dateFormat = require("dateformat");
 const { io } = require("../socket");
 const { timeStamp } = require("console");
+const { is } = require("translate-google/languages");
+const { deserialize } = require("v8");
 const reserveStock = async (validCart) => {
   for (const shop of validCart) {
     for (const item of shop.CartItems) {
@@ -674,7 +678,79 @@ const vnPayIPN = async (req, res) => {
 
 const checkoutWithEzyWallet = async (req, res) => {
   try {
-    const { user_id, totalPayment, validCart } = req.body;
+    const { user_id, address, totalPayment, validCart, voucher, totalPerItem } =
+      req.body;
+    const user = await UserAccount.findOne({
+      where: {
+        user_id,
+      },
+    });
+
+    const wallet = await UserWallet.findOne({
+      where: {
+        user_id,
+      },
+    });
+    if (!wallet) {
+      return res.status(400).json({
+        error: true,
+        message: "Tài khoản của bạn không có ví",
+      });
+    }
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ error: true, message: "Không tìm thấy người dùng" });
+    }
+
+    const isEnoughStock = await checkStock(validCart);
+    if (!isEnoughStock) {
+      return res.status(400).json({
+        error: true,
+        message: "Sản phẩm hiện không đủ tồn kho",
+      });
+    }
+    const isValidVoucher = await checkVoucher(voucher);
+    if (!isValidVoucher) {
+      return res.status(400).json({
+        error: true,
+        message: "Voucher không hợp lệ",
+      });
+    }
+    const isEnoughMoney = wallet.balance >= totalPayment.final;
+    if (isEnoughMoney) {
+      wallet.balance -= totalPayment.final;
+      await WalletTransaction.create({
+        user_wallet_id: wallet.user_wallet_id,
+        transaction_type: "Thanh Toán",
+        amount: -totalPayment.final,
+        transaction_date: new Date(),
+        description: "Thanh toán Ezy",
+      });
+      await wallet.save();
+    } else {
+      return res.status(400).json({
+        error: true,
+        message: "Số dư trong ví không đủ",
+      });
+    }
+
+    await saveOrder(
+      user_id,
+      validCart,
+      voucher,
+      address,
+      totalPayment,
+      totalPerItem,
+      4,
+      2
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Thanh toán thành công",
+    });
   } catch (error) {
     console.log("Error in checkoutWithEzyWallet: ", error);
     return res
@@ -872,19 +948,17 @@ const saveOrder = async (
                 : 0,
             is_reviewed: false,
             thumbnail:
-              item.ProductVarient.ProductClassify.thumbnail !== null ||
-              item.ProductVarient.ProductClassify.thumbnail !== "" ||
-              item.ProductVarient.ProductClassify.thumbnail !== undefined
+              item.ProductVarient.product_classify_id !== null
                 ? item.ProductVarient.ProductClassify.thumbnail
                 : item.ProductVarient.Product.thumbnail,
             classify:
-              item.ProductVarient.ProductSize != null &&
-              item.ProductVarient.classify !== null
+              item.ProductVarient.product_size_id &&
+              item.ProductVarient.product_classify_id !== null
                 ? item.ProductVarient.ProductClassify.product_classify_name +
                   " " +
                   item.ProductVarient.ProductSize.product_size_name
-                : item.ProductVarient.ProductSize === null &&
-                  item.ProductVarient.ProductClassiy !== null
+                : item.ProductVarient.product_size_id === null &&
+                  item.ProductVarient.product_classify_id !== null
                 ? item.ProductVarient.ProductClassify.product_classify_name
                 : "",
           });

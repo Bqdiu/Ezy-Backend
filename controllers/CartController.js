@@ -465,6 +465,7 @@ const updateSelectedAll = async (req, res) => {
       {
         where: {
           cart_shop_id: cartShop.map((item) => item.cart_shop_id),
+          isOutOfStock: 0,
         },
       }
     );
@@ -504,6 +505,7 @@ const updateAllItemsOfShop = async (req, res) => {
       {
         where: {
           cart_shop_id,
+          isOutOfStock: 0,
         },
       }
     );

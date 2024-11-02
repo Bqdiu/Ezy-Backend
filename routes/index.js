@@ -126,6 +126,10 @@ const {
 } = require("../controllers/SaleEventController");
 const { ro } = require("translate-google/languages");
 const { getOrderStatus } = require("../controllers/OrderStatusController");
+const {
+  getWallet,
+  getWalletHistory,
+} = require("../controllers/WalletController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -247,6 +251,9 @@ router.delete("/sale-events/delete-event/:id", deleteSaleEvent);
 router.post("/sale-events/set-categories/:id", addCategoriesToEvent);
 router.get("/sale-events/get-categories/:id", getAllCategoryIdsForEvent);
 
+//-----------------Wallet-----------------
+router.post("/wallet/get-wallet", authenticate, getWallet);
+router.get("/wallet/get-wallet-history", getWalletHistory);
 //-----------------Order-----------------
 router.get("/order/order-status", getOrderStatus);
 module.exports = router;
