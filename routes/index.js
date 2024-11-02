@@ -79,12 +79,17 @@ const {
   getAllProductClassify,
   addProductClassify,
   getClassifyIDsByProductID,
+  updateProductClassify,
+  deleteProductClassify,
+  deleteSomeProductClassify,
 } = require("../controllers/ProductClassifyController");
 const { addProductImage } = require("../controllers/ProductImgsController");
 const {
   addProductVarients,
   findProductVarients,
   deleteProductVarients,
+  deleteAllProductVarients,
+  deleteSomeProductVarients,
 } = require("../controllers/ProductVarientsController");
 const {
   addProductSize,
@@ -175,13 +180,19 @@ router.post("/reset-product-stock", resetProductStock);
 //-----------------ProductClassify-------------------
 router.get("/classify-products", getProductClassifyByProductID);
 router.get("/all-classifies", getAllProductClassify);
-router.post("/add-product-classify", addProductClassify);
 router.get("/get-classifies-id", getClassifyIDsByProductID);
+router.post("/add-product-classify", addProductClassify);
+router.post("/update-product-classify", updateProductClassify);
+router.post("/delete-product-classify", deleteProductClassify);
+router.post("/delete-some-product-classify", deleteSomeProductClassify);
 
 //-----------------ProductVarient-------------------
-router.post("/add-product-varient", addProductVarients);
 router.get("/find-product-varient", findProductVarients);
+router.post("/add-product-varient", addProductVarients);
 router.post("/delete-product-varient", deleteProductVarients);
+router.post("/delete-some-product-varients", deleteSomeProductVarients);
+router.post("/delete-all-product-varients", deleteAllProductVarients);
+
 //-----------------ProductImage-------------------
 router.post("/add-product-image", addProductImage);
 //-----------------ProductSize-------------------
