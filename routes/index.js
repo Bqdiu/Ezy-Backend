@@ -37,6 +37,7 @@ const {
   searchShopProducts,
   updateProductStatus,
   getProductByID,
+  resetProductStock,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
 const {
@@ -82,6 +83,8 @@ const {
 const { addProductImage } = require("../controllers/ProductImgsController");
 const {
   addProductVarients,
+  findProductVarients,
+  deleteProductVarients,
 } = require("../controllers/ProductVarientsController");
 const {
   addProductSize,
@@ -171,6 +174,7 @@ router.get("/search-shop-products", searchShopProducts);
 
 router.post("/add-product", addProduct);
 router.post("/update-product-status", updateProductStatus);
+router.post("/reset-product-stock", resetProductStock);
 
 //-----------------ProductClassify-------------------
 router.get("/classify-products", getProductClassifyByProductID);
@@ -180,6 +184,8 @@ router.get("/get-classifies-id", getClassifyIDsByProductID);
 
 //-----------------ProductVarient-------------------
 router.post("/add-product-varient", addProductVarients);
+router.get("/find-product-varient", findProductVarients);
+router.post("/delete-product-varient", deleteProductVarients);
 //-----------------ProductImage-------------------
 router.post("/add-product-image", addProductImage);
 //-----------------ProductSize-------------------
