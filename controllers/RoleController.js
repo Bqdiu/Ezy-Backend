@@ -1,5 +1,6 @@
 const {
-    Role
+    Role,
+    UserAccount,
 } = require("../models/Assosiations");
 
 
@@ -18,6 +19,67 @@ const getAllRole = async (req, res) => {
     }
 }
 
+const addRole = async (req, res) => {
+    const { role_name } = req.body; 
+
+    try {
+        const newRole = await Role.create({ role_name });
+        res.status(201).json({
+            success: true,
+            data: newRole
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: true,
+            message: error.message || error
+        });
+    }
+}
+
+const deleteRole = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const roleWithUsers = await Role.findOne({
+            where: { role_id: id },
+            include: {
+                model: UserAccount,
+                as: "UserAccounts",
+            },
+        });
+
+        if (roleWithUsers && roleWithUsers.UserAccounts.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Role không thể xóa vì đang được sử dụng!',
+            });
+        }
+
+        const deletedRole = await Role.destroy({
+            where: { role_id: id },
+        });
+
+        if (deletedRole) {
+            return res.status(200).json({
+                success: true,
+                message: 'Role đã được xóa thành công!',
+            });
+        } else {
+            return res.status(404).json({
+                success: false,
+                message: 'Role không tồn tại!',
+            });
+        }
+    } catch (error) {
+        res.status(500).json({
+            error: true,
+            message: error.message || error,
+        });
+    }
+};
+
 module.exports = {
-    getAllRole
+    getAllRole,
+    addRole,
+    deleteRole,
 }
