@@ -63,7 +63,11 @@ const {
   getDefaultAddress,
   getUserDataByUserId,
 } = require("../controllers/UserController");
-const { getAllRole } = require("../controllers/RoleController");
+const { 
+  getAllRole,
+  addRole,
+  deleteRole,
+} = require("../controllers/RoleController");
 const {
   getAllBusinessStyle,
 } = require("../controllers/BusinessStyleController");
@@ -235,6 +239,8 @@ router.post("/address/remove-address", removeAddress);
 router.get("/address/get-default-address", getDefaultAddress);
 //-----------------Role-----------------
 router.get("/all-role", getAllRole);
+router.post("/add-role", addRole);
+router.delete("/delete-role/:id", deleteRole);
 
 //-----------------BusinessStyle-----------------
 router.get("/all-business-styles", getAllBusinessStyle);
