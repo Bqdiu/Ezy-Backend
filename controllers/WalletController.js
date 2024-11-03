@@ -212,35 +212,51 @@ const depositToWallet = async (req, res) => {
 
 const ipnHandler = async (req, res) => {
   try {
-    const { user_wallet_id } = req.params;
+    const { user_wallet_id } = req.query;
     const verify = vnpay.verifyIpnCall(req.body);
-    console.log("query: ", req.params);
-    console.log("body: ", req.body);
-    console.log("IPN Fail: ", verify);
-    if (verify.isVerified && verify.isSuccess) {
-      const wallet = await UserWallet.findOne({
-        where: {
-          user_wallet_id,
-        },
+    if (!verify.isVerified) {
+      return res.json({ status: "error", message: "Xác thực thất bại" });
+    }
+    if (!verify.isSuccess) {
+      return res.json({
+        status: "error",
+        message: "Giao dịch không thành công",
       });
-      if (!wallet) {
-        return res
-          .status(404)
-          .json({ error: true, message: "Không tìm thấy thông tin ví" });
-      }
-      await wallet.increment("balance", { by: verify.vnp_Amount });
-      await WalletTransaction.create({
+    }
+    const wallet = await UserWallet.findOne({
+      where: {
         user_wallet_id,
-        transaction_type: "Nạp tiền",
-        description: "Nạp tiền vào ví",
-        amount: verify.vnp_Amount,
-        transaction_date: new Date(),
+      },
+    });
+    if (!wallet) {
+      return res
+        .status(404)
+        .json({ error: true, message: "Không tìm thấy thông tin ví" });
+    }
+    const transaction = await WalletTransaction.findOne({
+      where: {
+        description: {
+          [Op.like]: `%Mã giao dịch: ${verify.vnp_TxnRef}%`,
+        },
+      },
+    });
+    if (transaction) {
+      return res.json({
+        status: "success",
+        message: "Giao dịch đã được xử lý thành công trước đó",
       });
     }
     switch (verify.vnp_ResponseCode) {
       case "00":
         // Giao dịch thành công
-
+        await wallet.increment("balance", { by: verify.vnp_Amount });
+        await WalletTransaction.create({
+          user_wallet_id,
+          transaction_type: "Nạp tiền vào ví",
+          description: "Mã giao dịch: " + verify.vnp_TxnRef,
+          amount: verify.vnp_Amount,
+          transaction_date: new Date(),
+        });
         return res.json({
           status: "success",
           message: "Giao dịch thành công",

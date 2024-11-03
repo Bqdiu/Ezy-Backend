@@ -571,25 +571,42 @@ const vnPayIPN = async (req, res) => {
         },
       ],
     });
-
-    if (verify.isVerified && verify.isSuccess)
-      foundOrderByTransactionCode.forEach(async (order) => {
-        if (
-          order.OrderStatusHistories[order.OrderStatusHistories.length - 1]
-            .order_status_id === 1
-        ) {
-          await OrderStatusHistory.create({
-            user_order_id: order.user_order_id,
-            order_status_id: 2,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-        }
+    if (!verify.isVerified) {
+      return res.json({ status: "error", message: "Xác thực thất bại" });
+    }
+    if (!verify.isSuccess) {
+      return res.json({
+        status: "error",
+        message: "Giao dịch không thành công",
       });
+    }
+    const isPaid = foundOrderByTransactionCode.every((order) => {
+      order.OrderStatusHistories[order.OrderStatusHistories.length - 1]
+        .order_status_id === 2;
+    });
+    if (isPaid) {
+      return res.json({
+        status: "success",
+        message: "Giao dịch đã được xử lý",
+      });
+    }
+
     switch (verify.vnp_ResponseCode) {
       case "00":
         // Giao dịch thành công
-
+        foundOrderByTransactionCode.forEach(async (order) => {
+          if (
+            order.OrderStatusHistories[order.OrderStatusHistories.length - 1]
+              .order_status_id === 1
+          ) {
+            await OrderStatusHistory.create({
+              user_order_id: order.user_order_id,
+              order_status_id: 2,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+          }
+        });
         return res.json({
           status: "success",
           message: "Giao dịch thành công",
