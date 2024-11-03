@@ -132,6 +132,8 @@ const { getOrderStatus } = require("../controllers/OrderStatusController");
 const {
   getWallet,
   getWalletHistory,
+  depositToWallet,
+  ipnHandler,
 } = require("../controllers/WalletController");
 
 //------------------Categories-----------------------
@@ -259,7 +261,9 @@ router.get("/sale-events/get-categories/:id", getAllCategoryIdsForEvent);
 
 //-----------------Wallet-----------------
 router.post("/wallet/get-wallet", authenticate, getWallet);
-router.get("/wallet/get-wallet-history", getWalletHistory);
+router.post("/wallet/get-wallet-history", getWalletHistory);
+router.post("/wallet/deposit", depositToWallet);
+router.post("/wallet/wallet-ipn", ipnHandler);
 //-----------------Order-----------------
 router.get("/order/order-status", getOrderStatus);
 module.exports = router;
