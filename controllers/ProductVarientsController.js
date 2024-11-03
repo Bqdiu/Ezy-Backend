@@ -15,12 +15,6 @@ const addProductVarients = async (req, res) => {
         width,
         weight,
     } = req.body;
-    if (!product_id || !product_classify_id) {
-        res.status(400).json({
-            error: true,
-            message: "Product ID and Product Classify ID are required"
-        });
-    }
     try {
         const product_varient = await ProductVarients.create({
             product_id: product_id,
@@ -177,11 +171,52 @@ const deleteSomeProductVarients = async (req, res) => {
     }
 }
 
+const deleteProductVarientsByClassify = async (req, res) => {
+    const { product_classify_id } = req.body;
+
+    const transaction = await ProductVarients.sequelize.transaction();
+    try {
+        const deleteCount = await ProductVarients.destroy({
+            where: { product_classify_id: product_classify_id },
+            transaction: transaction,
+        });
+
+        if (deleteCount === 0) {
+            await transaction.rollback();
+            return res.status(404).json({
+                error: true,
+                message: "No product varients found for this product classify ID"
+            });
+        }
+
+        await transaction.commit();
+        res.status(200).json({
+            success: true,
+            message: "Delete product varient successfully"
+        });
+    } catch (error) {
+        await transaction.rollback();
+
+        if (error.original && error.original.errno === 1451) {
+            res.status(400).json({
+                error: true,
+                message: "Cannot delete product varient as it is referenced by other records."
+            });
+        } else {
+            res.status(500).json({
+                error: true,
+                message: error.message || error
+            });
+        }
+    }
+};
+
 
 module.exports = {
     addProductVarients,
     findProductVarients,
     deleteProductVarients,
     deleteAllProductVarients,
-    deleteSomeProductVarients
+    deleteSomeProductVarients,
+    deleteProductVarientsByClassify
 }

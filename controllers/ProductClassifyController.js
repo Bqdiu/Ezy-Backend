@@ -216,7 +216,28 @@ const deleteSomeProductClassify = async (req, res) => {
     }
   }
 }
+const updateClassifyTypeName = async (req, res) => {
+  const { product_id, type_name } = req.body;
+  if (!product_id || !type_name) {
+    return res.status(400).json({ error: true, message: 'Invalid input data' });
+  }
 
+  try {
+    // Assuming you have a model named ProductClassify
+    const result = await ProductClassify.update(
+      { type_name: type_name },
+      { where: { product_id: product_id } }
+    );
+
+    if (result[0] === 0) {
+      return res.status(404).json({ error: true, message: 'Product classify not found' });
+    }
+    return res.status(200).json({ success: true, message: 'Type name updated successfully' });
+  } catch (error) {
+    console.error('Error updating type name:', error);
+    return res.status(500).json({ error: true, message: 'Server error' });
+  }
+}
 
 module.exports = {
   getAllProductClassify,
@@ -225,5 +246,6 @@ module.exports = {
   getClassifyIDsByProductID,
   updateProductClassify,
   deleteProductClassify,
-  deleteSomeProductClassify
+  deleteSomeProductClassify,
+  updateClassifyTypeName
 };
