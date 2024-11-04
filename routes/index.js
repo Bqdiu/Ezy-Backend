@@ -135,6 +135,8 @@ const {
   deleteSaleEvent,
   addCategoriesToEvent,
   getAllCategoryIdsForEvent,
+  getShopsForEvent,
+  getVouchersForEvent
 } = require("../controllers/SaleEventController");
 const { ro } = require("translate-google/languages");
 const { getOrderStatus } = require("../controllers/OrderStatusController");
@@ -275,6 +277,8 @@ router.post("/sale-events/add-event", addSaleEvent);
 router.delete("/sale-events/delete-event/:id", deleteSaleEvent);
 router.post("/sale-events/set-categories/:id", addCategoriesToEvent);
 router.get("/sale-events/get-categories/:id", getAllCategoryIdsForEvent);
+router.get("/sale-events/get-shops/:id", getShopsForEvent);
+router.get("/sale-events/get-vouchers/:id", getVouchersForEvent);
 
 //-----------------Wallet-----------------
 router.post("/wallet/get-wallet", authenticate, getWallet);
