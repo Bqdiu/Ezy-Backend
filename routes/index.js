@@ -119,6 +119,7 @@ const {
   getAllVouchers,
   addVoucher,
   getAllDiscountVoucherType,
+  addVoucherByEventId,
 } = require("../controllers/DiscountVoucherController");
 
 const {
@@ -264,6 +265,7 @@ router.post("/voucher/voucher-list", getVoucherList);
 router.get("/voucher/get-all-voucher", getAllVouchers);
 router.post("/voucher/add-voucher", addVoucher);
 router.get("/voucher/types", getAllDiscountVoucherType);
+router.post("/voucher/add-voucher-by-event-id/:id", addVoucherByEventId);
 
 //-----------------Checkout-----------------
 router.post("/checkout/cod", checkoutWithCOD);
