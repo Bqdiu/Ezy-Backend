@@ -1,6 +1,9 @@
 const {
     SaleEvents,
+    Shop,
+    DiscountVoucher,
     SaleEventsOnCategories,
+    ShopRegisterEvents, 
 } = require("../models/Assosiations");
 const sequelize = require("../config/database");
 const getAllSaleEvents = async (req, res) => {
@@ -174,10 +177,104 @@ const getAllCategoryIdsForEvent = async (req, res) => {
         });
     }
 };
+
+const getShopsForEvent = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const saleEvent = await SaleEvents.findOne({ where: { sale_events_id: id } });
+
+        if (!saleEvent) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sự kiện không tìm thấy',
+            });
+        }
+
+        const shops = await ShopRegisterEvents.findAll({
+            where: { sale_events_id: id },
+            include: [
+                {
+                    model: Shop,
+                    attributes: ['shop_id', 'shop_name', 'shop_address'],
+                }
+            ]
+        });
+
+        const shopDetails = shops.map(shop => ({
+            shop_id: shop.Shop.shop_id,
+            shop_name: shop.Shop.shop_name,
+            shop_address: shop.Shop.shop_address,
+        }));
+
+        res.status(200).json({
+            success: true,
+            shops: shopDetails,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy thông tin cửa hàng cho sự kiện',
+            error: error.message,
+        });
+    }
+};
+
+const getVouchersForEvent = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const saleEvent = await SaleEvents.findOne({ where: { sale_events_id: id } });
+
+        if (!saleEvent) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sự kiện không tìm thấy',
+            });
+        }
+
+        const vouchers = await DiscountVoucher.findAll({
+            where: { sale_events_id: id },
+            attributes: [
+                'discount_voucher_id', 
+                'discount_voucher_code', 
+                'discount_voucher_name', 
+                'description', 
+                'discount_type', 
+                'min_order_value', 
+                'discount_value', 
+                'discount_max_value', 
+                'quantity', 
+                'started_at', 
+                'ended_at'
+            ],
+        });
+
+        if (vouchers.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không có voucher nào áp dụng cho sự kiện này',
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            vouchers,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy thông tin voucher cho sự kiện',
+            error: error.message,
+        });
+    }
+};
+
+
 module.exports = {
     getAllSaleEvents,
     addSaleEvent,
     deleteSaleEvent,
     addCategoriesToEvent,
-    getAllCategoryIdsForEvent
+    getAllCategoryIdsForEvent,
+    getShopsForEvent,
+    getVouchersForEvent,
 }
