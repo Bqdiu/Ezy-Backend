@@ -98,11 +98,16 @@ const {
   deleteSomeProductVarients,
   deleteSomeProductVarientsByClassify,
   addSomeProductVarientLevel3,
+  deleteSomeProductVarientsBySize,
+  addSomeProductVarientsByClassifies,
 } = require("../controllers/ProductVarientsController");
 const {
   addProductSize,
   getSizeOfProduct,
   addSomeProductSize,
+  deleteSomeProductSize,
+  updateSomeProductSize,
+  updateTypeOfProductSize,
 } = require("../controllers/ProductSizeController");
 const router = express.Router();
 const authenticate = require("../middleware/authMiddleware");
@@ -210,7 +215,9 @@ router.post("/delete-product-varient", deleteProductVarients);
 router.post("/delete-some-product-varients", deleteSomeProductVarients);
 router.post("/delete-all-product-varients", deleteAllProductVarients);
 router.post("/delete-some-product-varients-by-classify", deleteSomeProductVarientsByClassify);
+router.post("/delete-some-product-varients-by-size", deleteSomeProductVarientsBySize);
 router.post("/add-some-product-varients-level3", addSomeProductVarientLevel3);
+router.post("/add-some-product-varients-by-classifies", addSomeProductVarientsByClassifies);
 
 //-----------------ProductImage-------------------
 router.post("/add-product-image", addProductImage);
@@ -218,6 +225,9 @@ router.post("/add-product-image", addProductImage);
 router.post("/add-product-size", addProductSize);
 router.get("/get-product-size", getSizeOfProduct);
 router.post("/add-some-product-size", addSomeProductSize);
+router.post("/delete-some-product-size", deleteSomeProductSize);
+router.post("/update-some-product-size", updateSomeProductSize);
+router.post("/update-type-of-product-size", updateTypeOfProductSize);
 
 //-----------------ProductsReview-------------------
 router.get("/product-reviews/:product_id", getProductReview);
