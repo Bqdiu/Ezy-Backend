@@ -86,6 +86,8 @@ const {
   updateProductClassify,
   deleteProductClassify,
   deleteSomeProductClassify,
+  updateClassifyTypeName,
+  addSomeClassify,
 } = require("../controllers/ProductClassifyController");
 const { addProductImage } = require("../controllers/ProductImgsController");
 const {
@@ -94,10 +96,18 @@ const {
   deleteProductVarients,
   deleteAllProductVarients,
   deleteSomeProductVarients,
+  deleteSomeProductVarientsByClassify,
+  addSomeProductVarientLevel3,
+  deleteSomeProductVarientsBySize,
+  addSomeProductVarientsByClassifies,
 } = require("../controllers/ProductVarientsController");
 const {
   addProductSize,
   getSizeOfProduct,
+  addSomeProductSize,
+  deleteSomeProductSize,
+  updateSomeProductSize,
+  updateTypeOfProductSize,
 } = require("../controllers/ProductSizeController");
 const router = express.Router();
 const authenticate = require("../middleware/authMiddleware");
@@ -198,6 +208,8 @@ router.post("/add-product-classify", addProductClassify);
 router.post("/update-product-classify", updateProductClassify);
 router.post("/delete-product-classify", deleteProductClassify);
 router.post("/delete-some-product-classify", deleteSomeProductClassify);
+router.post("/update-classify-type-name", updateClassifyTypeName);
+router.post("/add-some-classify", addSomeClassify);
 
 //-----------------ProductVarient-------------------
 router.get("/find-product-varient", findProductVarients);
@@ -205,12 +217,21 @@ router.post("/add-product-varient", addProductVarients);
 router.post("/delete-product-varient", deleteProductVarients);
 router.post("/delete-some-product-varients", deleteSomeProductVarients);
 router.post("/delete-all-product-varients", deleteAllProductVarients);
+router.post("/delete-some-product-varients-by-classify", deleteSomeProductVarientsByClassify);
+router.post("/delete-some-product-varients-by-size", deleteSomeProductVarientsBySize);
+router.post("/add-some-product-varients-level3", addSomeProductVarientLevel3);
+router.post("/add-some-product-varients-by-classifies", addSomeProductVarientsByClassifies);
 
 //-----------------ProductImage-------------------
 router.post("/add-product-image", addProductImage);
 //-----------------ProductSize-------------------
 router.post("/add-product-size", addProductSize);
 router.get("/get-product-size", getSizeOfProduct);
+router.post("/add-some-product-size", addSomeProductSize);
+router.post("/delete-some-product-size", deleteSomeProductSize);
+router.post("/update-some-product-size", updateSomeProductSize);
+router.post("/update-type-of-product-size", updateTypeOfProductSize);
+
 //-----------------ProductsReview-------------------
 router.get("/product-reviews/:product_id", getProductReview);
 
