@@ -216,6 +216,40 @@ const deleteSomeProductClassify = async (req, res) => {
     }
   }
 }
+
+const addSomeClassify = async (req, res) => {
+  const { product_id, product_classify_names, type_name, thumbnails } = req.body;
+  if (
+    !Array.isArray(product_classify_names) ||
+    product_classify_names.length === 0 ||
+    !product_id ||
+    !type_name ||
+    !Array.isArray(thumbnails) ||
+    thumbnails.length === 0
+  ) {
+    return res.status(400).json({ error: true, message: 'Invalid input data' });
+  }
+  const transaction = await ProductClassify.sequelize.transaction();
+  try {
+    const classifyData = product_classify_names.map((product_classify_name, index) => ({
+      product_id,
+      product_classify_name,
+      type_name,
+      thumbnail: thumbnails[index]
+    }));
+
+    const productClassify = await ProductClassify.bulkCreate(classifyData, { transaction });
+
+    await transaction.commit();
+    return res.status(200).json({ success: true, data: productClassify });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error adding product classify:', error);
+    return res.status(500).json({ error: true, message: 'Server error' });
+  }
+
+}
+
 const updateClassifyTypeName = async (req, res) => {
   const { product_id, type_name } = req.body;
   if (!product_id || !type_name) {
@@ -247,5 +281,6 @@ module.exports = {
   updateProductClassify,
   deleteProductClassify,
   deleteSomeProductClassify,
-  updateClassifyTypeName
+  updateClassifyTypeName,
+  addSomeClassify
 };

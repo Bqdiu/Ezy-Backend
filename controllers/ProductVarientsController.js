@@ -1,3 +1,4 @@
+const { da } = require("translate-google/languages");
 const {
     ProductVarients,
 } = require("../models/Assosiations");
@@ -171,36 +172,34 @@ const deleteSomeProductVarients = async (req, res) => {
     }
 }
 
-const deleteProductVarientsByClassify = async (req, res) => {
-    const { product_classify_id } = req.body;
-
+const deleteSomeProductVarientsByClassify = async (req, res) => {
+    const { product_classify_ids } = req.body;
+    if (!Array.isArray(product_classify_ids) || product_classify_ids.length === 0) {
+        return res.status(400).json({ message: "product_classify_ids invalid" });
+    }
     const transaction = await ProductVarients.sequelize.transaction();
     try {
         const deleteCount = await ProductVarients.destroy({
-            where: { product_classify_id: product_classify_id },
-            transaction: transaction,
+            where: { product_classify_id: product_classify_ids },
+            transaction
         });
 
         if (deleteCount === 0) {
             await transaction.rollback();
-            return res.status(404).json({
-                error: true,
-                message: "No product varients found for this product classify ID"
-            });
+            return res.status(404).json({ message: "Not found product_classify_ids" });
         }
 
         await transaction.commit();
         res.status(200).json({
             success: true,
-            message: "Delete product varient successfully"
+            message: "Delete successfully"
         });
     } catch (error) {
         await transaction.rollback();
-
         if (error.original && error.original.errno === 1451) {
             res.status(400).json({
                 error: true,
-                message: "Cannot delete product varient as it is referenced by other records."
+                message: "Cannot delete product varients as it is referenced by other records."
             });
         } else {
             res.status(500).json({
@@ -211,6 +210,75 @@ const deleteProductVarientsByClassify = async (req, res) => {
     }
 };
 
+const addSomeProductVarientLevel3 = async (req, res) => {
+    const {
+        product_id,
+        product_classify_ids,
+        product_size_ids,
+        price,
+        stock,
+        sale_percents,
+        height,
+        length,
+        width,
+        weight,
+    } = req.body;
+
+    if (!product_id || !product_classify_ids || !product_size_ids) {
+        return res.status(400).json({
+            error: true,
+            message: "product_id, product_classify_ids, product_size_ids is required"
+        });
+    }
+    if (!Array.isArray(product_classify_ids) || product_classify_ids.length === 0) {
+        return res.status(400).json({
+            error: true,
+            message: "product_classify_ids has to be an array and not empty"
+        });
+    }
+    if (!Array.isArray(product_size_ids) || product_size_ids.length === 0) {
+        return res.status(400).json({
+            error: true,
+            message: "product_size_ids has to be an array and not empty"
+        });
+    }
+
+    const transaction = await ProductVarients.sequelize.transaction();
+
+    try {
+        const product_varients = product_classify_ids.flatMap((product_classify_id) =>
+            product_size_ids.map((product_size_id) => ({
+                product_id: product_id,
+                product_classify_id: product_classify_id,
+                product_size_id: product_size_id,  
+                price: price,
+                stock: stock,
+                sale_percents: sale_percents,
+                height: height,
+                length: length,
+                width: width,
+                weight: weight
+            }))
+        );
+
+        await ProductVarients.bulkCreate(product_varients, { transaction });
+        await transaction.commit();
+
+        res.status(200).json({
+            success: true,
+            message: "Create product varients successfully",
+            data: product_varients
+        });
+    } catch (error) {
+        await transaction.rollback();
+        res.status(500).json({
+            error: true,
+            message: "Không thể tạo các biến thể sản phẩm",
+            details: error.message
+        });
+    }
+};
+
 
 module.exports = {
     addProductVarients,
@@ -218,5 +286,6 @@ module.exports = {
     deleteProductVarients,
     deleteAllProductVarients,
     deleteSomeProductVarients,
-    deleteProductVarientsByClassify
+    deleteSomeProductVarientsByClassify,
+    addSomeProductVarientLevel3
 }
