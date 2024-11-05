@@ -64,7 +64,7 @@ const {
   getDefaultAddress,
   getUserDataByUserId,
 } = require("../controllers/UserController");
-const { 
+const {
   getAllRole,
   addRole,
   deleteRole,
@@ -134,6 +134,7 @@ const {
   getAllDiscountVoucherType,
   addVoucherByEventId,
   updateVoucher,
+  deleteVoucher,
 } = require("../controllers/DiscountVoucherController");
 
 const {
@@ -153,6 +154,7 @@ const {
   getShopsForEvent,
   getVouchersForEvent,
   getEventById,
+  updateSaleEvent,
 } = require("../controllers/SaleEventController");
 const { ro } = require("translate-google/languages");
 const { getOrderStatus } = require("../controllers/OrderStatusController");
@@ -162,6 +164,10 @@ const {
   depositToWallet,
   ipnHandler,
 } = require("../controllers/WalletController");
+const {
+  getOrders,
+  updateOrderStatus,
+} = require("../controllers/UserOrderController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -223,12 +229,22 @@ router.post("/add-product-varient", addProductVarients);
 router.post("/delete-product-varient", deleteProductVarients);
 router.post("/delete-some-product-varients", deleteSomeProductVarients);
 router.post("/delete-all-product-varients", deleteAllProductVarients);
-router.post("/delete-some-product-varients-by-classify", deleteSomeProductVarientsByClassify);
-router.post("/delete-some-product-varients-by-size", deleteSomeProductVarientsBySize);
+router.post(
+  "/delete-some-product-varients-by-classify",
+  deleteSomeProductVarientsByClassify
+);
+router.post(
+  "/delete-some-product-varients-by-size",
+  deleteSomeProductVarientsBySize
+);
 router.post("/add-some-product-varients-level3", addSomeProductVarientLevel3);
 router.post("/add-some-product-varients-by-classifies", addSomeProductVarientsByClassifies);
 router.post("/update-shipping-info", updateShippingInfo);
 router.post("/update-some-sale-info-product-varients", updateSomeSaleInfoProductVarients);
+router.post(
+  "/add-some-product-varients-by-classifies",
+  addSomeProductVarientsByClassifies
+);
 
 //-----------------ProductImage-------------------
 router.post("/add-product-image", addProductImage);
@@ -298,6 +314,7 @@ router.post("/voucher/add-voucher", addVoucher);
 router.get("/voucher/types", getAllDiscountVoucherType);
 router.post("/voucher/add-voucher-by-event-id/:id", addVoucherByEventId);
 router.put("/voucher/update-voucher/:id", updateVoucher);
+router.delete("/voucher/delete-voucher/:id", deleteVoucher);
 
 //-----------------Checkout-----------------
 router.post("/checkout/cod", checkoutWithCOD);
@@ -314,6 +331,7 @@ router.get("/sale-events/get-categories/:id", getAllCategoryIdsForEvent);
 router.get("/sale-events/get-shops/:id", getShopsForEvent);
 router.get("/sale-events/get-vouchers/:id", getVouchersForEvent);
 router.get("/sale-events/get-event-by-id/:id", getEventById);
+router.put("/sale-events/update-event/:id", updateSaleEvent);
 
 //-----------------Wallet-----------------
 router.post("/wallet/get-wallet", authenticate, getWallet);
@@ -322,4 +340,6 @@ router.post("/wallet/deposit", depositToWallet);
 router.post("/wallet/wallet-ipn", ipnHandler);
 //-----------------Order-----------------
 router.get("/order/order-status", getOrderStatus);
+router.post("/order/get_orders", getOrders);
+
 module.exports = router;
