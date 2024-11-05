@@ -38,6 +38,7 @@ const {
   updateProductStatus,
   getProductByID,
   resetProductStock,
+  updateBasicInfoProduct,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
 const {
@@ -89,7 +90,7 @@ const {
   updateClassifyTypeName,
   addSomeClassify,
 } = require("../controllers/ProductClassifyController");
-const { addProductImage } = require("../controllers/ProductImgsController");
+const { addProductImage, addSomeProductImages, deleteSomeProductImages } = require("../controllers/ProductImgsController");
 const {
   addProductVarients,
   findProductVarients,
@@ -100,6 +101,8 @@ const {
   addSomeProductVarientLevel3,
   deleteSomeProductVarientsBySize,
   addSomeProductVarientsByClassifies,
+  updateShippingInfo,
+  updateSomeSaleInfoProductVarients,
 } = require("../controllers/ProductVarientsController");
 const {
   addProductSize,
@@ -207,6 +210,7 @@ router.get("/search-shop-products", searchShopProducts);
 router.post("/add-product", addProduct);
 router.post("/update-product-status", updateProductStatus);
 router.post("/reset-product-stock", resetProductStock);
+router.post("/update-basic-info-product", updateBasicInfoProduct);
 
 //-----------------ProductClassify-------------------
 router.get("/classify-products", getProductClassifyByProductID);
@@ -234,6 +238,9 @@ router.post(
   deleteSomeProductVarientsBySize
 );
 router.post("/add-some-product-varients-level3", addSomeProductVarientLevel3);
+router.post("/add-some-product-varients-by-classifies", addSomeProductVarientsByClassifies);
+router.post("/update-shipping-info", updateShippingInfo);
+router.post("/update-some-sale-info-product-varients", updateSomeSaleInfoProductVarients);
 router.post(
   "/add-some-product-varients-by-classifies",
   addSomeProductVarientsByClassifies
@@ -241,6 +248,8 @@ router.post(
 
 //-----------------ProductImage-------------------
 router.post("/add-product-image", addProductImage);
+router.post("/add-some-product-images", addSomeProductImages);
+router.post("/delete-some-product-images", deleteSomeProductImages);
 //-----------------ProductSize-------------------
 router.post("/add-product-size", addProductSize);
 router.get("/get-product-size", getSizeOfProduct);

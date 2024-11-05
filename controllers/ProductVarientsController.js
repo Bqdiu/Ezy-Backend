@@ -1,6 +1,7 @@
 const { da } = require("translate-google/languages");
 const {
     ProductVarients,
+    Product,
 } = require("../models/Assosiations");
 
 const addProductVarients = async (req, res) => {
@@ -250,7 +251,7 @@ const addSomeProductVarientLevel3 = async (req, res) => {
             product_size_ids.map((product_size_id) => ({
                 product_id: product_id,
                 product_classify_id: product_classify_id,
-                product_size_id: product_size_id,  
+                product_size_id: product_size_id,
                 price: price,
                 stock: stock,
                 sale_percents: sale_percents,
@@ -379,6 +380,102 @@ const addSomeProductVarientsByClassifies = async (req, res) => {
     }
 }
 
+const updateShippingInfo = async (req, res) => {
+    const { product_id, height, length, width, weight } = req.body;
+    if (!product_id) {
+        return res.status(400).json({
+            error: true,
+            message: "product_id is required"
+        });
+    }
+
+    // Check if product exists
+    const product = await Product.findOne({
+        where: { product_id: product_id }
+    });
+    if (!product) {
+        return res.status(404).json({
+            error: true,
+            message: "Product not found"
+        });
+    }
+    try {
+        const product_varients = await ProductVarients.update({
+            height: height || product.height,
+            length: length || product.length,
+            width: width || product.width,
+            weight: weight || product.weight
+        }, {
+            where: { product_id: product_id }
+        });
+        res.status(200).json({
+            success: true,
+            data: product_varients
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: true,
+            message: error.message || error
+        });
+    }
+}
+
+const updateSomeSaleInfoProductVarients = async (req, res) => {
+    const { product_varients_ids, prices, stocks, sale_percents } = req.body;
+    if (!Array.isArray(product_varients_ids) || product_varients_ids.length === 0) {
+        return res.status(400).json({ message: "product_varients_ids invalid" });
+    }
+    if (!Array.isArray(prices) || prices.length === 0) {
+        return res.status(400).json({ message: "prices invalid" });
+    }
+    if (!Array.isArray(stocks) || stocks.length === 0) {
+        return res.status(400).json({ message: "stock invalid" });
+    }
+    if (!Array.isArray(sale_percents) || sale_percents.length === 0) {
+        return res.status(400).json({ message: "sale_percents invalid" });
+    }
+    if (
+        product_varients_ids.length !== prices.length || 
+        product_varients_ids.length !== stocks.length || 
+        product_varients_ids.length !== sale_percents.length
+    ) {
+        return res.status(400).json({ message: "product_varients_ids, prices, stocks, sale_percents length not match" });
+    }
+
+    const transaction = await ProductVarients.sequelize.transaction();
+    try {
+        for (let i = 0; i < product_varients_ids.length; i++) {
+            await ProductVarients.update({
+                price: prices[i],
+                stock: stocks[i],
+                sale_percents: sale_percents[i]
+            }, {
+                where: { product_varients_id: product_varients_ids[i] },
+                transaction
+            });
+        }
+
+        await transaction.commit();
+        res.status(200).json({
+            success: true,
+            message: "Update successfully"
+        });
+    } catch (error) {
+        await transaction.rollback();
+        if (error.original && error.original.errno === 1451) {
+            res.status(400).json({
+                error: true,
+                message: "Cannot update product varients as it is referenced by other records."
+            });
+        } else {
+            res.status(500).json({
+                error: true,
+                message: error.message || error
+            });
+        }
+    }
+}
+
 module.exports = {
     addProductVarients,
     findProductVarients,
@@ -388,5 +485,7 @@ module.exports = {
     deleteSomeProductVarientsByClassify,
     addSomeProductVarientLevel3,
     deleteSomeProductVarientsBySize,
-    addSomeProductVarientsByClassifies
+    addSomeProductVarientsByClassifies,
+    updateShippingInfo,
+    updateSomeSaleInfoProductVarients
 }

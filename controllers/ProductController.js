@@ -1182,6 +1182,61 @@ const resetProductStock = async (req, res) => {
   }
 }
 
+const updateBasicInfoProduct = async (req, res) => {
+  const {
+    product_id,
+    thumbnail,
+    sub_category_id,
+    product_name,
+    description,
+    origin,
+    gender_object,
+    brand
+  } = req.body;
+
+  if (!product_id) {
+    return res.status(400).json({
+      success: false,
+      message: "product_id is required",
+    });
+  }
+
+  try {
+    const product = await Product.findOne({
+      where: {
+        product_id: product_id,
+      },
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    product.sub_category_id = sub_category_id || product.sub_category_id;
+    product.product_name = product_name || product.product_name;
+    product.thumbnail = thumbnail || product.thumbnail;
+    product.brand = brand || product.brand;
+    product.description = description || product.description;
+    product.gender_object = gender_object || product.gender_object;
+    product.origin = origin || product.origin;
+
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      data: product,
+    });
+  } catch (error) {
+    console.error("Error updating product: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+}
 
 module.exports = {
   getAllProducts,
@@ -1200,5 +1255,6 @@ module.exports = {
   searchShopProducts,
   updateProductStatus,
   getProductByID,
-  resetProductStock
+  resetProductStock,
+  updateBasicInfoProduct
 };
