@@ -38,6 +38,7 @@ const {
   updateProductStatus,
   getProductByID,
   resetProductStock,
+  updateBasicInfoProduct,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
 const {
@@ -100,6 +101,8 @@ const {
   addSomeProductVarientLevel3,
   deleteSomeProductVarientsBySize,
   addSomeProductVarientsByClassifies,
+  updateShippingInfo,
+  updateSomeSaleInfoProductVarients,
 } = require("../controllers/ProductVarientsController");
 const {
   addProductSize,
@@ -201,6 +204,7 @@ router.get("/search-shop-products", searchShopProducts);
 router.post("/add-product", addProduct);
 router.post("/update-product-status", updateProductStatus);
 router.post("/reset-product-stock", resetProductStock);
+router.post("/update-basic-info-product", updateBasicInfoProduct);
 
 //-----------------ProductClassify-------------------
 router.get("/classify-products", getProductClassifyByProductID);
@@ -223,6 +227,8 @@ router.post("/delete-some-product-varients-by-classify", deleteSomeProductVarien
 router.post("/delete-some-product-varients-by-size", deleteSomeProductVarientsBySize);
 router.post("/add-some-product-varients-level3", addSomeProductVarientLevel3);
 router.post("/add-some-product-varients-by-classifies", addSomeProductVarientsByClassifies);
+router.post("/update-shipping-info", updateShippingInfo);
+router.post("/update-some-sale-info-product-varients", updateSomeSaleInfoProductVarients);
 
 //-----------------ProductImage-------------------
 router.post("/add-product-image", addProductImage);
