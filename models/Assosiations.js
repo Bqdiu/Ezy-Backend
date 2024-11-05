@@ -196,6 +196,8 @@ ViolationHistory.belongsTo(Violations, { foreignKey: "violation_id" });
 UserAccount.hasMany(ViolationHistory, { foreignKey: "updated_by" });
 ViolationHistory.belongsTo(UserAccount, { foreignKey: "updated_by" });
 
+UserOrder.belongsTo(OrderStatus, { foreignKey: "order_status_id" });
+UserOrder.belongsTo(Shop, { foreignKey: "shop_id" });
 module.exports = {
   UserAccount,
   UserAddress,

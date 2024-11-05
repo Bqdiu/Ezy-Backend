@@ -63,7 +63,7 @@ const {
   getDefaultAddress,
   getUserDataByUserId,
 } = require("../controllers/UserController");
-const { 
+const {
   getAllRole,
   addRole,
   deleteRole,
@@ -159,6 +159,10 @@ const {
   depositToWallet,
   ipnHandler,
 } = require("../controllers/WalletController");
+const {
+  getOrders,
+  updateOrderStatus,
+} = require("../controllers/UserOrderController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -219,10 +223,19 @@ router.post("/add-product-varient", addProductVarients);
 router.post("/delete-product-varient", deleteProductVarients);
 router.post("/delete-some-product-varients", deleteSomeProductVarients);
 router.post("/delete-all-product-varients", deleteAllProductVarients);
-router.post("/delete-some-product-varients-by-classify", deleteSomeProductVarientsByClassify);
-router.post("/delete-some-product-varients-by-size", deleteSomeProductVarientsBySize);
+router.post(
+  "/delete-some-product-varients-by-classify",
+  deleteSomeProductVarientsByClassify
+);
+router.post(
+  "/delete-some-product-varients-by-size",
+  deleteSomeProductVarientsBySize
+);
 router.post("/add-some-product-varients-level3", addSomeProductVarientLevel3);
-router.post("/add-some-product-varients-by-classifies", addSomeProductVarientsByClassifies);
+router.post(
+  "/add-some-product-varients-by-classifies",
+  addSomeProductVarientsByClassifies
+);
 
 //-----------------ProductImage-------------------
 router.post("/add-product-image", addProductImage);
@@ -314,4 +327,6 @@ router.post("/wallet/deposit", depositToWallet);
 router.post("/wallet/wallet-ipn", ipnHandler);
 //-----------------Order-----------------
 router.get("/order/order-status", getOrderStatus);
+router.post("/order/get_orders", getOrders);
+
 module.exports = router;
