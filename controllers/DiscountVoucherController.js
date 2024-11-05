@@ -229,10 +229,10 @@ const getAllDiscountVoucherType = async (req, res) => {
     res.status(500).json({ error: true, message: error.message || "Server error" });
   }
 };
+
 const addVoucherByEventId = async (req, res) => {
   try {
     const {
-      sale_events_id,
       discount_voucher_type_id,
       discount_voucher_code,
       discount_voucher_name,
@@ -246,15 +246,16 @@ const addVoucherByEventId = async (req, res) => {
       ended_at,
     } = req.body;
 
-    if (!sale_events_id) {
-      return res.status(400).json({ error: true, message: "sale_events_id is required." });
-    }
+    // Extract sale_events_id from the URL parameters
+    const sale_events_id = req.params.id;
 
+    // Verify if the sale event exists
     const saleEvent = await SaleEvents.findByPk(sale_events_id);
     if (!saleEvent) {
       return res.status(404).json({ error: true, message: "Sale event not found." });
     }
 
+    // Create a new voucher associated with the sale event
     const newVoucher = await DiscountVoucher.create({
       sale_events_id,
       discount_voucher_type_id,
@@ -266,16 +267,63 @@ const addVoucherByEventId = async (req, res) => {
       discount_value,
       discount_max_value,
       quantity,
-      started_at,
-      ended_at,
+      started_at: new Date(started_at), 
+      ended_at: new Date(ended_at),   
     });
 
     res.status(201).json({ success: true, voucher: newVoucher });
   } catch (error) {
-    console.error("Error adding voucher: ", error);
+    console.error("Error adding voucher:", error);
     res.status(500).json({ error: true, message: error.message || "Server error" });
   }
 };
+
+const updateVoucher = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      discount_voucher_type_id,
+      discount_voucher_code,
+      discount_voucher_name,
+      description,
+      discount_type,
+      min_order_value,
+      discount_value,
+      discount_max_value,
+      quantity,
+      started_at,
+      ended_at,
+    } = req.body;
+
+    // Find the voucher by ID
+    const voucher = await DiscountVoucher.findByPk(id);
+    if (!voucher) {
+      return res.status(404).json({ error: true, message: "Voucher not found." });
+    }
+
+    // Directly assign values from request, assuming all fields are provided by frontend
+    await voucher.update({
+      discount_voucher_type_id,
+      discount_voucher_code,
+      discount_voucher_name,
+      description,
+      discount_type,
+      min_order_value,
+      discount_value,
+      discount_max_value,
+      quantity,
+      started_at: started_at ? new Date(started_at) : voucher.started_at,
+      ended_at: ended_at ? new Date(ended_at) : voucher.ended_at,
+    });
+
+    res.status(200).json({ success: true, message: "Voucher updated successfully", voucher });
+  } catch (error) {
+    console.error("Error updating voucher:", error);
+    res.status(500).json({ error: true, message: error.message || "Server error" });
+  }
+};
+
+
 
 module.exports = {
   getVoucherList,
@@ -283,4 +331,5 @@ module.exports = {
   addVoucher,
   getAllDiscountVoucherType,
   addVoucherByEventId,
+  updateVoucher,
 };
