@@ -25,6 +25,11 @@ const SaleEvents = sequelize.define(
       type: DataTypes.DATE,
       allowNull: false,
     },
+    is_actived: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   },
   {
     tableName: "sale_events",

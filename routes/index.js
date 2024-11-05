@@ -131,6 +131,7 @@ const {
   getAllDiscountVoucherType,
   addVoucherByEventId,
   updateVoucher,
+  deleteVoucher,
 } = require("../controllers/DiscountVoucherController");
 
 const {
@@ -150,6 +151,7 @@ const {
   getShopsForEvent,
   getVouchersForEvent,
   getEventById,
+  updateSaleEvent,
 } = require("../controllers/SaleEventController");
 const { ro } = require("translate-google/languages");
 const { getOrderStatus } = require("../controllers/OrderStatusController");
@@ -303,6 +305,7 @@ router.post("/voucher/add-voucher", addVoucher);
 router.get("/voucher/types", getAllDiscountVoucherType);
 router.post("/voucher/add-voucher-by-event-id/:id", addVoucherByEventId);
 router.put("/voucher/update-voucher/:id", updateVoucher);
+router.delete("/voucher/delete-voucher/:id", deleteVoucher);
 
 //-----------------Checkout-----------------
 router.post("/checkout/cod", checkoutWithCOD);
@@ -319,6 +322,7 @@ router.get("/sale-events/get-categories/:id", getAllCategoryIdsForEvent);
 router.get("/sale-events/get-shops/:id", getShopsForEvent);
 router.get("/sale-events/get-vouchers/:id", getVouchersForEvent);
 router.get("/sale-events/get-event-by-id/:id", getEventById);
+router.put("/sale-events/update-event/:id", updateSaleEvent);
 
 //-----------------Wallet-----------------
 router.post("/wallet/get-wallet", authenticate, getWallet);
