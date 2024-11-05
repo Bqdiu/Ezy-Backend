@@ -244,7 +244,8 @@ const getVouchersForEvent = async (req, res) => {
                 'discount_max_value', 
                 'quantity', 
                 'started_at', 
-                'ended_at'
+                'ended_at',
+                'discount_voucher_type_id' 
             ],
         });
 
@@ -268,6 +269,32 @@ const getVouchersForEvent = async (req, res) => {
     }
 };
 
+const getEventById = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const saleEvent = await SaleEvents.findOne({ where: { sale_events_id: id } });
+
+        if (!saleEvent) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sự kiện không tìm thấy',
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: saleEvent,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy thông tin sự kiện',
+            error: error.message,
+        });
+    }
+};
+
+
 
 module.exports = {
     getAllSaleEvents,
@@ -277,4 +304,5 @@ module.exports = {
     getAllCategoryIdsForEvent,
     getShopsForEvent,
     getVouchersForEvent,
+    getEventById,
 }
