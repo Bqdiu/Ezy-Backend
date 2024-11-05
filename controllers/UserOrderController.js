@@ -11,16 +11,22 @@ const {
 
 const checkPaid = async (orderId) => {
   try {
-    const orderStatusHistory = await OrderStatusHistory.findAll({
+    const order = await UserOrder.findOne({
       where: {
         user_order_id: orderId,
       },
-      order: [["createdAt", "DESC"]],
     });
+    // const orderStatusHistory = await OrderStatusHistory.findAll({
+    //   where: {
+    //     user_order_id: orderId,
+    //   },
+    //   order: [["createdAt", "DESC"]],
+    // });
 
-    const isPendingOnly = orderStatusHistory.every(
-      (status) => status.order_status_id === 1
-    );
+    // const isPendingOnly = orderStatusHistory.every(
+    //   (status) => status.order_status_id === 1
+    // );
+    const isPendingOnly = order.order_status_id === 1;
     return isPendingOnly;
   } catch (error) {
     console.log("Lỗi khi lấy trạng thái đơn hàng: ", error);

@@ -29,6 +29,8 @@ const SaleEventsOnCategories = sequelize.define(
   {
     tableName: "sale_events_on_categories",
     timestamps: false,
+    charset: "utf8mb4",
+    collate: "utf8mb4_general_ci",
   }
 );
 

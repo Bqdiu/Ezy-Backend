@@ -17,6 +17,8 @@ const DiscountVoucherType = sequelize.define(
   {
     tableName: "discount_voucher_type",
     timestamps: false,
+    charset: "utf8mb4",
+    collate: "utf8mb4_general_ci",
   }
 );
 

@@ -1,10 +1,10 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const UserAddress = sequelize.define(
-  "UserAddress",
+const ReturnRequest = sequelize.define(
+  "ReturnRequest",
   {
-    user_address_id: {
+    return_request_id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
@@ -17,42 +17,41 @@ const UserAddress = sequelize.define(
         key: "user_id",
       },
     },
-    full_name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    phone_number: {
-      type: DataTypes.CHAR,
-      allowNull: false,
-    },
-    province_id: {
+    shop_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      references: {
+        model: "shop",
+        key: "shop_id",
+      },
     },
-    district_id: {
+    user_order_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      references: {
+        model: "user_order",
+        key: "user_order_id",
+      },
     },
-    ward_code: {
+    request_type: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    address: {
+    reason: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    isDefault: {
-      type: DataTypes.TINYINT,
+    status: {
+      type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 0,
     },
   },
   {
-    tableName: "user_address",
-    timestamps: false,
+    tableName: "return_request",
     charset: "utf8mb4",
     collate: "utf8mb4_general_ci",
+    timestamps: true,
   }
 );
 
-module.exports = UserAddress;
+module.exports = ReturnRequest;

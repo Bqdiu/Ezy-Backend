@@ -38,6 +38,8 @@ const OrderStatusHistory = sequelize.define(
         fields: ["user_order_id", "order_status_id"],
       },
     ],
+    charset: "utf8mb4",
+    collate: "utf8mb4_general_ci",
   }
 );
 

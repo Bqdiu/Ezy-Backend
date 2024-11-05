@@ -17,6 +17,8 @@ const Role = sequelize.define(
   {
     tableName: "role",
     timestamps: false,
+    charset: "utf8mb4",
+    collate: "utf8mb4_general_ci",
   }
 );
 
