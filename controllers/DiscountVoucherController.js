@@ -323,6 +323,24 @@ const updateVoucher = async (req, res) => {
   }
 };
 
+const deleteVoucher = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the voucher by ID
+    const voucher = await DiscountVoucher.findByPk(id);
+    if (!voucher) {
+      return res.status(404).json({ error: true, message: "Voucher not found." });
+    }
+
+    await voucher.destroy();
+
+    res.status(200).json({ success: true, message: "Voucher deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting voucher:", error);
+    res.status(500).json({ error: true, message: error.message || "Server error" });
+  }
+};
 
 
 module.exports = {
@@ -332,4 +350,5 @@ module.exports = {
   getAllDiscountVoucherType,
   addVoucherByEventId,
   updateVoucher,
+  deleteVoucher,
 };

@@ -7,6 +7,10 @@ const {
   checkPaid,
 } = require("../controllers/UserOrderController");
 
+const {
+  activateEvents,
+  deactivateEvents,
+} = require("../controllers/SaleEventController");
 const app = express();
 //**Socket Connection */
 const server = http.createServer(app);
@@ -48,8 +52,14 @@ io.on("connection", (socket) => {
           console.log(`Đơn hàng ${orderID} đã có trạng thái khác, không xóa.`);
         }
       }
-    }, 60000); // Lặp lại mỗi phút
+    }, 60000);
   });
+  const monitorEventStatuses = () => {
+    activateEvents();
+    deactivateEvents();
+  };
+  setInterval(monitorEventStatuses, 60000);
+
   socket.on("disconnect", () => {
     console.log("Client disconnected");
   });

@@ -5,6 +5,7 @@ const {
     SaleEventsOnCategories,
     ShopRegisterEvents, 
 } = require("../models/Assosiations");
+const { Op } = require("sequelize");
 const sequelize = require("../config/database");
 const getAllSaleEvents = async (req, res) => {
     try {
@@ -64,10 +65,18 @@ const deleteSaleEvent = async (req, res) => {
             });
         }
 
-        // Xóa tất cả danh mục liên quan đến sự kiện
+        const currentDate = new Date();
+        const eventStartDate = new Date(saleEvent.started_at);
+
+        if (currentDate > eventStartDate) {
+            return res.status(403).json({
+                success: false,
+                message: 'Không thể xóa sự kiện đã bắt đầu hoặc đã kết thúc'
+            });
+        }
+
         await SaleEventsOnCategories.destroy({ where: { sale_events_id: id } });
 
-        // Xóa sự kiện
         await SaleEvents.destroy({ where: { sale_events_id: id } });
 
         res.status(200).json({
@@ -81,7 +90,7 @@ const deleteSaleEvent = async (req, res) => {
             error: error.message,
         });
     }
-}
+};
 const addCategoriesToEvent = async (req, res) => {
     const { id } = req.params;
     const { category_ids } = req.body;
@@ -294,8 +303,108 @@ const getEventById = async (req, res) => {
     }
 };
 
+const updateSaleEvent = async (req, res) => {
+    const { id } = req.params;
+    const { sale_events_name, thumbnail, started_at, ended_at } = req.body;
 
+    try {
+        const saleEvent = await SaleEvents.findOne({ where: { sale_events_id: id } });
 
+        if (!saleEvent) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sự kiện không tìm thấy',
+            });
+        }
+
+        const newStartDate = new Date(started_at);
+        const newEndDate = new Date(ended_at);
+
+        // Fetch associated vouchers
+        const vouchers = await DiscountVoucher.findAll({
+            where: { sale_events_id: id },
+            attributes: ['discount_voucher_id', 'started_at', 'ended_at'],
+        });
+
+        // Validate new event dates against voucher dates
+        for (const voucher of vouchers) {
+            const voucherStartDate = new Date(voucher.started_at);
+            const voucherEndDate = new Date(voucher.ended_at);
+
+            if (newStartDate > voucherStartDate || newEndDate < voucherEndDate) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Ngày cập nhật của sự kiện không hợp lệ. Voucher ${voucher.discount_voucher_id} đã bắt đầu vào ${voucherStartDate.toDateString()} và kết thúc vào ${voucherEndDate.toDateString()}`,
+                });
+            }
+        }
+
+        // Update the sale event
+        await saleEvent.update({
+            sale_events_name,
+            thumbnail: thumbnail || saleEvent.thumbnail, 
+            started_at: newStartDate,
+            ended_at: newEndDate,
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Cập nhật sự kiện thành công',
+            data: saleEvent,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi cập nhật sự kiện',
+            error: error.message,
+        });
+    }
+};
+
+const activateEvents = async () => {
+    try {
+      const now = new Date();
+      const [activatedCount] = await SaleEvents.update(
+        { is_actived: true },
+        {
+          where: {
+            started_at: { [Op.lte]: now },
+            ended_at: { [Op.gt]: now },
+            is_actived: false,
+          },
+        }
+      );
+  
+      if (activatedCount > 0) {
+        const updatedEvents = await SaleEvents.findAll();
+        io.emit("eventStatusUpdate", updatedEvents);
+      }
+    } catch (error) {
+      console.error("Error activating events:", error);
+    }
+  };
+  
+  const deactivateEvents = async () => {
+    try {
+      const now = new Date();
+      const [deactivatedCount] = await SaleEvents.update(
+        { is_actived: false },
+        {
+          where: {
+            ended_at: { [Op.lte]: now },
+            is_actived: true,
+          },
+        }
+      );
+  
+      if (deactivatedCount > 0) {
+        const updatedEvents = await SaleEvents.findAll();
+        io.emit("eventStatusUpdate", updatedEvents);
+      }
+    } catch (error) {
+      console.error("Error deactivating events:", error);
+    }
+  };
 module.exports = {
     getAllSaleEvents,
     addSaleEvent,
@@ -305,4 +414,7 @@ module.exports = {
     getShopsForEvent,
     getVouchersForEvent,
     getEventById,
+    updateSaleEvent,
+    activateEvents,
+    deactivateEvents,
 }
