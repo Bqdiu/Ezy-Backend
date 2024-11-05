@@ -69,6 +69,10 @@ const UserOrder = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    order_code: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -79,11 +83,25 @@ const UserOrder = sequelize.define(
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
+    return_expiration_date: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    order_status_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "order_status",
+        key: "order_status_id",
+      },
+    },
   },
   {
     tableName: "user_order",
     updatedAt: false,
     createdAt: false,
+    charset: "utf8mb4",
+    collate: "utf8mb4_general_ci",
   }
 );
 

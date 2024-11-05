@@ -100,6 +100,8 @@ const Product = sequelize.define(
   {
     tableName: "product",
     timestamps: false,
+    charset: "utf8mb4",
+    collate: "utf8mb4_general_ci",
   }
 );
 

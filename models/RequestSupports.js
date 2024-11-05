@@ -1,15 +1,15 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const UserWallet = sequelize.define(
-  "UserWallet",
+const RequestSupports = sequelize.define(
+  "RequestSupports",
   {
-    user_wallet_id: {
+    request_support_id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
-    user_id: {
+    requestor_id: {
       type: DataTypes.STRING,
       allowNull: false,
       references: {
@@ -17,28 +17,26 @@ const UserWallet = sequelize.define(
         key: "user_id",
       },
     },
-    balance: {
-      type: DataTypes.BIGINT,
-      allowNull: false,
+    resolver_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
-    created_at: {
+    resolved_at: {
       type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW,
+      allowNull: true,
     },
-    updated_at: {
-      type: DataTypes.DATE,
+    status: {
+      type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: DataTypes.NOW,
+      defaultValue: "Đang chờ xử lý",
     },
   },
   {
-    tableName: "user_wallet",
-    updatedAt: false,
-    createdAt: false,
+    tableName: "request_supports",
     charset: "utf8mb4",
     collate: "utf8mb4_general_ci",
+    timestamps: true,
   }
 );
 
-module.exports = UserWallet;
+module.exports = RequestSupports;

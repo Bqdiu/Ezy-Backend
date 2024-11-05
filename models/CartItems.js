@@ -42,6 +42,8 @@ const CartItems = sequelize.define(
   {
     tableName: "cart_items",
     timestamps: true,
+    charset: "utf8mb4",
+    collate: "utf8mb4_general_ci",
   }
 );
 

@@ -49,6 +49,8 @@ const ShopRegisterFlashSales = sequelize.define(
   {
     tableName: "shop_register_flash_sales",
     timestamps: true,
+    charset: "utf8mb4",
+    collate: "utf8mb4_general_ci",
   }
 );
 

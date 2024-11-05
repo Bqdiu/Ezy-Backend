@@ -8,6 +8,8 @@ const UserAccount = sequelize.define(
     user_id: {
       type: DataTypes.STRING,
       primaryKey: true,
+      charset: "utf8mb4",
+      collate: "utf8mb4_general_ci",
     },
     username: {
       type: DataTypes.STRING,
@@ -82,6 +84,8 @@ const UserAccount = sequelize.define(
   {
     tableName: "user_account",
     timestamps: false,
+    charset: "utf8mb4",
+    collate: "utf8mb4_general_ci",
   }
 );
 UserAccount.describe().then((description) => {

@@ -32,6 +32,12 @@ const DiscountVoucherType = require("./DiscountVoucherType");
 const ShopRegisterEvents = require("./ShopRegisterEvents");
 const FlashSales = require("./FlashSales");
 const ShopRegisterFlashSales = require("./ShopRegisterFlashSales");
+const Notifications = require("./Notifications");
+const RequestSupports = require("./RequestSupports");
+const ReturnRequest = require("./ReturnRequest");
+const Violations = require("./Violations");
+const ViolationActions = require("./ViolationActions");
+const ViolationHistory = require("./ViolationHistory");
 // Thiết lập mối quan hệ
 UserAccount.hasMany(UserAddress, { foreignKey: "user_id" });
 UserAddress.belongsTo(UserAccount, { foreignKey: "user_id" });
@@ -163,6 +169,33 @@ ShopRegisterFlashSales.belongsTo(Shop, { foreignKey: "shop_id" });
 Product.hasMany(ShopRegisterFlashSales, { foreignKey: "product_id" });
 ShopRegisterFlashSales.belongsTo(Product, { foreignKey: "product_id" });
 
+UserAccount.hasMany(Notifications, { foreignKey: "user_id" });
+Notifications.belongsTo(UserAccount, { foreignKey: "user_id" });
+
+UserAccount.hasMany(RequestSupports, { foreignKey: "requestor_id" });
+RequestSupports.belongsTo(UserAccount, { foreignKey: "requestor_id" });
+
+UserAccount.hasMany(ReturnRequest, { foreignKey: "user_id" });
+ReturnRequest.belongsTo(UserAccount, { foreignKey: "user_id" });
+
+Shop.hasMany(ReturnRequest, { foreignKey: "shop_id" });
+ReturnRequest.belongsTo(Shop, { foreignKey: "shop_id" });
+
+UserOrder.hasMany(ReturnRequest, { foreignKey: "user_order_id" });
+ReturnRequest.belongsTo(UserOrder, { foreignKey: "user_order_id" });
+
+UserAccount.hasMany(Violations, { foreignKey: "user_id" });
+Violations.belongsTo(UserAccount, { foreignKey: "user_id" });
+
+Violations.hasMany(ViolationActions, { foreignKey: "violation_id" });
+ViolationActions.belongsTo(Violations, { foreignKey: "violation_id" });
+
+Violations.hasMany(ViolationHistory, { foreignKey: "violation_id" });
+ViolationHistory.belongsTo(Violations, { foreignKey: "violation_id" });
+
+UserAccount.hasMany(ViolationHistory, { foreignKey: "updated_by" });
+ViolationHistory.belongsTo(UserAccount, { foreignKey: "updated_by" });
+
 module.exports = {
   UserAccount,
   UserAddress,
@@ -198,4 +231,10 @@ module.exports = {
   PaymentMethod,
   FlashSales,
   ShopRegisterFlashSales,
+  Notifications,
+  RequestSupports,
+  ReturnRequest,
+  Violations,
+  ViolationActions,
+  ViolationHistory,
 };

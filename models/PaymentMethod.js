@@ -17,6 +17,8 @@ const PaymentMethod = sequelize.define(
   {
     tableName: "payment_method",
     timestamps: true,
+    charset: "utf8mb4",
+    collate: "utf8mb4_general_ci",
   }
 );
 

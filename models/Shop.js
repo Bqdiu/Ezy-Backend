@@ -82,8 +82,7 @@ const Shop = sequelize.define(
     phone_number: {
       type: DataTypes.STRING,
       allowNull: true,
-    }
-    ,
+    },
     user_id: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -102,6 +101,8 @@ const Shop = sequelize.define(
     updatedAt: false,
     createdAt: false,
     tableName: "shop",
+    charset: "utf8mb4",
+    collate: "utf8mb4_general_ci",
   }
 );
 

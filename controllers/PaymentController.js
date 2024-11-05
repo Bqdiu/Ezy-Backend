@@ -58,20 +58,6 @@ const checkStock = async (validCart) => {
   return true;
 };
 
-const releaseStock = async (validCart) => {
-  for (const shop of validCart) {
-    for (const item of shop.CartItems) {
-      const productVarient = await ProductVarients.findOne({
-        where: {
-          product_varients_id: item.product_varients_id,
-        },
-      });
-
-      productVarient.stock += item.quantity;
-      await productVarient.save();
-    }
-  }
-};
 const momoPayment = async (amount) => {
   return new Promise((resolve, reject) => {
     var accessKey = "F8BBA842ECF85";
@@ -581,8 +567,7 @@ const vnPayIPN = async (req, res) => {
       });
     }
     const isPaid = foundOrderByTransactionCode.every((order) => {
-      order.OrderStatusHistories[order.OrderStatusHistories.length - 1]
-        .order_status_id === 2;
+      order.order_status_id === 2;
     });
     if (isPaid) {
       return res.json({
@@ -595,10 +580,10 @@ const vnPayIPN = async (req, res) => {
       case "00":
         // Giao dịch thành công
         foundOrderByTransactionCode.forEach(async (order) => {
-          if (
-            order.OrderStatusHistories[order.OrderStatusHistories.length - 1]
-              .order_status_id === 1
-          ) {
+          if (order.order_status_id === 1) {
+            await order.update({
+              order_status_id: 2,
+            });
             await OrderStatusHistory.create({
               user_order_id: order.user_order_id,
               order_status_id: 2,
@@ -878,6 +863,9 @@ const saveOrder = async (
       payment_method_id: payment_method_id,
       transaction_code: "",
       order_note: validCart[0].orderNote || "",
+      order_code: "",
+      order_status_id: order_status_id,
+      return_expiration_date: null,
     });
     await OrderStatusHistory.create({
       user_order_id: order.user_order_id,
@@ -945,6 +933,9 @@ const saveOrder = async (
           payment_method_id: payment_method_id,
           transaction_code: "",
           order_note: shop.orderNote || "",
+          order_code: "",
+          order_status_id: order_status_id,
+          return_expiration_date: null,
         });
         await OrderStatusHistory.create({
           user_order_id: order.user_order_id,

@@ -44,6 +44,8 @@ const ProductReview = sequelize.define(
     createdAt: false,
     tableName: "product_review",
     timestamps: false,
+    charset: "utf8mb4",
+    collate: "utf8mb4_general_ci",
   }
 );
 

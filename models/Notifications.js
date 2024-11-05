@@ -1,10 +1,10 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const UserWallet = sequelize.define(
-  "UserWallet",
+const Notifications = sequelize.define(
+  "Notifications",
   {
-    user_wallet_id: {
+    notification_id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
@@ -17,28 +17,25 @@ const UserWallet = sequelize.define(
         key: "user_id",
       },
     },
-    balance: {
-      type: DataTypes.BIGINT,
+    title: {
+      type: DataTypes.STRING,
       allowNull: false,
     },
-    created_at: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW,
+    thumbnail: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
-    updated_at: {
-      type: DataTypes.DATE,
+    content: {
+      type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: DataTypes.NOW,
     },
   },
   {
-    tableName: "user_wallet",
-    updatedAt: false,
-    createdAt: false,
+    tableName: "notifications",
+    timestamps: false,
     charset: "utf8mb4",
     collate: "utf8mb4_general_ci",
   }
 );
 
-module.exports = UserWallet;
+module.exports = Notifications;
