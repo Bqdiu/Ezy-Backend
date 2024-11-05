@@ -89,7 +89,7 @@ const {
   updateClassifyTypeName,
   addSomeClassify,
 } = require("../controllers/ProductClassifyController");
-const { addProductImage } = require("../controllers/ProductImgsController");
+const { addProductImage, addSomeProductImages, deleteSomeProductImages } = require("../controllers/ProductImgsController");
 const {
   addProductVarients,
   findProductVarients,
@@ -224,6 +224,8 @@ router.post("/add-some-product-varients-by-classifies", addSomeProductVarientsBy
 
 //-----------------ProductImage-------------------
 router.post("/add-product-image", addProductImage);
+router.post("/add-some-product-images", addSomeProductImages);
+router.post("/delete-some-product-images", deleteSomeProductImages);
 //-----------------ProductSize-------------------
 router.post("/add-product-size", addProductSize);
 router.get("/get-product-size", getSizeOfProduct);
