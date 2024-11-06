@@ -170,6 +170,13 @@ const {
   updateOrderStatus,
 } = require("../controllers/UserOrderController");
 
+const {
+  getAllFlashSales,
+  addFlashSale,
+  updateFlashSale,
+  deleteFlashSale,
+} = require("../controllers/FlashSaleController");
+
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
 router.get("/categories_name/:category_id", getCategoriesName);
@@ -344,5 +351,11 @@ router.post("/wallet/wallet-ipn", ipnHandler);
 //-----------------Order-----------------
 router.get("/order/order-status", getOrderStatus);
 router.post("/order/get_orders", getOrders);
+
+//-----------------FlashSale-----------------
+router.get("/flash-sales/get-all", getAllFlashSales);
+router.post("/flash-sales/add", addFlashSale);
+router.put('/flash-sales/update/:id', updateFlashSale);
+router.delete('/flash-sales/delete/:id', deleteFlashSale);
 
 module.exports = router;

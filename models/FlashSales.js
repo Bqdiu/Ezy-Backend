@@ -12,6 +12,7 @@ const FlashSales = sequelize.define(
     flash_sales_name: {
       type: DataTypes.STRING,
       allowNull: false,
+      timezone: "+07:00",
     },
     started_at: {
       type: DataTypes.DATE,
@@ -29,8 +30,16 @@ const FlashSales = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
   },
-  {
+  {  
     tableName: "flash_sales",
     timestamps: true,
     charset: "utf8mb4",
