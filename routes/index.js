@@ -39,6 +39,7 @@ const {
   getProductByID,
   resetProductStock,
   updateBasicInfoProduct,
+  deleteSomeProducts,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
 const {
@@ -211,6 +212,8 @@ router.post("/add-product", addProduct);
 router.post("/update-product-status", updateProductStatus);
 router.post("/reset-product-stock", resetProductStock);
 router.post("/update-basic-info-product", updateBasicInfoProduct);
+router.post("/delete-some-products", deleteSomeProducts);
+
 
 //-----------------ProductClassify-------------------
 router.get("/classify-products", getProductClassifyByProductID);

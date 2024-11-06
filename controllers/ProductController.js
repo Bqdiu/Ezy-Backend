@@ -1238,6 +1238,67 @@ const updateBasicInfoProduct = async (req, res) => {
   }
 }
 
+
+const deleteSomeProducts = async (req, res) => {
+  const { product_ids } = req.body;
+
+  if (!product_ids || !Array.isArray(product_ids) || product_ids.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: "product_ids is required and must be a non-empty array",
+    });
+  }
+
+  const transaction = await sequelize.transaction(); 
+
+  try {
+    const products = await Product.findAll({
+      where: {
+        product_id: product_ids,
+      },
+      transaction
+    });
+
+    if (products.length === 0) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "No products found for the provided IDs",
+      });
+    }
+
+    await Product.destroy({
+      where: {
+        product_id: product_ids,
+      },
+      transaction
+    });
+
+    await transaction.commit(); 
+    res.status(200).json({
+      success: true,
+      message: "Deleted products successfully",
+    });
+  } catch (error) {
+    await transaction.rollback(); 
+
+    if (error.name === 'SequelizeForeignKeyConstraintError') {
+      console.log("Foreign key constraint error: ", error);
+      return res.status(409).json({
+        success: false,
+        message: "Cannot delete products due to foreign key constraints",
+      });
+    }
+
+    console.log("Error deleting products: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+
 module.exports = {
   getAllProducts,
   getProductDetailsByID,
@@ -1256,5 +1317,6 @@ module.exports = {
   updateProductStatus,
   getProductByID,
   resetProductStock,
-  updateBasicInfoProduct
+  updateBasicInfoProduct,
+  deleteSomeProducts
 };
