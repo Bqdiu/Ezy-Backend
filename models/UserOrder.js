@@ -71,7 +71,8 @@ const UserOrder = sequelize.define(
     },
     order_code: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
+      defaultValue: null,
     },
     created_at: {
       type: DataTypes.DATE,

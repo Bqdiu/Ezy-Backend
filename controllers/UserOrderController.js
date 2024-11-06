@@ -1,5 +1,5 @@
 const sequelize = require("../config/database");
-const { Op } = require("sequelize");
+const { Op, Sequelize } = require("sequelize");
 
 const {
   UserOrder,
@@ -13,6 +13,7 @@ const {
   UserAccount,
 } = require("../models/Assosiations");
 const { getOrderDetailGHN } = require("../services/ghnServices");
+const { tr } = require("translate-google/languages");
 
 const checkPaid = async (orderId) => {
   try {
@@ -112,8 +113,10 @@ const deleteOrder = async (orderId, selectedVoucher) => {
 
 const getOrders = async (req, res) => {
   try {
-    const { user_id, status_id, limit = 10, page = 1 } = req.body;
-    console.log("getOrders", user_id, status_id, limit, page);
+    const { user_id, status_id, limit = 10, page = 1, searchText } = req.body;
+
+    console.log(req.body);
+    const sanitizedSearchText = searchText.trim().toLowerCase();
     const offset = (page - 1) * limit;
     let whereConditions = {};
     if (status_id !== -1) {
@@ -122,17 +125,50 @@ const getOrders = async (req, res) => {
         order_status_id: status_id,
       };
     }
+    if (sanitizedSearchText !== "") {
+      whereConditions = {
+        ...whereConditions,
+        [Op.or]: [
+          {
+            user_order_id: {
+              [Op.eq]: isNaN(parseInt(sanitizedSearchText))
+                ? null
+                : parseInt(sanitizedSearchText),
+            },
+          },
+          {
+            "$Shop.shop_name$": {
+              [Op.like]: `%${sanitizedSearchText}%`,
+            },
+          },
+          Sequelize.literal(`
+            EXISTS (
+              SELECT 1
+              FROM user_order_details AS uod
+              WHERE uod.user_order_id = UserOrder.user_order_id
+                AND LOWER(uod.varient_name) LIKE '%${sanitizedSearchText}%'
+            )
+          `),
+        ],
+      };
+    }
+
     const { count, rows: orders } = await UserOrder.findAndCountAll({
-      where: whereConditions,
       include: [
         {
           model: UserOrderDetails,
+
           include: [
             {
               model: ProductVarients,
+              attributes: ["product_varients_id"],
+
               include: [
                 {
                   model: Product,
+
+                  as: "Product",
+                  attributes: ["product_id", "product_name"],
                 },
               ],
             },
@@ -143,6 +179,7 @@ const getOrders = async (req, res) => {
         },
         {
           model: Shop,
+          required: true,
           include: [
             {
               model: UserAccount,
@@ -151,10 +188,12 @@ const getOrders = async (req, res) => {
           ],
         },
       ],
+      where: whereConditions,
       limit,
       offset,
       order: [["created_at", "DESC"]],
     });
+
     const statusDescriptions = {
       ready_to_pick: "Mới tạo đơn hàng",
       picking: "Nhân viên đang lấy hàng",

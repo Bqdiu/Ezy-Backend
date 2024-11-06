@@ -557,25 +557,17 @@ const vnPayIPN = async (req, res) => {
         },
       ],
     });
-    if (!verify.isVerified) {
-      return res.json({ status: "error", message: "Xác thực thất bại" });
-    }
-    if (!verify.isSuccess) {
-      return res.json({
-        status: "error",
-        message: "Giao dịch không thành công",
+    if (verify.isVerified && verify.isSuccess) {
+      const isPaid = foundOrderByTransactionCode.every((order) => {
+        order.order_status_id === 2;
       });
+      if (isPaid) {
+        return res.json({
+          status: "success",
+          message: "Giao dịch đã được xử lý",
+        });
+      }
     }
-    const isPaid = foundOrderByTransactionCode.every((order) => {
-      order.order_status_id === 2;
-    });
-    if (isPaid) {
-      return res.json({
-        status: "success",
-        message: "Giao dịch đã được xử lý",
-      });
-    }
-
     switch (verify.vnp_ResponseCode) {
       case "00":
         // Giao dịch thành công
@@ -863,9 +855,13 @@ const saveOrder = async (
       payment_method_id: payment_method_id,
       transaction_code: "",
       order_note: validCart[0].orderNote || "",
-      order_code: "",
       order_status_id: order_status_id,
       return_expiration_date: null,
+    });
+    io.emit("newOrder", {
+      orderID: order.user_order_id,
+      selectedVoucher: voucher,
+      timeStamp: new Date(),
     });
     await OrderStatusHistory.create({
       user_order_id: order.user_order_id,
@@ -936,6 +932,11 @@ const saveOrder = async (
           order_code: "",
           order_status_id: order_status_id,
           return_expiration_date: null,
+        });
+        io.emit("newOrder", {
+          orderID: order.user_order_id,
+          selectedVoucher: voucher,
+          timeStamp: new Date(),
         });
         await OrderStatusHistory.create({
           user_order_id: order.user_order_id,
