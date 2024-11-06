@@ -101,6 +101,11 @@ const UserOrder = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    is_blocked: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "user_order",

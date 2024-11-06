@@ -5,6 +5,8 @@ const { timeStamp, time } = require("console");
 const {
   deleteOrder,
   checkPaid,
+  updateBlockStatus,
+  checkBlockStatus,
 } = require("../controllers/UserOrderController");
 
 const {
@@ -40,19 +42,42 @@ io.on("connection", (socket) => {
       console.log("timeLeft: ", timeLeft);
       if (timeLeft >= 2 * 60 * 1000) {
         const isNotPaid = await checkPaid(orderID);
-
+        const isUnBlocked = await checkBlockStatus(orderID);
         if (isNotPaid) {
-          clearInterval(interval);
-          await deleteOrder(orderID, selectedVoucher);
-          console.log(
-            `Đơn hàng ${orderID} đã bị xóa do chưa thanh toán và chỉ có trạng thái "Chờ thanh toán".`
-          );
+          if (isUnBlocked) {
+            await deleteOrder(orderID, selectedVoucher);
+            console.log(
+              `Đơn hàng ${orderID} đã bị xóa do chưa thanh toán và chỉ có trạng thái "Chờ thanh toán".`
+            );
+            clearInterval(interval);
+          } else {
+            console.log(`Đơn hàng ${orderID} đã bị chặn, không xóa.`);
+          }
         } else {
           clearInterval(interval);
           console.log(`Đơn hàng ${orderID} đã có trạng thái khác, không xóa.`);
         }
       }
     }, 60000);
+  });
+
+  socket.on("updateBlockStatus", async (data) => {
+    const { orderID, timeStamp } = data;
+    const timeStampMs = new Date(timeStamp).getTime();
+    if (isNaN(timeStampMs)) {
+      console.error("Invalid timeStamp format:", timeStamp);
+      return;
+    }
+    const delay = 1 * 60 * 1000; // 1 phút
+    setTimeout(async () => {
+      const isUpdated = await updateBlockStatus(orderID);
+
+      if (isUpdated) {
+        console.log(`Đơn hàng ${orderID} đã cập nhật trạng thái thành công.`);
+      } else {
+        console.log(`Đơn hàng ${orderID} không thể cập nhật trạng thái.`);
+      }
+    }, delay);
   });
   const monitorEventStatuses = () => {
     activateEvents();

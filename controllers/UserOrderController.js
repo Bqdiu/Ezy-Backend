@@ -1,6 +1,15 @@
 const sequelize = require("../config/database");
 const { Op, Sequelize } = require("sequelize");
-
+const vnpay = require("../services/vnpayService");
+const {
+  ProductCode,
+  VnpLocale,
+  IpnUnknownError,
+  IpnFailChecksum,
+  IpnOrderNotFound,
+  IpnInvalidAmount,
+  IpnSuccess,
+} = require("vnpay");
 const {
   UserOrder,
   UserOrderDetails,
@@ -13,8 +22,9 @@ const {
   UserAccount,
 } = require("../models/Assosiations");
 const { getOrderDetailGHN } = require("../services/ghnServices");
-const { tr } = require("translate-google/languages");
 
+const dateFormat = require("dateformat");
+const { io } = require("../socket");
 const checkPaid = async (orderId) => {
   try {
     const order = await UserOrder.findOne({
@@ -36,6 +46,18 @@ const checkPaid = async (orderId) => {
     return isPendingOnly;
   } catch (error) {
     console.log("Lỗi khi lấy trạng thái đơn hàng: ", error);
+  }
+};
+const checkBlockStatus = async (orderId) => {
+  try {
+    const order = await UserOrder.findOne({
+      where: {
+        user_order_id: orderId,
+      },
+    });
+    return order.is_blocked === 0;
+  } catch (error) {
+    console.log("Lỗi khi lấy trạng thái block đơn hàng: ", error);
   }
 };
 
@@ -334,4 +356,94 @@ const updateOrderStatus = async (data) => {
   }
 };
 
-module.exports = { deleteOrder, checkPaid, getOrders, updateOrderStatus };
+const checkoutOrder = async (req, res) => {
+  try {
+    const { user_order_id } = req.body;
+    const order = await UserOrder.findOne({
+      where: {
+        user_order_id,
+      },
+      include: [
+        {
+          model: UserOrderDetails,
+        },
+      ],
+    });
+
+    const date = new Date();
+    const createdDate = dateFormat(date, "yyyymmddHHMMss");
+    const newDate = new Date(date.getTime() + 5 * 60 * 1000);
+    const expiredDate = dateFormat(newDate, "yyyymmddHHMMss");
+
+    const ref = `EzyEcommerce_${order.user_id}_${createdDate}_${expiredDate}`;
+
+    const paymentUrl = await vnpay.buildPaymentUrl({
+      vnp_Amount: order.final_price,
+      vnp_IpAddr: req.ip,
+      vnp_TxnRef: ref,
+      vnp_OrderInfo: "Thanh toán đơn hàng",
+      vnp_OrderType: ProductCode.Other,
+      vnp_ReturnUrl: "http://localhost:3000/cart/checkout/result",
+      vnp_Locale: VnpLocale.VN,
+      vnp_CreateDate: createdDate,
+      vnp_ExpireDate: expiredDate,
+    });
+
+    if (!paymentUrl) {
+      return res.status(400).json({
+        error: true,
+        message: "Không thể tạo URL thanh toán",
+      });
+    }
+    await order.update({
+      is_blocked: 1,
+    });
+    if (io) {
+      io.emit("unBlockOrder", {
+        orderID: order.user_order_id,
+        timeStamp: new Date(),
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      paymentUrl,
+    });
+  } catch (error) {
+    console.log("Lỗi khi tạo đơn hàng: ", error);
+    return res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const updateBlockStatus = async (user_order_id) => {
+  try {
+    const order = await UserOrder.findOne({
+      where: {
+        user_order_id,
+      },
+    });
+    if (order.is_blocked === 1) {
+      await order.update({
+        is_blocked: 0,
+        updated_at: new Date(),
+      });
+      return true;
+    }
+  } catch (error) {
+    console.log("Lỗi khi cập nhật trạng thái đơn hàng: ", error);
+    return false;
+  }
+};
+
+module.exports = {
+  deleteOrder,
+  checkPaid,
+  getOrders,
+  updateOrderStatus,
+  checkoutOrder,
+  updateBlockStatus,
+  checkBlockStatus,
+};

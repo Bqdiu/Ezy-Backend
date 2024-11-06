@@ -23,9 +23,6 @@ const {
 } = require("vnpay");
 const dateFormat = require("dateformat");
 const { io } = require("../socket");
-const { timeStamp } = require("console");
-const { is } = require("translate-google/languages");
-const { deserialize } = require("v8");
 const reserveStock = async (validCart) => {
   for (const shop of validCart) {
     for (const item of shop.CartItems) {
@@ -496,8 +493,8 @@ const checkoutWithVNPay = async (req, res) => {
 
     const date = new Date();
     const createdDate = dateFormat(date, "yyyymmddHHMMss");
-    const tommorow = new Date(date.setDate(date.getDate() + 1));
-    const expiredDate = dateFormat(tommorow, "yyyymmddHHMMss");
+    const newDate = new Date(date.getTime() + 5 * 60 * 1000);
+    const expiredDate = dateFormat(newDate, "yyyymmddHHMMss");
 
     const ref = `EzyEcommerce_${user_id}_${createdDate}_${expiredDate}`;
 
@@ -557,6 +554,13 @@ const vnPayIPN = async (req, res) => {
         },
       ],
     });
+    if (!foundOrderByTransactionCode.length === 0) {
+      return res.json({
+        status: "fail",
+        message: "Không tìm thấy đơn hàng",
+      });
+    }
+
     if (verify.isVerified && verify.isSuccess) {
       const isPaid = foundOrderByTransactionCode.every((order) => {
         order.order_status_id === 2;
@@ -575,6 +579,7 @@ const vnPayIPN = async (req, res) => {
           if (order.order_status_id === 1) {
             await order.update({
               order_status_id: 2,
+              is_blocked: 0,
             });
             await OrderStatusHistory.create({
               user_order_id: order.user_order_id,
@@ -857,12 +862,20 @@ const saveOrder = async (
       order_note: validCart[0].orderNote || "",
       order_status_id: order_status_id,
       return_expiration_date: null,
+      is_blocked: payment_method_id === 3 ? 1 : 0,
     });
-    io.emit("newOrder", {
-      orderID: order.user_order_id,
-      selectedVoucher: voucher,
-      timeStamp: new Date(),
-    });
+
+    if (payment_method_id === 3) {
+      io.emit("newOrder", {
+        orderID: order.user_order_id,
+        selectedVoucher: voucher,
+        timeStamp: new Date(),
+      });
+      io.emit("unBlockOrder", {
+        orderID: order.user_order_id,
+        timeStamp: new Date(),
+      });
+    }
     await OrderStatusHistory.create({
       user_order_id: order.user_order_id,
       order_status_id: order_status_id,
@@ -933,11 +946,17 @@ const saveOrder = async (
           order_status_id: order_status_id,
           return_expiration_date: null,
         });
-        io.emit("newOrder", {
-          orderID: order.user_order_id,
-          selectedVoucher: voucher,
-          timeStamp: new Date(),
-        });
+        if (payment_method_id === 3) {
+          io.emit("newOrder", {
+            orderID: order.user_order_id,
+            selectedVoucher: voucher,
+            timeStamp: new Date(),
+          });
+          io.emit("unBlockOrder", {
+            orderID: order.user_order_id,
+            timeStamp: new Date(),
+          });
+        }
         await OrderStatusHistory.create({
           user_order_id: order.user_order_id,
           order_status_id: order_status_id,

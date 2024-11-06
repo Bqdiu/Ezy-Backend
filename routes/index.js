@@ -91,7 +91,11 @@ const {
   updateClassifyTypeName,
   addSomeClassify,
 } = require("../controllers/ProductClassifyController");
-const { addProductImage, addSomeProductImages, deleteSomeProductImages } = require("../controllers/ProductImgsController");
+const {
+  addProductImage,
+  addSomeProductImages,
+  deleteSomeProductImages,
+} = require("../controllers/ProductImgsController");
 const {
   addProductVarients,
   findProductVarients,
@@ -168,6 +172,7 @@ const {
 const {
   getOrders,
   updateOrderStatus,
+  checkoutOrder,
 } = require("../controllers/UserOrderController");
 
 const {
@@ -221,7 +226,6 @@ router.post("/reset-product-stock", resetProductStock);
 router.post("/update-basic-info-product", updateBasicInfoProduct);
 router.post("/delete-some-products", deleteSomeProducts);
 
-
 //-----------------ProductClassify-------------------
 router.get("/classify-products", getProductClassifyByProductID);
 router.get("/all-classifies", getAllProductClassify);
@@ -248,9 +252,15 @@ router.post(
   deleteSomeProductVarientsBySize
 );
 router.post("/add-some-product-varients-level3", addSomeProductVarientLevel3);
-router.post("/add-some-product-varients-by-classifies", addSomeProductVarientsByClassifies);
+router.post(
+  "/add-some-product-varients-by-classifies",
+  addSomeProductVarientsByClassifies
+);
 router.post("/update-shipping-info", updateShippingInfo);
-router.post("/update-some-sale-info-product-varients", updateSomeSaleInfoProductVarients);
+router.post(
+  "/update-some-sale-info-product-varients",
+  updateSomeSaleInfoProductVarients
+);
 router.post(
   "/add-some-product-varients-by-classifies",
   addSomeProductVarientsByClassifies
@@ -351,11 +361,12 @@ router.post("/wallet/wallet-ipn", ipnHandler);
 //-----------------Order-----------------
 router.get("/order/order-status", getOrderStatus);
 router.post("/order/get_orders", getOrders);
+router.post("/order/checkout-order", checkoutOrder);
 
 //-----------------FlashSale-----------------
 router.get("/flash-sales/get-all", getAllFlashSales);
 router.post("/flash-sales/add", addFlashSale);
-router.put('/flash-sales/update/:id', updateFlashSale);
-router.delete('/flash-sales/delete/:id', deleteFlashSale);
+router.put("/flash-sales/update/:id", updateFlashSale);
+router.delete("/flash-sales/delete/:id", deleteFlashSale);
 
 module.exports = router;
