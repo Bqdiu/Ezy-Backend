@@ -95,6 +95,11 @@ const UserOrder = sequelize.define(
         key: "order_status_id",
       },
     },
+    is_reviewed: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "user_order",

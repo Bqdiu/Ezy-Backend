@@ -49,11 +49,6 @@ const UserOrderDetails = sequelize.define(
       type: DataTypes.BIGINT,
       allowNull: false,
     },
-    is_reviewed: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    },
   },
   {
     tableName: "user_order_details",
