@@ -110,6 +110,11 @@ const UserOrder = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    is_pending_payout: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
+      defaultValue: 1,
+    },
   },
   {
     tableName: "user_order",
