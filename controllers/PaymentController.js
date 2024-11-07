@@ -863,6 +863,16 @@ const saveOrder = async (
   order_status_id,
   transaction_code = ""
 ) => {
+  let vouchers_applied = "";
+  if (voucher) {
+    if (voucher.discountVoucher) {
+      vouchers_applied += `${voucher.discountVoucher.discount_voucher_id},`;
+    }
+    if (voucher.shippingVoucher) {
+      vouchers_applied += `${voucher.shippingVoucher.discount_voucher_id},`;
+    }
+    vouchers_applied = vouchers_applied.split(",").filter(Boolean).join(","); // Remove the trailing comma and join as a string
+  }
   if (validCart.length === 1) {
     const order = await UserOrder.create({
       user_id,
@@ -880,6 +890,7 @@ const saveOrder = async (
       order_status_id: order_status_id,
       return_expiration_date: null,
       is_blocked: payment_method_id === 3 ? 1 : 0,
+      vouchers_applied: vouchers_applied === "" ? null : vouchers_applied,
     });
 
     if (payment_method_id === 3) {
@@ -962,6 +973,7 @@ const saveOrder = async (
           order_code: "",
           order_status_id: order_status_id,
           return_expiration_date: null,
+          is_blocked: payment_method_id === 3 ? 1 : 0,
         });
         if (payment_method_id === 3) {
           io.emit("newOrder", {
