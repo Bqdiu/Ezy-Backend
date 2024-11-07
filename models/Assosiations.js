@@ -41,6 +41,7 @@ const ViolationHistory = require("./ViolationHistory");
 const ViolationTypes = require("./ViolationTypes");
 const ViolationImgs = require("./ViolationImgs");
 const ReturnReason = require("./ReturnReason");
+const ReturnType = require("./ReturnType");
 // Thiết lập mối quan hệ
 UserAccount.hasMany(UserAddress, { foreignKey: "user_id" });
 UserAddress.belongsTo(UserAccount, { foreignKey: "user_id" });
@@ -210,6 +211,10 @@ ViolationHistory.belongsTo(UserAccount, { foreignKey: "updated_by" });
 
 UserOrder.belongsTo(OrderStatus, { foreignKey: "order_status_id" });
 UserOrder.belongsTo(Shop, { foreignKey: "shop_id" });
+
+ReturnType.hasMany(ReturnRequest, { foreignKey: "return_type_id" });
+ReturnRequest.belongsTo(ReturnType, { foreignKey: "return_type_id" });
+
 module.exports = {
   UserAccount,
   UserAddress,

@@ -33,6 +33,14 @@ const ReturnRequest = sequelize.define(
         key: "user_order_id",
       },
     },
+    return_type_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "return_type",
+        key: "return_type_id",
+      },
+    },
     return_reason_id: {
       type: DataTypes.INTEGER,
       allowNull: false,

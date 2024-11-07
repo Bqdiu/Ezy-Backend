@@ -1,5 +1,5 @@
 const sequelize = require("../config/database");
-const { Op, Sequelize } = require("sequelize");
+const { Op, Sequelize, or } = require("sequelize");
 const vnpay = require("../services/vnpayService");
 const {
   ProductCode,
@@ -509,6 +509,64 @@ const updateBlockStatus = async (user_order_id) => {
   }
 };
 
+const cancelOrder = async (req, res) => {
+  try {
+    const { user_order_id } = req.body;
+    const order = await UserOrder.findOne({
+      where: {
+        user_order_id,
+      },
+      include: [
+        {
+          model: UserOrderDetails,
+        },
+      ],
+    });
+    if (!order) {
+      return res.status(404).json({
+        error: true,
+        message: "Đơn hàng không tồn tại",
+      });
+    }
+    await order.update({
+      order_status_id: 6,
+      updated_at: new Date(),
+    });
+    await OrderStatusHistory.create({
+      user_order_id,
+      order_status_id: 6,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await Promise.all(
+      order.UserOrderDetails.map(async (product) => {
+        await ProductVarients.increment(
+          { stock: product.quantity },
+          {
+            where: {
+              product_varients_id: product.product_varients_id,
+            },
+          }
+        );
+      })
+    );
+
+    if (order.vouchers_applied !== null) {
+      const vouchersApplied = order.vouchers_applied.split(",").map(Number);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Hủy đơn hàng thành công",
+    });
+  } catch (error) {
+    console.log("Lỗi khi hủy đơn hàng: ", error);
+    return res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
 module.exports = {
   deleteOrder,
   checkPaid,
