@@ -20,6 +20,8 @@ const {
   Product,
   Shop,
   UserAccount,
+  UserWallet,
+  WalletTransaction,
 } = require("../models/Assosiations");
 const { getOrderDetailGHN } = require("../services/ghnServices");
 
@@ -422,6 +424,7 @@ const checkoutOrder = async (req, res) => {
 const checkoutOrderEzyWallet = async (req, res) => {
   try {
     const { user_order_id, user_wallet_id } = req.body;
+    console.log(req.body);
     const order = await UserOrder.findOne({
       where: {
         user_order_id,
@@ -450,8 +453,16 @@ const checkoutOrderEzyWallet = async (req, res) => {
         message: "Số dư không đủ",
       });
     }
+
     await wallet.update({
       balance: wallet.balance - order.final_price,
+    });
+    await WalletTransaction.create({
+      user_wallet_id: wallet.user_wallet_id,
+      transaction_type: "Thanh Toán",
+      amount: -order.final_price,
+      transaction_date: new Date(),
+      description: "Thanh toán Ezy",
     });
     await OrderStatusHistory.create({
       user_order_id,

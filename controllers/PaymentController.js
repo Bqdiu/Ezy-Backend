@@ -586,7 +586,10 @@ const vnPayIPN = async (req, res) => {
       case "00":
         // Giao dịch thành công
         foundOrderByTransactionCode.forEach(async (order) => {
-          if (order.order_status_id === 1) {
+          const isPaid = order.OrderStatusHistories.every(
+            (history) => history.order_status_id === 1
+          );
+          if (isPaid) {
             await OrderStatusHistory.create({
               user_order_id: order.user_order_id,
               order_status_id: 2,

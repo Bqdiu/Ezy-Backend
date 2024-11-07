@@ -88,6 +88,10 @@ const UserOrder = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    vouchers_applied: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     order_status_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
