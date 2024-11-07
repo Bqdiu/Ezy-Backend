@@ -212,6 +212,8 @@ ViolationHistory.belongsTo(UserAccount, { foreignKey: "updated_by" });
 UserOrder.belongsTo(OrderStatus, { foreignKey: "order_status_id" });
 UserOrder.belongsTo(Shop, { foreignKey: "shop_id" });
 
+UserAccount.hasMany(UserOrder, { foreignKey: "user_id" });
+UserOrder.belongsTo(UserAccount, { foreignKey: "user_id" });
 ReturnType.hasMany(ReturnRequest, { foreignKey: "return_type_id" });
 ReturnRequest.belongsTo(ReturnType, { foreignKey: "return_type_id" });
 

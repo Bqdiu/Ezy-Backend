@@ -173,6 +173,7 @@ const {
   getOrders,
   updateOrderStatus,
   checkoutOrder,
+  getShopOrders,
   checkoutOrderEzyWallet,
   cancelOrder,
   confirmOrderCompleted,
@@ -365,6 +366,7 @@ router.post("/wallet/wallet-ipn", ipnHandler);
 router.get("/order/order-status", getOrderStatus);
 router.post("/order/get_orders", getOrders);
 router.post("/order/checkout-order", checkoutOrder);
+router.post("/order/get-shop-orders", getShopOrders);
 router.post("/order/checkout-order-ezy-wallet", checkoutOrderEzyWallet);
 router.post("/order/cancel-order", cancelOrder);
 router.post("/order/complete-order", confirmOrderCompleted);
