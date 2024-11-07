@@ -1,5 +1,5 @@
 const sequelize = require("../config/database");
-const { Op, Sequelize, or } = require("sequelize");
+const { Op, Sequelize, or, where } = require("sequelize");
 const vnpay = require("../services/vnpayService");
 const {
   ProductCode,
@@ -661,6 +661,36 @@ const cancelOrder = async (req, res) => {
 
     if (order.vouchers_applied !== null) {
       const vouchersApplied = order.vouchers_applied.split(",").map(Number);
+      await Promise.all(
+        vouchersApplied.map(async (voucherId) => {
+          await DiscountVoucher.increment(
+            { quantity: 1 },
+            {
+              where: {
+                discount_voucher_id: voucherId,
+              },
+            }
+          );
+        })
+      );
+    }
+
+    if (order.payment_method_id === 3 || order.payment_method_id === 4) {
+      const wallet = await UserWallet.findOne({
+        where: {
+          user_id: order.user_id,
+        },
+      });
+      await wallet.update({
+        balance: wallet.balance + order.final_price,
+      });
+      await WalletTransaction.create({
+        user_wallet_id: wallet.user_wallet_id,
+        transaction_type: "Hoàn tiền",
+        amount: order.final_price,
+        transaction_date: new Date(),
+        description: "Hoàn tiền đơn hàng",
+      });
     }
 
     return res.status(200).json({
@@ -669,6 +699,70 @@ const cancelOrder = async (req, res) => {
     });
   } catch (error) {
     console.log("Lỗi khi hủy đơn hàng: ", error);
+    return res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const confirmOrderCompleted = async (req, res) => {
+  try {
+    const { user_order_id } = req.body;
+    const order = await UserOrder.findOne({
+      where: {
+        user_order_id,
+      },
+      include: [
+        {
+          model: UserOrderDetails,
+          include: [
+            {
+              model: ProductVarients,
+            },
+          ],
+        },
+      ],
+    });
+    console.log(order);
+
+    if (!order) {
+      return res.status(404).json({
+        error: true,
+        message: "Đơn hàng không tồn tại",
+      });
+    }
+    await order.update({
+      order_status_id: 5,
+      updated_at: new Date(),
+    });
+    await OrderStatusHistory.create({
+      user_order_id,
+      order_status_id: 5,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await Promise.all(
+      order.UserOrderDetails.map(async (product) => {
+        await Product.increment(
+          { sold: product.quantity },
+          {
+            where: {
+              product_id: product.ProductVarient.product_id,
+            },
+          }
+        );
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+      order,
+      message: "Xác nhận giao hàng thành công",
+    });
+  } catch (error) {
+    console.log("Lỗi khi xác nhận giao hàng: ", error);
     return res.status(500).json({
       error: true,
       message: error.message || error,
@@ -684,5 +778,7 @@ module.exports = {
   updateBlockStatus,
   checkBlockStatus,
   getShopOrders,
-  checkoutOrderEzyWallet
+  checkoutOrderEzyWallet,
+  cancelOrder,
+  confirmOrderCompleted,
 };
