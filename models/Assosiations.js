@@ -38,6 +38,9 @@ const ReturnRequest = require("./ReturnRequest");
 const Violations = require("./Violations");
 const ViolationActions = require("./ViolationActions");
 const ViolationHistory = require("./ViolationHistory");
+const ViolationTypes = require("./ViolationTypes");
+const ViolationImgs = require("./ViolationImgs");
+const ReturnReason = require("./ReturnReason");
 // Thiết lập mối quan hệ
 UserAccount.hasMany(UserAddress, { foreignKey: "user_id" });
 UserAddress.belongsTo(UserAccount, { foreignKey: "user_id" });
@@ -178,6 +181,9 @@ RequestSupports.belongsTo(UserAccount, { foreignKey: "requestor_id" });
 UserAccount.hasMany(ReturnRequest, { foreignKey: "user_id" });
 ReturnRequest.belongsTo(UserAccount, { foreignKey: "user_id" });
 
+ReturnReason.hasMany(ReturnRequest, { foreignKey: "request_reason_id" });
+ReturnRequest.belongsTo(ReturnReason, { foreignKey: "request_reason_id" });
+
 Shop.hasMany(ReturnRequest, { foreignKey: "shop_id" });
 ReturnRequest.belongsTo(Shop, { foreignKey: "shop_id" });
 
@@ -192,6 +198,12 @@ ViolationActions.belongsTo(Violations, { foreignKey: "violation_id" });
 
 Violations.hasMany(ViolationHistory, { foreignKey: "violation_id" });
 ViolationHistory.belongsTo(Violations, { foreignKey: "violation_id" });
+
+ViolationTypes.hasMany(Violations, { foreignKey: "violation_type_id" });
+Violations.belongsTo(ViolationTypes, { foreignKey: "violation_type_id" });
+
+Violations.hasMany(ViolationImgs, { foreignKey: "violation_id" });
+ViolationImgs.belongsTo(Violations, { foreignKey: "violation_id" });
 
 UserAccount.hasMany(ViolationHistory, { foreignKey: "updated_by" });
 ViolationHistory.belongsTo(UserAccount, { foreignKey: "updated_by" });
@@ -242,4 +254,7 @@ module.exports = {
   Violations,
   ViolationActions,
   ViolationHistory,
+  ViolationImgs,
+  ViolationTypes,
+  ReturnReason,
 };

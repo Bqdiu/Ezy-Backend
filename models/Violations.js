@@ -18,19 +18,19 @@ const Violations = sequelize.define(
         key: "user_id",
       },
     },
-    violation_type: {
-      type: DataTypes.STRING,
+    violation_type_id: {
+      type: DataTypes.INTEGER,
       allowNull: false,
+      references: {
+        model: "violation_types",
+        key: "violation_type_id",
+      },
     },
     date_reported: {
       type: DataTypes.DATE,
       allowNull: false,
     },
-    priority_level: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      defaultValue: "Thấp",
-    },
+
     resolved_date: {
       type: DataTypes.DATE,
       allowNull: true,

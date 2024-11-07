@@ -20,6 +20,8 @@ const {
   Product,
   Shop,
   UserAccount,
+  UserWallet,
+  WalletTransaction,
 } = require("../models/Assosiations");
 const { getOrderDetailGHN } = require("../services/ghnServices");
 
@@ -372,10 +374,10 @@ const checkoutOrder = async (req, res) => {
 
     const date = new Date();
     const createdDate = dateFormat(date, "yyyymmddHHMMss");
-    const newDate = new Date(date.getTime() + 5 * 60 * 1000);
+    const newDate = new Date(date.getTime() + 2 * 60 * 1000);
     const expiredDate = dateFormat(newDate, "yyyymmddHHMMss");
 
-    const ref = `EzyEcommerce_${order.user_id}_${createdDate}_${expiredDate}`;
+    const ref = `EzyEcommerce_${order.user_id}_${createdDate}`;
 
     const paymentUrl = await vnpay.buildPaymentUrl({
       vnp_Amount: order.final_price,
@@ -397,6 +399,7 @@ const checkoutOrder = async (req, res) => {
     }
     await order.update({
       is_blocked: 1,
+      transaction_code: ref,
     });
     if (io) {
       io.emit("unBlockOrder", {
@@ -411,6 +414,74 @@ const checkoutOrder = async (req, res) => {
     });
   } catch (error) {
     console.log("Lỗi khi tạo đơn hàng: ", error);
+    return res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const checkoutOrderEzyWallet = async (req, res) => {
+  try {
+    const { user_order_id, user_wallet_id } = req.body;
+    console.log(req.body);
+    const order = await UserOrder.findOne({
+      where: {
+        user_order_id,
+      },
+    });
+    if (!order) {
+      return res.status(404).json({
+        error: true,
+        message: "Đơn hàng không tồn tại",
+      });
+    }
+    const wallet = await UserWallet.findOne({
+      where: {
+        user_wallet_id,
+      },
+    });
+    if (!wallet) {
+      return res.status(404).json({
+        error: true,
+        message: "Ví không tồn tại",
+      });
+    }
+    if (wallet.balance < order.final_price) {
+      return res.status(400).json({
+        error: true,
+        message: "Số dư không đủ",
+      });
+    }
+
+    await wallet.update({
+      balance: wallet.balance - order.final_price,
+    });
+    await WalletTransaction.create({
+      user_wallet_id: wallet.user_wallet_id,
+      transaction_type: "Thanh Toán",
+      amount: -order.final_price,
+      transaction_date: new Date(),
+      description: "Thanh toán Ezy",
+    });
+    await OrderStatusHistory.create({
+      user_order_id,
+      order_status_id: 2,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await order.update({
+      order_status_id: 2,
+      updated_at: new Date(),
+      is_blocked: 0,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Thanh toán thành công",
+    });
+  } catch (error) {
+    console.log("Lỗi khi thanh toán bằng ví Ezy: ", error);
     return res.status(500).json({
       error: true,
       message: error.message || error,
@@ -554,5 +625,6 @@ module.exports = {
   checkoutOrder,
   updateBlockStatus,
   checkBlockStatus,
-  getShopOrders
+  getShopOrders,
+  checkoutOrderEzyWallet
 };

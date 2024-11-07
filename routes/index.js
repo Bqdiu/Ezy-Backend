@@ -174,6 +174,7 @@ const {
   updateOrderStatus,
   checkoutOrder,
   getShopOrders,
+  checkoutOrderEzyWallet,
 } = require("../controllers/UserOrderController");
 
 const {
@@ -364,6 +365,7 @@ router.get("/order/order-status", getOrderStatus);
 router.post("/order/get_orders", getOrders);
 router.post("/order/checkout-order", checkoutOrder);
 router.post("/order/get-shop-orders", getShopOrders);
+router.post("/order/checkout-order-ezy-wallet", checkoutOrderEzyWallet);
 
 //-----------------FlashSale-----------------
 router.get("/flash-sales/get-all", getAllFlashSales);

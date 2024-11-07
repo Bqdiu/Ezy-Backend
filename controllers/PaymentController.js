@@ -493,10 +493,10 @@ const checkoutWithVNPay = async (req, res) => {
 
     const date = new Date();
     const createdDate = dateFormat(date, "yyyymmddHHMMss");
-    const newDate = new Date(date.getTime() + 5 * 60 * 1000);
+    const newDate = new Date(date.getTime() + 2 * 60 * 1000);
     const expiredDate = dateFormat(newDate, "yyyymmddHHMMss");
 
-    const ref = `EzyEcommerce_${user_id}_${createdDate}_${expiredDate}`;
+    const ref = `EzyVnPay_${user_id}_${createdDate}`;
 
     const paymentUrl = await vnpay.buildPaymentUrl({
       vnp_Amount: totalPayment.final,
@@ -524,7 +524,8 @@ const checkoutWithVNPay = async (req, res) => {
       totalPayment,
       totalPerItem,
       3,
-      1
+      1,
+      ref
     );
 
     return res.status(200).json({
@@ -554,6 +555,15 @@ const vnPayIPN = async (req, res) => {
         },
       ],
     });
+    if (!verify.isSuccess || !verify.isVerified) {
+      foundOrderByTransactionCode.forEach(async (order) => {
+        if (order.order_status_id === 1) {
+          await order.update({
+            is_blocked: 0,
+          });
+        }
+      });
+    }
     if (!foundOrderByTransactionCode.length === 0) {
       return res.json({
         status: "fail",
@@ -576,16 +586,19 @@ const vnPayIPN = async (req, res) => {
       case "00":
         // Giao dịch thành công
         foundOrderByTransactionCode.forEach(async (order) => {
-          if (order.order_status_id === 1) {
-            await order.update({
-              order_status_id: 2,
-              is_blocked: 0,
-            });
+          const isPaid = order.OrderStatusHistories.every(
+            (history) => history.order_status_id === 1
+          );
+          if (isPaid) {
             await OrderStatusHistory.create({
               user_order_id: order.user_order_id,
               order_status_id: 2,
               createdAt: new Date(),
               updatedAt: new Date(),
+            });
+            await order.update({
+              order_status_id: 2,
+              is_blocked: 0,
             });
           }
         });
@@ -718,15 +731,17 @@ const checkoutWithEzyWallet = async (req, res) => {
       });
     }
     const isEnoughMoney = wallet.balance >= totalPayment.final;
+    let transaction_code = "";
     if (isEnoughMoney) {
       wallet.balance -= totalPayment.final;
-      await WalletTransaction.create({
+      const transaction = await WalletTransaction.create({
         user_wallet_id: wallet.user_wallet_id,
         transaction_type: "Thanh Toán",
         amount: -totalPayment.final,
         transaction_date: new Date(),
         description: "Thanh toán Ezy",
       });
+      transaction_code = `EzyWallet_${user_id}_${transaction.wallet_transaction_id}`;
       await wallet.save();
     } else {
       return res.status(400).json({
@@ -743,7 +758,8 @@ const checkoutWithEzyWallet = async (req, res) => {
       totalPayment,
       totalPerItem,
       4,
-      2
+      2,
+      transaction_code
     );
 
     return res.status(200).json({
@@ -844,8 +860,19 @@ const saveOrder = async (
   totalPayment,
   totalPerItem,
   payment_method_id,
-  order_status_id
+  order_status_id,
+  transaction_code = ""
 ) => {
+  let vouchers_applied = "";
+  if (voucher) {
+    if (voucher.discountVoucher) {
+      vouchers_applied += `${voucher.discountVoucher.discount_voucher_id},`;
+    }
+    if (voucher.shippingVoucher) {
+      vouchers_applied += `${voucher.shippingVoucher.discount_voucher_id},`;
+    }
+    vouchers_applied = vouchers_applied.split(",").filter(Boolean).join(","); // Remove the trailing comma and join as a string
+  }
   if (validCart.length === 1) {
     const order = await UserOrder.create({
       user_id,
@@ -858,11 +885,12 @@ const saveOrder = async (
       discount_shipping_fee: totalPayment.discountShippingFee,
       discount_price: totalPayment.discountPrice,
       payment_method_id: payment_method_id,
-      transaction_code: "",
+      transaction_code: transaction_code,
       order_note: validCart[0].orderNote || "",
       order_status_id: order_status_id,
       return_expiration_date: null,
       is_blocked: payment_method_id === 3 ? 1 : 0,
+      vouchers_applied: vouchers_applied === "" ? null : vouchers_applied,
     });
 
     if (payment_method_id === 3) {
@@ -940,11 +968,12 @@ const saveOrder = async (
           discount_shipping_fee: total.discountShippingFee,
           discount_price: total.discountPrice,
           payment_method_id: payment_method_id,
-          transaction_code: "",
+          transaction_code: transaction_code,
           order_note: shop.orderNote || "",
           order_code: "",
           order_status_id: order_status_id,
           return_expiration_date: null,
+          is_blocked: payment_method_id === 3 ? 1 : 0,
         });
         if (payment_method_id === 3) {
           io.emit("newOrder", {
