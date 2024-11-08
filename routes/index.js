@@ -179,6 +179,7 @@ const {
   cancelOrder,
   confirmOrderCompleted,
   buyOrderAgain,
+  reviewOrder,
 } = require("../controllers/UserOrderController");
 
 const {
@@ -319,7 +320,6 @@ router.post("/add-role", addRole);
 router.delete("/delete-role/:id", deleteRole);
 router.put("/update-role/:id", updateRole);
 
-
 //-----------------BusinessStyle-----------------
 router.get("/all-business-styles", getAllBusinessStyle);
 
@@ -375,6 +375,7 @@ router.post("/order/checkout-order-ezy-wallet", checkoutOrderEzyWallet);
 router.post("/order/cancel-order", cancelOrder);
 router.post("/order/complete-order", confirmOrderCompleted);
 router.post("/order/buy-again", buyOrderAgain);
+router.post("/order/review-order", reviewOrder);
 //-----------------FlashSale-----------------
 router.get("/flash-sales/get-all", getAllFlashSales);
 router.post("/flash-sales/add", addFlashSale);

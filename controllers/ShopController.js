@@ -105,6 +105,7 @@ const getShopDetail = async (req, res) => {
                 stock: { [Op.gt]: 0 },
                 avgRating: { [Op.gte]: 4 },
                 sold: { [Op.gt]: 0 },
+                product_status: 1,
               },
             ],
           },
@@ -219,26 +220,26 @@ const getShopByUserID = async (req, res) => {
   try {
     const shop = await Shop.findOne({
       where: {
-        user_id: user_id
-      }
+        user_id: user_id,
+      },
     });
 
     if (!shop) {
       return res.status(404).json({
         success: false,
-        message: 'Shop not found'
+        message: "Shop not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: shop
+      data: shop,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'An error occurred while fetching the shop.',
-      error: error.message
+      message: "An error occurred while fetching the shop.",
+      error: error.message,
     });
   }
 };
@@ -260,65 +261,68 @@ const updateShopProfile = async (req, res) => {
       shop_address,
       citizen_number,
       full_name,
-      phone_number
+      phone_number,
     } = req.body;
     const shop = await Shop.findOne({
       where: {
-        shop_id
-      }
+        shop_id,
+      },
     });
 
     if (!shop) {
       return res.status(404).json({
         success: false,
-        message: 'Shop not found'
+        message: "Shop not found",
       });
     }
 
-    await Shop.update({
-      shop_name: shop_name || shop.shop_name,
-      logo_url: logo_url || shop.logo_url,
-      shop_description: shop_description || shop.shop_description,
-      business_style_id: business_style_id || shop.business_style_id,
-      tax_code: tax_code || shop.tax_code,
-      business_email: business_email || shop.business_email,
-      province_id: province_id || shop.province_id,
-      district_id: district_id || shop.district_id,
-      ward_code: ward_code || shop.ward_code,
-      shop_address: shop_address || shop.shop_address,
-      citizen_number: citizen_number || shop.citizen_number,
-      full_name: full_name || shop.full_name,
-      phone_number: phone_number || shop.phone_number
-    }, {
-      where: {
-        shop_id
+    await Shop.update(
+      {
+        shop_name: shop_name || shop.shop_name,
+        logo_url: logo_url || shop.logo_url,
+        shop_description: shop_description || shop.shop_description,
+        business_style_id: business_style_id || shop.business_style_id,
+        tax_code: tax_code || shop.tax_code,
+        business_email: business_email || shop.business_email,
+        province_id: province_id || shop.province_id,
+        district_id: district_id || shop.district_id,
+        ward_code: ward_code || shop.ward_code,
+        shop_address: shop_address || shop.shop_address,
+        citizen_number: citizen_number || shop.citizen_number,
+        full_name: full_name || shop.full_name,
+        phone_number: phone_number || shop.phone_number,
+      },
+      {
+        where: {
+          shop_id,
+        },
       }
-    });
+    );
 
     const updatedShop = await Shop.findOne({
       where: {
-        shop_id
-      }
+        shop_id,
+      },
     });
 
     res.status(200).json({
       success: true,
-      message: 'Shop updated successfully',
-      data: updatedShop
+      message: "Shop updated successfully",
+      data: updatedShop,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'An error occurred while updating the shop',
-      error: error.message || error
+      message: "An error occurred while updating the shop",
+      error: error.message || error,
     });
   }
-}
+};
 
 module.exports = {
   getShops,
   getShopDetail,
   createShop,
   getShopByUserID,
-  updateShopProfile
+  updateShopProfile,
 };
