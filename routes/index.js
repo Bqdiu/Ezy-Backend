@@ -69,6 +69,7 @@ const {
   getAllRole,
   addRole,
   deleteRole,
+  updateRole,
 } = require("../controllers/RoleController");
 const {
   getAllBusinessStyle,
@@ -316,6 +317,8 @@ router.get("/address/get-default-address", getDefaultAddress);
 router.get("/all-role", getAllRole);
 router.post("/add-role", addRole);
 router.delete("/delete-role/:id", deleteRole);
+router.put("/update-role/:id", updateRole);
+
 
 //-----------------BusinessStyle-----------------
 router.get("/all-business-styles", getAllBusinessStyle);
