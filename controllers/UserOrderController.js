@@ -617,7 +617,7 @@ const getShopOrders = async (req, res) => {
       .status(500)
       .json({ error: true, message: error.message || error });
   }
-}
+};
 
 const cancelOrder = async (req, res) => {
   try {

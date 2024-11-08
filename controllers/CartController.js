@@ -34,7 +34,13 @@ const getCart = async (req, res) => {
     const cartShop = await CartShop.findAll({
       where: {
         cart_id: cartSection.cart_id,
+        "$Shop.shop_status$": 1,
+        "$CartItems.ProductVarient.Product.product_status$": 1,
+        "$CartItems.ProductVarient.stock$": {
+          [Op.gt]: 0,
+        },
       },
+
       include: [
         {
           model: Shop,
@@ -65,6 +71,9 @@ const getCart = async (req, res) => {
                       ],
                     },
                   ],
+                  // where: {
+                  //   product_status: 1,
+                  // },
                 },
                 {
                   model: ProductClassify,
@@ -73,27 +82,57 @@ const getCart = async (req, res) => {
                   model: ProductSize,
                 },
               ],
-              where: {
-                stock: { [Op.gt]: 0 },
-              },
+              // where: {
+              //   stock: {
+              //     [Op.gt]: 0,
+              //   },
+              // },
             },
           ],
-          order: [["updatedAt", "DESC"]],
+        },
+        {
+          model: CartSections,
         },
       ],
+
       order: [["updatedAt", "DESC"]],
     });
 
-    const filteredCartShop = cartShop.filter((shop) => {
-      const allItemsOutOfStock = shop.CartItems.every(
-        (item) => item.isOutOfStock === 1
-      );
-      return !allItemsOutOfStock;
-    });
+    // const filteredCartShop = cartShop.filter((shop) => {
+    //   const allItemsOutOfStock = shop.CartItems.every(
+    //     (item) =>
+    //       item.isOutOfStock === 1 ||
+    //       item.ProductVarient.Product.product_status === 0
+    //   );
+    //   return !allItemsOutOfStock;
+    // });
 
     const invalidItems = await CartItems.findAll({
       where: {
-        cart_shop_id: cartShop.map((item) => item.cart_shop_id),
+        [Op.and]: [
+          {
+            "$CartShop.CartSection.cart_id$": cartSection.cart_id,
+          },
+          {
+            [Op.or]: [
+              {
+                "$ProductVarient.stock$": {
+                  [Op.lte]: 0,
+                },
+              },
+              {
+                "$ProductVarient.Product.product_status$": {
+                  [Op.eq]: 0,
+                },
+              },
+              {
+                "$ProductVarient.Product.Shop.shop_status$": {
+                  [Op.eq]: 0,
+                },
+              },
+            ],
+          },
+        ],
       },
       include: [
         {
@@ -105,6 +144,10 @@ const getCart = async (req, res) => {
                 {
                   model: ProductClassify,
                 },
+                {
+                  model: Shop,
+                  attributes: ["shop_id", "shop_name", "shop_status"],
+                },
               ],
             },
             {
@@ -114,15 +157,21 @@ const getCart = async (req, res) => {
               model: ProductSize,
             },
           ],
-          where: {
-            stock: { [Op.lte]: 0 },
-          },
+        },
+        {
+          model: CartShop,
+          include: [
+            {
+              model: CartSections,
+            },
+          ],
         },
       ],
     });
+
     res.status(200).json({
       success: true,
-      cartShop: filteredCartShop,
+      cartShop: cartShop,
       invalidItems,
     });
   } catch (error) {
@@ -149,59 +198,58 @@ const getLimitCartItems = async (req, res) => {
         totalItems: 0,
       });
     }
-    const cartItems = await CartItems.findAll({
+    const { count, rows: cartItems } = await CartItems.findAndCountAll({
       include: [
         {
           model: ProductVarients,
           include: [
             {
               model: Product,
+              // where: {
+              //   product_status: 1,
+              // },
             },
+
             {
               model: ProductClassify,
             },
           ],
-          where: {
-            stock: {
-              [Op.gt]: 0,
-            },
-          },
+          // where: {
+          //   stock: {
+          //     [Op.gt]: 0,
+          //   },
+          // },
         },
         {
           model: CartShop,
-          where: {
-            cart_id: cartSection.cart_id,
-          },
+          // where: {
+          //   cart_id: cartSection.cart_id,
+          // },
+          include: [
+            {
+              model: Shop,
+              attributes: ["shop_id", "shop_name", "shop_status"],
+            },
+          ],
         },
       ],
+      where: {
+        "$CartShop.cart_id$": cartSection.cart_id,
+        "$CartShop.Shop.shop_status$": 1,
+        "$ProductVarient.Product.product_status$": 1,
+        "$ProductVarient.stock$": {
+          [Op.gt]: 0,
+        },
+      },
       order: [["createdAt", "DESC"]],
       limit: 5,
-    });
-
-    const totalItems = await CartItems.count({
-      include: [
-        {
-          model: ProductVarients,
-          where: {
-            stock: {
-              [Op.gt]: 0,
-            },
-          },
-        },
-        {
-          model: CartShop,
-          where: {
-            cart_id: cartSection.cart_id,
-          },
-        },
-      ],
     });
 
     if (cartItems) {
       return res.status(200).json({
         success: true,
         cartItems,
-        totalItems,
+        totalItems: count,
       });
     }
   } catch (error) {
@@ -220,11 +268,34 @@ const addToCart = async (req, res) => {
       where: {
         product_varients_id: product_varients_id,
       },
+      include: [
+        {
+          model: Product,
+          include: [
+            {
+              model: Shop,
+              attributes: ["shop_id", "shop_name", "shop_status"],
+            },
+          ],
+        },
+      ],
     });
     if (!productVarient) {
       return res.status(404).json({
         error: true,
         message: "Không tìm thấy sản phẩm",
+      });
+    }
+    if (productVarient.Product.Shop.shop_status === 0) {
+      return res.status(400).json({
+        error: true,
+        message: "Cửa hàng đã bị khóa không thể thêm sản phẩm vào giỏ hàng",
+      });
+    }
+    if (productVarient.Product.product_status === 0) {
+      return res.status(400).json({
+        error: true,
+        message: "Sản phẩm đã bị khóa không thể thêm sản phẩm vào giỏ hàng",
       });
     }
     if (quantity > productVarient.stock) {
@@ -256,8 +327,6 @@ const addToCart = async (req, res) => {
         updatedAt: new Date(),
       },
     });
-    console.log("cart_shop_id: ", cartShop.cart_shop_id);
-    console.log("product_varients_id: ", product_varients_id);
     const cartItem = await CartItems.findOne({
       where: {
         cart_shop_id: cartShop.cart_shop_id,
@@ -347,7 +416,30 @@ const updateQuantity = async (req, res) => {
       where: {
         product_varients_id: cartItem.product_varients_id,
       },
+      include: [
+        {
+          model: Product,
+          include: [
+            {
+              model: Shop,
+              attributes: ["shop_id", "shop_name", "shop_status"],
+            },
+          ],
+        },
+      ],
     });
+    if (productVarient.Product.Shop.shop_status === 0) {
+      return res.status(400).json({
+        error: true,
+        message: "Cửa hàng đã bị khóa không thể câp nhật số lượng sản phẩm",
+      });
+    }
+    if (productVarient.Product.product_status === 0) {
+      return res.status(400).json({
+        error: true,
+        message: "Sản phẩm đã bị khóa không thể cập nhật số lượng sản phẩm",
+      });
+    }
 
     if (quantity > productVarient.stock) {
       return res.status(400).json({
@@ -356,7 +448,7 @@ const updateQuantity = async (req, res) => {
       });
     }
 
-    cartItem.update({ quantity });
+    await cartItem.update({ quantity });
 
     res.status(200).json({
       success: true,
@@ -385,12 +477,36 @@ const updateVarients = async (req, res) => {
       where: {
         product_varients_id,
       },
+      include: [
+        {
+          model: Product,
+          include: [
+            {
+              model: Shop,
+              attributes: ["shop_id", "shop_name", "shop_status"],
+            },
+          ],
+        },
+      ],
     });
 
     if (!productVarient) {
       return res.status(404).json({
         error: true,
         message: "Không tìm thấy sản phẩm",
+      });
+    }
+
+    if (productVarient.Product.Shop.shop_status === 0) {
+      return res.status(400).json({
+        error: true,
+        message: "Cửa hàng đã bị khóa không thể cập nhật sản phẩm",
+      });
+    }
+    if (productVarient.Product.product_status === 0) {
+      return res.status(400).json({
+        error: true,
+        message: "Sản phẩm đã bị khóa không thể cập nhật sản phẩm",
       });
     }
 
@@ -448,27 +564,59 @@ const updateSelectedAll = async (req, res) => {
         cart_id,
       },
     });
-    await CartShop.update(
-      {
-        selected,
+    const cartItems = await CartItems.findAll({
+      where: {
+        cart_shop_id: cartShop.map((item) => item.cart_shop_id),
+        isOutOfStock: 0,
+        "$ProductVarient.Product.product_status$": 1,
+        "$ProductVarient.Product.Shop.shop_status$": 1,
       },
+      include: [
+        {
+          model: ProductVarients,
+          include: [
+            {
+              model: Product,
+              include: [
+                {
+                  model: Shop,
+                  attributes: ["shop_id", "shop_name", "shop_status"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const [affectedRows] = await CartItems.update(
+      { selected },
       {
         where: {
-          cart_id,
+          cart_item_id: cartItems.map((item) => item.cart_item_id),
         },
       }
     );
-    await CartItems.update(
-      {
-        selected,
-      },
-      {
-        where: {
-          cart_shop_id: cartShop.map((item) => item.cart_shop_id),
-          isOutOfStock: 0,
-        },
-      }
-    );
+
+    if (affectedRows > 0) {
+      await CartShop.update(
+        { selected },
+        {
+          where: {
+            cart_id,
+          },
+        }
+      );
+    } else if (affectedRows === 0) {
+      await CartShop.update(
+        { selected: 0 },
+        {
+          where: {
+            cart_id,
+            selected: 1,
+          },
+        }
+      );
+    }
 
     res.status(200).json({
       success: true,
@@ -494,21 +642,59 @@ const updateAllItemsOfShop = async (req, res) => {
         cart_shop_id,
       },
     });
-    cartShop.update({
-      selected,
+    const cartItems = await CartItems.findAll({
+      where: {
+        cart_shop_id,
+        isOutOfStock: 0,
+        "$ProductVarient.Product.product_status$": 1,
+        "$ProductVarient.Product.Shop.shop_status$": 1,
+      },
+      include: [
+        {
+          model: ProductVarients,
+          include: [
+            {
+              model: Product,
+              include: [
+                {
+                  model: Shop,
+                  attributes: ["shop_id", "shop_name", "shop_status"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
     });
 
-    const cartItems = await CartItems.update(
-      {
-        selected,
-      },
+    const [affectedRows] = await CartItems.update(
+      { selected },
       {
         where: {
-          cart_shop_id,
-          isOutOfStock: 0,
+          cart_item_id: cartItems.map((item) => item.cart_item_id),
         },
       }
     );
+
+    if (affectedRows > 0) {
+      await cartShop.update({
+        selected,
+      });
+    } else if (affectedRows === 0) {
+      {
+        await cartShop.update(
+          {
+            selected: 0,
+          },
+          {
+            where: {
+              selected: 1,
+            },
+          }
+        );
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: "Cập nhật lựa chọn tất cả sản phẩm trong giỏ hàng thành công",
@@ -532,7 +718,41 @@ const updateSelectedItem = async (req, res) => {
       where: {
         cart_item_id,
       },
+      include: [
+        {
+          model: ProductVarients,
+          include: [
+            {
+              model: Product,
+              include: [
+                {
+                  model: Shop,
+                  attributes: ["shop_id", "shop_name", "shop_status"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
     });
+    if (!cartItem) {
+      return res.status(404).json({
+        error: true,
+        message: "Không tìm thấy sản phẩm trong giỏ hàng",
+      });
+    }
+    if (cartItem.ProductVarient.Product.Shop.shop_status === 0) {
+      return res.status(400).json({
+        error: true,
+        message: "Cửa hàng đã bị khóa không thể cập nhật sản phẩm",
+      });
+    }
+    if (cartItem.ProductVarient.Product.product_status === 0) {
+      return res.status(400).json({
+        error: true,
+        message: "Sản phẩm đã bị khóa không thể cập nhật sản phẩm",
+      });
+    }
     await cartItem.update({
       selected,
     });

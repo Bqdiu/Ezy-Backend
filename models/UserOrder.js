@@ -29,6 +29,10 @@ const UserOrder = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    user_address_id_string: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     total_quantity: {
       type: DataTypes.INTEGER,
       allowNull: false,
