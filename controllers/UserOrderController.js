@@ -30,7 +30,7 @@ const { getOrderDetailGHN, createOrderGHN } = require("../services/ghnServices")
 
 const dateFormat = require("dateformat");
 const { io } = require("../socket");
-const { fr } = require("translate-google/languages");
+const { fr, da } = require("translate-google/languages");
 const checkPaid = async (orderId) => {
   try {
     const order = await UserOrder.findOne({
@@ -816,92 +816,79 @@ const confirmOrder = async (req, res) => {
   if (!shopId || !user_order_id) {
     return res.status(400).json({
       error: true,
-      message: "shop id or user order id is required",
+      message: "Shop ID or user order ID is required",
       data: req.body
     });
   }
 
-  const order = await UserOrder.findOne({
-    where: {
-      user_order_id,
-    },
-  });
+  try {
+    const order = await UserOrder.findOne({ where: { user_order_id } });
+    if (!order) {
+      return res.status(404).json({ error: true, message: "Order not found" });
+    }
 
-  if (!order) {
-    return res.status(404).json({
+    data.cod_amount = order.final_price;
+    data.payment_type_id = payment_method_id === 1 ? 2 : 1;
+    if (payment_method_id === 1) data.cod_amount = 0;
+
+    const requiredFields = [
+      'from_name', 'from_phone', 'from_address', 'from_ward_name', 'from_district_name', 'from_province_name',
+      'to_name', 'to_phone', 'to_address', 'to_ward_code', 'to_district_id', 'weight', 'length', 'width', 'height',
+      'service_type_id', 'items'
+    ];
+    const missingFields = requiredFields.filter(field => !data[field]);
+
+    if (missingFields.length) {
+      return res.status(400).json({
+        error: true,
+        message: `Missing required fields: ${missingFields.join(', ')}`,
+        missingFields
+      });
+    }
+
+    const resultGHN = await createOrderGHN(shopId, data);
+    if (resultGHN.error) {
+      return res.status(400).json({
+        error: true,
+        message: "Failed to create order with GHN. Please check provided data or try again later.",
+        details: resultGHN.error
+      });
+    }
+    if (resultGHN.data) {
+      await order.update({
+        order_status_id: 3,
+        order_code: resultGHN.data.order_code,
+        updated_at: new Date(),
+      });
+
+      await OrderStatusHistory.create({
+        user_order_id,
+        order_status_id: 3,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Order created successfully",
+        ghn_data: resultGHN.data,
+        order_data: order
+      });
+    } else {
+      return res.status(400).json({
+        error: true,
+        message: "Error creating the order",
+        data: resultGHN
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
       error: true,
-      message: "Order not found"
+      message: "Server error",
+      details: error.message
     });
   }
-  data.code_amount = order.final_price;
-  // Choose who pay shipping fee 1: Seller, 2: Buyer
-  if (payment_method_id === 1) {
-    data.payment_type_id = 2;
-    data.code_amount = 0;
-  }
-  else {
-    data.payment_type_id = 1;
-  }
-  if (!data.from_name ||
-    !data.from_phone ||
-    !data.from_address ||
-    !data.from_ward_name ||
-    !data.from_district_name ||
-    !data.from_province_name ||
-    !data.to_name ||
-    !data.to_phone ||
-    !data.to_address ||
-    !data.to_ward_code ||
-    !data.to_district_id ||
-    !data.weight ||
-    !data.length ||
-    !data.width ||
-    !data.height ||
-    !data.service_type_id ||
-    !data.items
-  )
-    return res.status(400).json({
-      error: true,
-      message: "Missing required data",
-      data: data
-    });
-
-
-  const resultGHN = await createOrderGHN(shopId, data);
-  if (resultGHN.error)
-    return res.status(400).json({
-      error: true,
-      message: resultGHN.message
-    });
-  if (resultGHN.data) {
-    await order.update({
-      order_status_id: 3,
-      order_code: resultGHN.data.order_code,
-      updated_at: new Date(),
-    });
-
-    await OrderStatusHistory.create({
-      user_order_id,
-      order_status_id: 3,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Order created successfully",
-      ghn_data: resultGHN.data,
-      order_data: order
-    });
-
-  }
-  else {
-    return res.status(400).json({
-      error: true,
-      message: "Lỗi khi tạo đơn hàng"
-    });
-  }
-}
+};
 
 const buyOrderAgain = async (req, res) => {
   try {
@@ -972,17 +959,15 @@ const buyOrderAgain = async (req, res) => {
         if (product.ProductVarient.Product.product_status === 0) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name}  ${
-              product.classify !== "" && "- " + product.classify
-            } đã bị khóa`,
+            message: `Sản phẩm ${product.varient_name}  ${product.classify !== "" && "- " + product.classify
+              } đã bị khóa`,
           });
         }
         if (stock < product.quantity) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name} ${
-              product.classify !== "" && "- " + product.classify
-            } không đủ hàng`,
+            message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
+              } không đủ hàng`,
           });
         }
         const cartItem = await CartItems.findOne({
@@ -998,9 +983,8 @@ const buyOrderAgain = async (req, res) => {
           if (newQuantity > stock) {
             return res.status(400).json({
               error: true,
-              message: `Sản phẩm ${product.varient_name} ${
-                product.classify !== "" && "- " + product.classify
-              } không đủ hàng`,
+              message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
+                } không đủ hàng`,
             });
           }
           console.log("price: ", newQuantity * discount_price);

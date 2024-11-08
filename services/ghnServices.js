@@ -37,7 +37,9 @@ const createOrderGHN = async (shopId, data) => {
     });
     return res.data;
   } catch (error) {
-    throw new Error(error.message);
+    // 
+    console.log(error.message);
+    return error;
   }
 };
 
