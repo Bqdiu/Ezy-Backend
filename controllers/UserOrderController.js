@@ -22,6 +22,9 @@ const {
   UserAccount,
   UserWallet,
   WalletTransaction,
+  CartSections,
+  CartShop,
+  CartItems,
 } = require("../models/Assosiations");
 const { getOrderDetailGHN } = require("../services/ghnServices");
 
@@ -769,6 +772,142 @@ const confirmOrderCompleted = async (req, res) => {
     });
   }
 };
+
+const buyOrderAgain = async (req, res) => {
+  try {
+    const { user_order_id } = req.body;
+    const userOrder = await UserOrder.findOne({
+      where: {
+        user_order_id,
+      },
+      include: [
+        {
+          model: UserOrderDetails,
+          include: [
+            {
+              model: ProductVarients,
+              attributes: ["product_varients_id", "stock"],
+              include: [
+                {
+                  model: Product,
+                  attributes: ["product_id", "product_status"],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: Shop,
+          attributes: ["shop_id", "shop_status"],
+        },
+      ],
+    });
+    if (!userOrder) {
+      return res.status(404).json({
+        error: true,
+        message: "Đơn hàng không tồn tại",
+      });
+    }
+    if (userOrder.Shop.shop_status === 0) {
+      return res.status(400).json({
+        error: true,
+        message: "Cửa hàng đã bị khóa",
+      });
+    }
+    const [cartSections, createdSection] = await CartSections.findOrCreate({
+      where: {
+        user_id: userOrder.user_id,
+      },
+      defaults: {
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    const [cartShop, createdShop] = await CartShop.findOrCreate({
+      where: {
+        cart_id: cartSections.cart_id,
+        shop_id: userOrder.shop_id,
+      },
+      defaults: {
+        total_price: 0,
+        total_quantity: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    await Promise.all(
+      userOrder.UserOrderDetails.map(async (product) => {
+        const stock = product.ProductVarient.stock;
+        if (product.ProductVarient.Product.product_status === 0) {
+          return res.status(400).json({
+            error: true,
+            message: `Sản phẩm ${product.varient_name}  ${
+              product.classify !== "" && "- " + product.classify
+            } đã bị khóa`,
+          });
+        }
+        if (stock < product.quantity) {
+          return res.status(400).json({
+            error: true,
+            message: `Sản phẩm ${product.varient_name} ${
+              product.classify !== "" && "- " + product.classify
+            } không đủ hàng`,
+          });
+        }
+        const cartItem = await CartItems.findOne({
+          where: {
+            cart_shop_id: cartShop.cart_shop_id,
+            product_varients_id: product.product_varients_id,
+          },
+        });
+        const discount_price = product.ProductVarient.discounted_price;
+
+        if (cartItem) {
+          const newQuantity = cartItem.quantity + parseInt(product.quantity);
+          if (newQuantity > stock) {
+            return res.status(400).json({
+              error: true,
+              message: `Sản phẩm ${product.varient_name} ${
+                product.classify !== "" && "- " + product.classify
+              } không đủ hàng`,
+            });
+          }
+          console.log("price: ", newQuantity * discount_price);
+          console.log("newQuantity: ", newQuantity);
+          // await cartItem.update({
+          //   quantity: newQuantity,
+          //   selected: 1,
+          //   price: newQuantity * discount_price,
+          //   updatedAt: new Date(),
+          // });
+        } else {
+          console.log("price: ", product.quantity * discount_price);
+          // await CartItems.create({
+          //   cart_shop_id: cartShop.cart_shop_id,
+          //   product_varients_id: product.product_varients_id,
+          //   quantity: product.quantity,
+          //   price: product.quantity * discount_price,
+          //   selected: 1,
+          //   createdAt: new Date(),
+          //   updatedAt: new Date(),
+          // });
+        }
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Mua lại đơn hàng thành công",
+    });
+  } catch (error) {
+    console.log("Lỗi khi mua lại đơn hàng: ", error);
+    return res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
 module.exports = {
   deleteOrder,
   checkPaid,
@@ -781,4 +920,5 @@ module.exports = {
   checkoutOrderEzyWallet,
   cancelOrder,
   confirmOrderCompleted,
+  buyOrderAgain,
 };
