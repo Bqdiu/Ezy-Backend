@@ -25,6 +25,7 @@ const {
   CartSections,
   CartShop,
   CartItems,
+  ProductReview,
 } = require("../models/Assosiations");
 const { getOrderDetailGHN, createOrderGHN } = require("../services/ghnServices");
 
@@ -903,7 +904,7 @@ const buyOrderAgain = async (req, res) => {
           include: [
             {
               model: ProductVarients,
-              attributes: ["product_varients_id", "stock"],
+              attributes: ["product_varients_id", "stock", "discounted_price"],
               include: [
                 {
                   model: Product,
@@ -977,7 +978,7 @@ const buyOrderAgain = async (req, res) => {
           },
         });
         const discount_price = product.ProductVarient.discounted_price;
-
+        // console.log(product.ProductVarient);
         if (cartItem) {
           const newQuantity = cartItem.quantity + parseInt(product.quantity);
           if (newQuantity > stock) {
@@ -987,25 +988,27 @@ const buyOrderAgain = async (req, res) => {
                 } không đủ hàng`,
             });
           }
-          console.log("price: ", newQuantity * discount_price);
-          console.log("newQuantity: ", newQuantity);
-          // await cartItem.update({
-          //   quantity: newQuantity,
-          //   selected: 1,
-          //   price: newQuantity * discount_price,
-          //   updatedAt: new Date(),
-          // });
+          // console.log("price: ", newQuantity * discount_price);
+          // console.log("newQuantity: ", newQuantity);
+          await cartItem.update({
+            quantity: newQuantity,
+            selected: 1,
+            price: newQuantity * discount_price,
+            updatedAt: new Date(),
+          });
         } else {
-          console.log("price: ", product.quantity * discount_price);
-          // await CartItems.create({
-          //   cart_shop_id: cartShop.cart_shop_id,
-          //   product_varients_id: product.product_varients_id,
-          //   quantity: product.quantity,
-          //   price: product.quantity * discount_price,
-          //   selected: 1,
-          //   createdAt: new Date(),
-          //   updatedAt: new Date(),
-          // });
+          // console.log("discount_price", discount_price);
+          // console.log("product.quantity", product.quantity);
+          // console.log("price: ", product.quantity * discount_price);
+          await CartItems.create({
+            cart_shop_id: cartShop.cart_shop_id,
+            product_varients_id: product.product_varients_id,
+            quantity: product.quantity,
+            price: product.quantity * discount_price,
+            selected: 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
         }
       })
     );
@@ -1016,6 +1019,43 @@ const buyOrderAgain = async (req, res) => {
     });
   } catch (error) {
     console.log("Lỗi khi mua lại đơn hàng: ", error);
+    return res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const reviewOrder = async (req, res) => {
+  try {
+    const { user_id, user_order_id, ratingList } = req.body;
+    const userOrder = await UserOrder.findOne({
+      where: {
+        user_order_id,
+      },
+    });
+    if (Array.isArray(ratingList) && ratingList.length > 0) {
+      await Promise.all(
+        ratingList.map(async (rating) => {
+          await ProductReview.create({
+            rating: rating.rating,
+            review_content: rating.review,
+            product_varients_id: rating.product_varients_id,
+            user_id,
+            created_at: new Date(),
+          });
+        }),
+        await userOrder.update({
+          is_reviewed: 1,
+        })
+      );
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Đánh giá đơn hàng thành công",
+    });
+  } catch (error) {
+    console.log("Lỗi khi đánh giá đơn hàng: ", error);
     return res.status(500).json({
       error: true,
       message: error.message || error,
@@ -1035,5 +1075,6 @@ module.exports = {
   cancelOrder,
   confirmOrderCompleted,
   buyOrderAgain,
+  reviewOrder,
   confirmOrder
 };
