@@ -737,7 +737,7 @@ const checkoutWithEzyWallet = async (req, res) => {
         user_id,
       },
     });
-
+    console.log(req.body);
     const wallet = await UserWallet.findOne({
       where: {
         user_id,
@@ -912,9 +912,10 @@ const saveOrder = async (
   payment_method_id,
   order_status_id,
   transaction_code = "",
-  selectedService = null
+  selectedService
 ) => {
   // Theo chuỗi province_id,district_id,ward_code,service_id,service_type_id
+  console.log("selectedService", selectedService);
   let vouchers_applied = "";
 
   if (voucher) {
@@ -940,12 +941,12 @@ const saveOrder = async (
       .split(",")
       .filter(Boolean)
       .join(",");
-
+    console.log(user_address_id_string);
     const order = await UserOrder.create({
       user_id,
       shop_id: validCart[0].shop_id,
       user_address_string: address.address,
-      user_address_string_id: user_address_id_string,
+      user_address_id_string,
       total_quantity: validCart[0].total_quantity,
       total_price: validCart[0].total_price,
       final_price: totalPayment.final,

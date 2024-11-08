@@ -69,6 +69,7 @@ const {
   getAllRole,
   addRole,
   deleteRole,
+  updateRole,
 } = require("../controllers/RoleController");
 const {
   getAllBusinessStyle,
@@ -178,6 +179,7 @@ const {
   cancelOrder,
   confirmOrderCompleted,
   confirmOrder,
+  buyOrderAgain,
 } = require("../controllers/UserOrderController");
 
 const {
@@ -316,6 +318,8 @@ router.get("/address/get-default-address", getDefaultAddress);
 router.get("/all-role", getAllRole);
 router.post("/add-role", addRole);
 router.delete("/delete-role/:id", deleteRole);
+router.put("/update-role/:id", updateRole);
+
 
 //-----------------BusinessStyle-----------------
 router.get("/all-business-styles", getAllBusinessStyle);
@@ -372,6 +376,7 @@ router.post("/order/checkout-order-ezy-wallet", checkoutOrderEzyWallet);
 router.post("/order/cancel-order", cancelOrder);
 router.post("/order/complete-order", confirmOrderCompleted);
 router.post("/order/confirm-order", confirmOrder);
+router.post("/order/buy-again", buyOrderAgain);
 //-----------------FlashSale-----------------
 router.get("/flash-sales/get-all", getAllFlashSales);
 router.post("/flash-sales/add", addFlashSale);
