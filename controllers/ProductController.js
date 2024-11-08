@@ -73,7 +73,17 @@ const getLimitSuggestProducts = async (req, res) => {
       where: {
         sub_category_id: Array.from(subCategoryIds),
         stock: { [Sequelize.Op.gt]: 0 },
+        product_status: 1,
+        "$Shop.shop_status$": 1,
       },
+      include: [
+        {
+          model: Shop,
+          attributes: {
+            include: ["shop_name", "shop_id", "shop_status"],
+          },
+        },
+      ],
       limit: 48,
     });
     res.status(200).json({
@@ -117,25 +127,33 @@ const getSuggestProducts = async (req, res) => {
     historySearches.forEach((search) =>
       subCategoryIds.add(search.SubCategory.sub_category_id)
     );
-    const totalPages = await Product.count({
-      where: {
-        sub_category_id: Array.from(subCategoryIds),
-      },
-    });
-    const suggestedProducts = await Product.findAll({
+
+    const { count, rows: suggestedProducts } = await Product.findAndCountAll({
       where: {
         sub_category_id: Array.from(subCategoryIds),
         stock: { [Sequelize.Op.gt]: 0 },
+        product_status: 1,
+        "$Shop.shop_status$": 1,
       },
+      include: [
+        {
+          model: Shop,
+          attributes: {
+            include: ["shop_name", "shop_id", "shop_status"],
+          },
+        },
+      ],
+
       limit,
       offset,
     });
+
     res.status(200).json({
       success: true,
       data: suggestedProducts,
       total: suggestedProducts.length,
       pageNumbers,
-      totalPages: Math.ceil(totalPages / limit),
+      totalPages: Math.ceil(count / limit),
     });
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu sản phẩm gợi ý: ", error);
@@ -151,33 +169,37 @@ const getSuggestProductsOfShop = async (req, res) => {
     const { shop_id } = req.params;
     const { pageNumbers = 1, limit = 28 } = req.query;
     const offset = (pageNumbers - 1) * limit;
-
-    const products = await Product.findAll({
+    const { count, rows: products } = await Product.findAndCountAll({
       where: {
         shop_id,
         [Op.and]: [
           { avgRating: { [Op.gte]: 4 } },
           { sold: { [Op.gt]: 0 } },
           { stock: { [Op.gt]: 0 } },
+          {
+            product_status: 1,
+          },
+          {
+            "$Shop.shop_status$": 1,
+          },
         ],
       },
+      include: [
+        {
+          model: Shop,
+          attributes: {
+            include: ["shop_name", "shop_id", "shop_status"],
+          },
+        },
+      ],
       offset,
       limit,
     });
-    const totalProduct = await Product.count({
-      where: {
-        shop_id,
-        [Op.and]: [
-          { avgRating: { [Op.gte]: 4 } },
-          { sold: { [Op.gt]: 0 } },
-          { stock: { [Op.gt]: 0 } },
-        ],
-      },
-    });
+
     res.status(200).json({
       success: true,
       products,
-      totalPage: Math.ceil(totalProduct / limit),
+      totalPage: Math.ceil(count / limit),
     });
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu sản phẩm gợi ý của shop: ", error);
@@ -382,7 +404,17 @@ const getAllProductsOfShop = async (req, res) => {
           [Sequelize.Op.ne]: product_id,
         },
         stock: { [Sequelize.Op.gt]: 0 },
+        product_status: 1,
+        "$Shop.shop_status$": 1,
       },
+      include: [
+        {
+          model: Shop,
+          attributes: {
+            include: ["shop_name", "shop_id", "shop_status"],
+          },
+        },
+      ],
       limit: 10,
     });
     res.status(200).json({
@@ -420,6 +452,8 @@ const getProductBySortAndFilter = async (req, res) => {
     let filterConditions = [];
     const whereConditions = {
       stock: { [Sequelize.Op.gt]: 0 },
+      product_status: 1,
+      "$Shop.shop_status$": 1,
       ...(ratingFilter && { avgRating: { [Sequelize.Op.eq]: ratingFilter } }),
       ...(minPrice && {
         discounted_price: { [Sequelize.Op.gte]: minPrice },
@@ -465,27 +499,13 @@ const getProductBySortAndFilter = async (req, res) => {
         break;
     }
 
-    var products = [];
-    let totalProducts = 0;
-
-    totalProducts = await Product.count({
+    const { count, rows: products } = await Product.findAndCountAll({
       where: whereConditions,
-
       include: [
         {
-          model: SubCategory,
-          where: {
-            category_id: cat_id,
-            ...(facetArray.length > 0 && {
-              sub_category_id: { [Sequelize.Op.in]: facetArray },
-            }),
-          },
+          model: Shop,
+          attributes: ["shop_id", "shop_name", "shop_status"],
         },
-      ],
-    });
-    products = await Product.findAll({
-      where: whereConditions,
-      include: [
         {
           model: SubCategory,
           where: {
@@ -506,7 +526,7 @@ const getProductBySortAndFilter = async (req, res) => {
       success: true,
       products,
       currentPage: pageNumbers,
-      totalPages: Math.ceil(totalProducts / limit),
+      totalPages: Math.ceil(count / limit),
     });
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu sản phẩm theo sort và filter: ", error);
@@ -522,6 +542,9 @@ const getSuggestProductsNameBySearch = async (req, res) => {
     const { search, cat_id, shop_username } = req.query;
     if (search !== "") {
       let whereConditions = {
+        stock: { [Sequelize.Op.gt]: 0 },
+        product_status: 1,
+        "$Shop.shop_status$": 1,
         product_name: {
           [Sequelize.Op.like]: `%${search}%`,
         },
@@ -636,8 +659,9 @@ const getProductAndShopBySearch = async (req, res) => {
           ],
         },
       ],
-
+      "$Shop.shop_status$": 1,
       stock: { [Sequelize.Op.gt]: 0 },
+      product_status: 1,
       ...(ratingFilter && { avgRating: { [Sequelize.Op.eq]: ratingFilter } }),
       ...(minPrice && {
         discounted_price: { [Sequelize.Op.gte]: minPrice },
@@ -688,31 +712,7 @@ const getProductAndShopBySearch = async (req, res) => {
         break;
     }
 
-    let totalProducts = await Product.count({
-      where: whereConditions,
-
-      include: [
-        {
-          model: Shop,
-          include: {
-            model: UserAccount,
-            attributes: {
-              exclude: ["role_id", "password"],
-            },
-            include: {
-              model: Role,
-            },
-          },
-        },
-        {
-          model: SubCategory,
-          include: {
-            model: Category,
-          },
-        },
-      ],
-    });
-    let products = await Product.findAll({
+    const { count, rows: products } = await Product.findAndCountAll({
       where: whereConditions,
       include: [
         {
@@ -775,7 +775,7 @@ const getProductAndShopBySearch = async (req, res) => {
       shop,
       products,
       currentPage: pageNumbers,
-      totalPages: Math.ceil(totalProducts / limit),
+      totalPages: Math.ceil(count / limit),
     });
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu sản phẩm gợi ý theo tên: ", error);
@@ -795,6 +795,8 @@ const getProductBySubCategory = async (req, res) => {
     let whereConditions = {
       shop_id,
       stock: { [Sequelize.Op.gt]: 0 },
+      "$Shop.shop_status$": 1,
+      product_status: 1,
     };
     if (sub_category_id != -1) {
       whereConditions.sub_category_id = sub_category_id;
@@ -837,12 +839,15 @@ const getProductBySubCategory = async (req, res) => {
         break;
     }
 
-    let totalProducts = await Product.count({
-      where: whereConditions,
-    });
-    let products = await Product.findAll({
+    const { count, rows: products } = await Product.findAndCountAll({
       where: whereConditions,
       order: filterConditions,
+      include: [
+        {
+          model: Shop,
+          attributes: ["shop_id", "shop_name", "shop_status"],
+        },
+      ],
       limit,
       offset,
     });
@@ -851,7 +856,7 @@ const getProductBySubCategory = async (req, res) => {
       success: true,
       products,
       currentPage: pageNumbers,
-      totalPages: Math.ceil(totalProducts / limit),
+      totalPages: Math.ceil(count / limit),
     });
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu sản phẩm theo subcategory: ", error);
@@ -924,7 +929,7 @@ const getShopProducts = async (req, res) => {
   }
 
   try {
-    const products = await Product.findAll({
+    const { count, rows: products } = await Product.findAndCountAll({
       where: whereCondition,
       attributes: {
         exclude: ["hasVarient"],
@@ -952,15 +957,11 @@ const getShopProducts = async (req, res) => {
       offset: offset,
     });
 
-    const totalProducts = await Product.count({
-      where: whereCondition,
-    });
-
     res.status(200).json({
       success: true,
       data: products,
-      totalPages: Math.ceil(totalProducts / parsedLimit),
-      totalItems: totalProducts,
+      totalPages: Math.ceil(count / parsedLimit),
+      totalItems: count,
     });
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu sản phẩm của shop: ", error);
@@ -1100,7 +1101,7 @@ const updateProductStatus = async (req, res) => {
       message: error.message || error,
     });
   }
-}
+};
 
 const getProductByID = async (req, res) => {
   try {
@@ -1124,26 +1125,26 @@ const getProductByID = async (req, res) => {
               model: ProductClassify,
             },
           ],
-        }
+        },
       ],
     });
     if (!product) {
       return res.status(404).json({
         success: false,
         message: "Product not found",
-      })
+      });
     }
     res.status(200).json({
       success: true,
       data: product,
-    })
+    });
   } catch (error) {
     res.status(500).json({
       error: true,
       message: error.message || error,
-    })
+    });
   }
-}
+};
 
 const resetProductStock = async (req, res) => {
   const { product_id } = req.body;
@@ -1180,7 +1181,7 @@ const resetProductStock = async (req, res) => {
       message: error.message || error,
     });
   }
-}
+};
 
 const updateBasicInfoProduct = async (req, res) => {
   const {
@@ -1191,7 +1192,7 @@ const updateBasicInfoProduct = async (req, res) => {
     description,
     origin,
     gender_object,
-    brand
+    brand,
   } = req.body;
 
   if (!product_id) {
@@ -1236,8 +1237,7 @@ const updateBasicInfoProduct = async (req, res) => {
       message: error.message || error,
     });
   }
-}
-
+};
 
 const deleteSomeProducts = async (req, res) => {
   const { product_ids } = req.body;
@@ -1249,14 +1249,14 @@ const deleteSomeProducts = async (req, res) => {
     });
   }
 
-  const transaction = await sequelize.transaction(); 
+  const transaction = await sequelize.transaction();
 
   try {
     const products = await Product.findAll({
       where: {
         product_id: product_ids,
       },
-      transaction
+      transaction,
     });
 
     if (products.length === 0) {
@@ -1271,18 +1271,18 @@ const deleteSomeProducts = async (req, res) => {
       where: {
         product_id: product_ids,
       },
-      transaction
+      transaction,
     });
 
-    await transaction.commit(); 
+    await transaction.commit();
     res.status(200).json({
       success: true,
       message: "Deleted products successfully",
     });
   } catch (error) {
-    await transaction.rollback(); 
+    await transaction.rollback();
 
-    if (error.name === 'SequelizeForeignKeyConstraintError') {
+    if (error.name === "SequelizeForeignKeyConstraintError") {
       console.log("Foreign key constraint error: ", error);
       return res.status(409).json({
         success: false,
@@ -1297,7 +1297,6 @@ const deleteSomeProducts = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   getAllProducts,
@@ -1318,5 +1317,5 @@ module.exports = {
   getProductByID,
   resetProductStock,
   updateBasicInfoProduct,
-  deleteSomeProducts
+  deleteSomeProducts,
 };

@@ -10,6 +10,8 @@ const {
   DiscountVoucher,
   UserWallet,
   WalletTransaction,
+  Shop,
+  Product,
 } = require("../models/Assosiations");
 const vnpay = require("../services/vnpayService");
 const {
@@ -23,6 +25,7 @@ const {
 } = require("vnpay");
 const dateFormat = require("dateformat");
 const { io } = require("../socket");
+const { is } = require("translate-google/languages");
 const reserveStock = async (validCart) => {
   for (const shop of validCart) {
     for (const item of shop.CartItems) {
@@ -46,13 +49,35 @@ const checkStock = async (validCart) => {
         where: {
           product_varients_id: item.product_varients_id,
         },
+        include: [
+          {
+            model: Product,
+            attributes: ["product_status"],
+            include: [{ model: Shop, attributes: ["shop_status"] }],
+          },
+        ],
       });
       if (!productVarient || item.quantity > productVarient.stock) {
-        return false;
+        return {
+          isEnoughStock: false,
+          message: "Sản phẩm hiện không đủ tồn kho",
+        };
+      }
+      if (productVarient.Product.product_status !== 1) {
+        return {
+          isEnoughStock: false,
+          message: "Sản phẩm hiện không còn kinh doanh",
+        };
+      }
+      if (productVarient.Product.Shop.shop_status !== 1) {
+        return {
+          isEnoughStock: false,
+          message: "Cửa hàng hiện không còn kinh doanh",
+        };
       }
     }
   }
-  return true;
+  return { isEnoughStock: true, message: "Sản phẩm hiện đủ tồn kho" };
 };
 
 const momoPayment = async (amount) => {
@@ -462,8 +487,15 @@ const checkoutWithMomo = async (req, res) => {
 
 const checkoutWithVNPay = async (req, res) => {
   try {
-    const { user_id, address, totalPayment, validCart, voucher, totalPerItem } =
-      req.body;
+    const {
+      user_id,
+      address,
+      totalPayment,
+      validCart,
+      voucher,
+      totalPerItem,
+      selectedService,
+    } = req.body;
     console.log(req.body);
     const user = await UserAccount.findOne({
       where: {
@@ -525,7 +557,8 @@ const checkoutWithVNPay = async (req, res) => {
       totalPerItem,
       3,
       1,
-      ref
+      ref,
+      selectedService
     );
 
     return res.status(200).json({
@@ -690,8 +723,15 @@ const vnPayIPN = async (req, res) => {
 
 const checkoutWithEzyWallet = async (req, res) => {
   try {
-    const { user_id, address, totalPayment, validCart, voucher, totalPerItem } =
-      req.body;
+    const {
+      user_id,
+      address,
+      totalPayment,
+      validCart,
+      voucher,
+      totalPerItem,
+      selectedService,
+    } = req.body;
     const user = await UserAccount.findOne({
       where: {
         user_id,
@@ -717,10 +757,10 @@ const checkoutWithEzyWallet = async (req, res) => {
     }
 
     const isEnoughStock = await checkStock(validCart);
-    if (!isEnoughStock) {
+    if (!isEnoughStock.isEnoughStock) {
       return res.status(400).json({
         error: true,
-        message: "Sản phẩm hiện không đủ tồn kho",
+        message: isEnoughStock.message,
       });
     }
     const isValidVoucher = await checkVoucher(voucher);
@@ -759,7 +799,8 @@ const checkoutWithEzyWallet = async (req, res) => {
       totalPerItem,
       4,
       2,
-      transaction_code
+      transaction_code,
+      selectedService
     );
 
     return res.status(200).json({
@@ -802,8 +843,15 @@ const checkVoucher = async (selectedVoucher) => {
 
 const checkoutWithCOD = async (req, res) => {
   try {
-    const { user_id, address, totalPayment, validCart, voucher, totalPerItem } =
-      req.body;
+    const {
+      user_id,
+      address,
+      totalPayment,
+      validCart,
+      voucher,
+      totalPerItem,
+      selectedService,
+    } = req.body;
 
     const user = await UserAccount.findOne({
       where: {
@@ -816,10 +864,10 @@ const checkoutWithCOD = async (req, res) => {
         .json({ error: true, message: "Không tìm thấy người dùng" });
     }
     const isEnoughStock = await checkStock(validCart);
-    if (!isEnoughStock) {
+    if (!isEnoughStock.isEnoughStock) {
       return res.status(400).json({
         error: true,
-        message: "Sản phẩm hiện không đủ tồn kho",
+        message: isEnoughStock.message,
       });
     }
     const isValidVoucher = await checkVoucher(voucher);
@@ -837,7 +885,9 @@ const checkoutWithCOD = async (req, res) => {
       totalPayment,
       totalPerItem,
       1,
-      2
+      2,
+      "",
+      selectedService
     );
 
     return res.status(200).json({
@@ -861,9 +911,12 @@ const saveOrder = async (
   totalPerItem,
   payment_method_id,
   order_status_id,
-  transaction_code = ""
+  transaction_code = "",
+  selectedService = null
 ) => {
+  // Theo chuỗi province_id,district_id,ward_code,service_id,service_type_id
   let vouchers_applied = "";
+
   if (voucher) {
     if (voucher.discountVoucher) {
       vouchers_applied += `${voucher.discountVoucher.discount_voucher_id},`;
@@ -873,11 +926,26 @@ const saveOrder = async (
     }
     vouchers_applied = vouchers_applied.split(",").filter(Boolean).join(","); // Remove the trailing comma and join as a string
   }
+
   if (validCart.length === 1) {
+    // Theo chuỗi province_id,district_id,ward_code,service_id,service_type_id
+    let user_address_id_string = `${address.province_id},${address.district_id},${address.ward_code}`;
+    if (Array.isArray(selectedService)) {
+      const service = selectedService.find(
+        (service) => service.shop_id === validCart[0].shop_id
+      );
+      user_address_id_string += `,${service.service_id},${service.service_type_id}`;
+    }
+    user_address_id_string = user_address_id_string
+      .split(",")
+      .filter(Boolean)
+      .join(",");
+
     const order = await UserOrder.create({
       user_id,
       shop_id: validCart[0].shop_id,
       user_address_string: address.address,
+      user_address_string_id: user_address_id_string,
       total_quantity: validCart[0].total_quantity,
       total_price: validCart[0].total_price,
       final_price: totalPayment.final,
@@ -887,6 +955,7 @@ const saveOrder = async (
       payment_method_id: payment_method_id,
       transaction_code: transaction_code,
       order_note: validCart[0].orderNote || "",
+      order_code: null,
       order_status_id: order_status_id,
       return_expiration_date: null,
       is_blocked: payment_method_id === 3 ? 1 : 0,
@@ -954,6 +1023,19 @@ const saveOrder = async (
   } else if (validCart.length > 1) {
     {
       for (const shop of validCart) {
+        let user_address_id_string = "";
+        user_address_id_string = `${address.province_id},${address.district_id},${address.ward_code}`;
+        if (Array.isArray(selectedService)) {
+          const service = selectedService.find(
+            (service) => service.shop_id === shop.shop_id
+          );
+          user_address_id_string += `,${service.service_id},${service.service_type_id}`;
+        }
+        user_address_id_string = user_address_id_string
+          .split(",")
+          .filter(Boolean)
+          .join(",");
+
         const total = totalPerItem.find(
           (item) => item.shop_id === shop.shop_id
         );
@@ -961,6 +1043,7 @@ const saveOrder = async (
           user_id,
           shop_id: shop.shop_id,
           user_address_string: address.address,
+          user_address_id_string: user_address_id_string,
           total_quantity: shop.total_quantity,
           total_price: shop.total_price,
           final_price: total.totalPrice,
@@ -970,7 +1053,7 @@ const saveOrder = async (
           payment_method_id: payment_method_id,
           transaction_code: transaction_code,
           order_note: shop.orderNote || "",
-          order_code: "",
+          order_code: null,
           order_status_id: order_status_id,
           return_expiration_date: null,
           is_blocked: payment_method_id === 3 ? 1 : 0,
