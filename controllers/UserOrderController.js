@@ -23,10 +23,11 @@ const {
   UserWallet,
   WalletTransaction,
 } = require("../models/Assosiations");
-const { getOrderDetailGHN } = require("../services/ghnServices");
+const { getOrderDetailGHN, createOrderGHN } = require("../services/ghnServices");
 
 const dateFormat = require("dateformat");
 const { io } = require("../socket");
+const { fr } = require("translate-google/languages");
 const checkPaid = async (orderId) => {
   try {
     const order = await UserOrder.findOne({
@@ -537,6 +538,7 @@ const getShopOrders = async (req, res) => {
         },
         { model: OrderStatus },
         { model: UserAccount },
+        { model: Shop, where: { shop_id } },
       ],
       limit,
       offset,
@@ -769,6 +771,135 @@ const confirmOrderCompleted = async (req, res) => {
     });
   }
 };
+
+const confirmOrder = async (req, res) => {
+  const { shopId, user_order_id } = req.body;
+  const { payment_method_id } = req.body;
+  const data = {
+    note,
+    required_note, // required_note: "CHOTHUHANG, CHOXEMHANGKHONGTHU, KHONGCHOXEMHANG",
+    from_name, // required
+    from_phone, // required
+    from_address, // required
+    from_ward_name, // required
+    from_district_name, // required
+    from_province_name, // required
+    return_phone,
+    return_address,
+    return_district_id,
+    return_ward_code,
+    client_order_code,
+    to_name, // required
+    to_phone, // required
+    to_address, // required
+    to_ward_code, // required
+    to_district_id, // required
+    content,
+    weight, // required
+    length, // required
+    width, // required 
+    height, // required
+    pick_station_id,
+    deliver_station_id,
+    // insurance_value, 
+    service_id,
+    service_type_id, // required
+    coupon,
+    pick_shift,
+    items, // required
+  } = req.body;
+
+
+  if (!shopId || !user_order_id) {
+    return res.status(400).json({
+      error: true,
+      message: "shop id or user order id is required",
+      data: req.body
+    });
+  }
+
+  const order = await UserOrder.findOne({
+    where: {
+      user_order_id,
+    },
+  });
+
+  if (!order) {
+    return res.status(404).json({
+      error: true,
+      message: "Order not found"
+    });
+  }
+  data.code_amount = order.final_price;
+  // Choose who pay shipping fee 1: Seller, 2: Buyer
+  if (payment_method_id === 1) {
+    data.payment_type_id = 2;
+    data.code_amount = 0;
+  }
+  else {
+    data.payment_type_id = 1;
+  }
+  if (!data.from_name ||
+    !data.from_phone ||
+    !data.from_address ||
+    !data.from_ward_name ||
+    !data.from_district_name ||
+    !data.from_province_name ||
+    !data.to_name ||
+    !data.to_phone ||
+    !data.to_address ||
+    !data.to_ward_code ||
+    !data.to_district_id ||
+    !data.weight ||
+    !data.length ||
+    !data.width ||
+    !data.height ||
+    !data.service_type_id ||
+    !data.items
+  )
+    return res.status(400).json({
+      error: true,
+      message: "Missing required data",
+      data: data
+    });
+
+
+  const resultGHN = await createOrderGHN(shopId, data);
+  if (resultGHN.error)
+    return res.status(400).json({
+      error: true,
+      message: resultGHN.message
+    });
+  if (resultGHN.data) {
+    await order.update({
+      order_status_id: 3,
+      order_code: resultGHN.data.order_code,
+      updated_at: new Date(),
+    });
+
+    await OrderStatusHistory.create({
+      user_order_id,
+      order_status_id: 3,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Order created successfully",
+      ghn_data: resultGHN.data,
+      order_data: order
+    });
+
+  }
+  else {
+    return res.status(400).json({
+      error: true,
+      message: "Lỗi khi tạo đơn hàng"
+    });
+  }
+}
+
 module.exports = {
   deleteOrder,
   checkPaid,
@@ -781,4 +912,5 @@ module.exports = {
   checkoutOrderEzyWallet,
   cancelOrder,
   confirmOrderCompleted,
+  confirmOrder
 };
