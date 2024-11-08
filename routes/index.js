@@ -178,6 +178,7 @@ const {
   checkoutOrderEzyWallet,
   cancelOrder,
   confirmOrderCompleted,
+  confirmOrder,
   buyOrderAgain,
   reviewOrder,
 } = require("../controllers/UserOrderController");
@@ -374,6 +375,7 @@ router.post("/order/get-shop-orders", getShopOrders);
 router.post("/order/checkout-order-ezy-wallet", checkoutOrderEzyWallet);
 router.post("/order/cancel-order", cancelOrder);
 router.post("/order/complete-order", confirmOrderCompleted);
+router.post("/order/confirm-order", confirmOrder);
 router.post("/order/buy-again", buyOrderAgain);
 router.post("/order/review-order", reviewOrder);
 //-----------------FlashSale-----------------

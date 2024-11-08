@@ -27,10 +27,11 @@ const {
   CartItems,
   ProductReview,
 } = require("../models/Assosiations");
-const { getOrderDetailGHN } = require("../services/ghnServices");
+const { getOrderDetailGHN, createOrderGHN } = require("../services/ghnServices");
 
 const dateFormat = require("dateformat");
 const { io } = require("../socket");
+const { fr, da } = require("translate-google/languages");
 const checkPaid = async (orderId) => {
   try {
     const order = await UserOrder.findOne({
@@ -541,6 +542,7 @@ const getShopOrders = async (req, res) => {
         },
         { model: OrderStatus },
         { model: UserAccount },
+        { model: Shop, where: { shop_id } },
       ],
       limit,
       offset,
@@ -774,6 +776,121 @@ const confirmOrderCompleted = async (req, res) => {
   }
 };
 
+const confirmOrder = async (req, res) => {
+  const { shopId, user_order_id } = req.body;
+  const { payment_method_id } = req.body;
+  const data = {
+    note,
+    required_note, // required_note: "CHOTHUHANG, CHOXEMHANGKHONGTHU, KHONGCHOXEMHANG",
+    from_name, // required
+    from_phone, // required
+    from_address, // required
+    from_ward_name, // required
+    from_district_name, // required
+    from_province_name, // required
+    return_phone,
+    return_address,
+    return_district_id,
+    return_ward_code,
+    client_order_code,
+    to_name, // required
+    to_phone, // required
+    to_address, // required
+    to_ward_code, // required
+    to_district_id, // required
+    content,
+    weight, // required
+    length, // required
+    width, // required 
+    height, // required
+    pick_station_id,
+    deliver_station_id,
+    // insurance_value, 
+    service_id,
+    service_type_id, // required
+    coupon,
+    pick_shift,
+    items, // required
+  } = req.body;
+
+
+  if (!shopId || !user_order_id) {
+    return res.status(400).json({
+      error: true,
+      message: "Shop ID or user order ID is required",
+      data: req.body
+    });
+  }
+
+  try {
+    const order = await UserOrder.findOne({ where: { user_order_id } });
+    if (!order) {
+      return res.status(404).json({ error: true, message: "Order not found" });
+    }
+
+    data.cod_amount = order.final_price;
+    data.payment_type_id = payment_method_id === 1 ? 2 : 1;
+    if (payment_method_id === 1) data.cod_amount = 0;
+
+    const requiredFields = [
+      'from_name', 'from_phone', 'from_address', 'from_ward_name', 'from_district_name', 'from_province_name',
+      'to_name', 'to_phone', 'to_address', 'to_ward_code', 'to_district_id', 'weight', 'length', 'width', 'height',
+      'service_type_id', 'items'
+    ];
+    const missingFields = requiredFields.filter(field => !data[field]);
+
+    if (missingFields.length) {
+      return res.status(400).json({
+        error: true,
+        message: `Missing required fields: ${missingFields.join(', ')}`,
+        missingFields
+      });
+    }
+
+    const resultGHN = await createOrderGHN(shopId, data);
+    if (resultGHN.error) {
+      return res.status(400).json({
+        error: true,
+        message: "Failed to create order with GHN. Please check provided data or try again later.",
+        details: resultGHN.error
+      });
+    }
+    if (resultGHN.data) {
+      await order.update({
+        order_status_id: 3,
+        order_code: resultGHN.data.order_code,
+        updated_at: new Date(),
+      });
+
+      await OrderStatusHistory.create({
+        user_order_id,
+        order_status_id: 3,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Order created successfully",
+        ghn_data: resultGHN.data,
+        order_data: order
+      });
+    } else {
+      return res.status(400).json({
+        error: true,
+        message: "Error creating the order",
+        data: resultGHN
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      error: true,
+      message: "Server error",
+      details: error.message
+    });
+  }
+};
+
 const buyOrderAgain = async (req, res) => {
   try {
     const { user_order_id } = req.body;
@@ -843,17 +960,15 @@ const buyOrderAgain = async (req, res) => {
         if (product.ProductVarient.Product.product_status === 0) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name}  ${
-              product.classify !== "" && "- " + product.classify
-            } đã bị khóa`,
+            message: `Sản phẩm ${product.varient_name}  ${product.classify !== "" && "- " + product.classify
+              } đã bị khóa`,
           });
         }
         if (stock < product.quantity) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name} ${
-              product.classify !== "" && "- " + product.classify
-            } không đủ hàng`,
+            message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
+              } không đủ hàng`,
           });
         }
         const cartItem = await CartItems.findOne({
@@ -869,9 +984,8 @@ const buyOrderAgain = async (req, res) => {
           if (newQuantity > stock) {
             return res.status(400).json({
               error: true,
-              message: `Sản phẩm ${product.varient_name} ${
-                product.classify !== "" && "- " + product.classify
-              } không đủ hàng`,
+              message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
+                } không đủ hàng`,
             });
           }
           // console.log("price: ", newQuantity * discount_price);
@@ -962,4 +1076,5 @@ module.exports = {
   confirmOrderCompleted,
   buyOrderAgain,
   reviewOrder,
+  confirmOrder
 };
