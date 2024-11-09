@@ -78,6 +78,11 @@ const UserOrder = sequelize.define(
       allowNull: true,
       defaultValue: null,
     },
+    order_return_code: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: null,
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -111,6 +116,11 @@ const UserOrder = sequelize.define(
     },
     is_blocked: {
       type: DataTypes.TINYINT,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    return_request_status: {
+      type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
     },

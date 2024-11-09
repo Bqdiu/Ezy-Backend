@@ -217,6 +217,9 @@ UserOrder.belongsTo(UserAccount, { foreignKey: "user_id" });
 ReturnType.hasMany(ReturnRequest, { foreignKey: "return_type_id" });
 ReturnRequest.belongsTo(ReturnType, { foreignKey: "return_type_id" });
 
+UserOrder.hasMany(ProductReview, { foreignKey: "user_order_id" });
+ProductReview.belongsTo(UserOrder, { foreignKey: "user_order_id" });
+
 module.exports = {
   UserAccount,
   UserAddress,

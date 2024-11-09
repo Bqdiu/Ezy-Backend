@@ -182,6 +182,10 @@ const {
   buyOrderAgain,
   reviewOrder,
   shopCancelOrder,
+  getReviewOrder,
+  fetchRequestReason,
+  getRequestReason,
+  sendRequest,
 } = require("../controllers/UserOrderController");
 
 const {
@@ -380,6 +384,9 @@ router.post("/order/confirm-order", confirmOrder);
 router.post("/order/buy-again", buyOrderAgain);
 router.post("/order/review-order", reviewOrder);
 router.post("/order/shop-cancel-order", shopCancelOrder);
+router.get("/order/get-reviews", getReviewOrder);
+router.get("/order/get-reasons", getRequestReason);
+router.post("/order/send-request", sendRequest);
 //-----------------FlashSale-----------------
 router.get("/flash-sales/get-all", getAllFlashSales);
 router.post("/flash-sales/add", addFlashSale);
