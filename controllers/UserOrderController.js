@@ -26,6 +26,8 @@ const {
   CartShop,
   CartItems,
   ProductReview,
+  ReturnReason,
+  ReturnRequest,
 } = require("../models/Assosiations");
 const {
   getOrderDetailGHN,
@@ -1087,7 +1089,106 @@ const reviewOrder = async (req, res) => {
   }
 };
 
-const getReviewOrder = async (req, res) => {};
+const getReviewOrder = async (req, res) => {
+  const { user_order_id } = req.query;
+  try {
+    const reviews = await ProductReview.findAll({
+      where: {
+        user_order_id,
+      },
+    });
+    return res.status(200).json({
+      success: true,
+      reviews,
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy đánh giá đơn hàng: ", error);
+    return res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const getRequestReason = async (req, res) => {
+  try {
+    const { type } = req.query;
+    let reasons = [];
+    if (type === "cancel-request") {
+      reasons = await ReturnReason.findAll({
+        where: {
+          return_reason_id: {
+            [Op.in]: [3, 4, 5],
+          },
+        },
+      });
+    } else {
+      reasons = await ReturnReason.findAll({
+        where: {
+          return_reason_id: {
+            [Op.in]: [1, 2],
+          },
+        },
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      reasons,
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy lý do yêu cầu: ", error);
+    return res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+const sendRequest = async (req, res) => {
+  try {
+    const { user_order_id, return_type_id, return_reason_id, note, status } =
+      req.body;
+    const order = await UserOrder.findOne({
+      where: {
+        user_order_id,
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        error: true,
+        message: "Đơn hàng không tồn tại",
+      });
+    }
+    await order.update({
+      return_request_status: 1,
+    });
+
+    await ReturnRequest.create({
+      user_id: order.user_id,
+      shop_id: order.shop_id,
+      user_order_id: order.user_order_id,
+      return_type_id,
+      return_reason_id,
+      note,
+      status,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Gửi yêu cầu thành công",
+    });
+  } catch (error) {
+    console.log("Lỗi khi gửi yêu cầu: ", error);
+    return res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
 module.exports = {
   deleteOrder,
   checkPaid,
@@ -1103,4 +1204,7 @@ module.exports = {
   buyOrderAgain,
   reviewOrder,
   confirmOrder,
+  getReviewOrder,
+  getRequestReason,
+  sendRequest,
 };

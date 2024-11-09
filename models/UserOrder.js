@@ -119,6 +119,11 @@ const UserOrder = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    return_request_status: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
     is_pending_payout: {
       type: DataTypes.TINYINT,
       allowNull: false,

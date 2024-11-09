@@ -17,6 +17,14 @@ const ProductReview = sequelize.define(
         key: "user_id",
       },
     },
+    user_order_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "user_order",
+        key: "user_order_id",
+      },
+    },
     product_varients_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
