@@ -71,6 +71,9 @@ const getCart = async (req, res) => {
                       ],
                     },
                   ],
+                  attributes: {
+                    exclude: ["description"],
+                  },
                   // where: {
                   //   product_status: 1,
                   // },
