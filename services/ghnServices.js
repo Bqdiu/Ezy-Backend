@@ -43,7 +43,32 @@ const createOrderGHN = async (shopId, data) => {
   }
 };
 
+
+const cancelOrderGHN = async (shopId, orderCode) => {
+  try {
+    const url =
+      "https://dev-online-gateway.ghn.vn/shiip/public-api/v2/switch-status/cancel";
+    const res = await axios({
+      method: "POST",
+      url: url,
+      headers: {
+        Token: `${process.env.REACT_APP_GHV_KEY_TOKEN}`,
+        ShopId: shopId,
+        "Content-Type": "application/json",
+      },
+      data: {
+        order_codes: orderCode, // require array of order code
+      },
+    });
+    return res.data;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+
 module.exports = { 
   getOrderDetailGHN,
   createOrderGHN,
+  cancelOrderGHN
 };
