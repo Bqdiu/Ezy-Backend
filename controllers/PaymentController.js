@@ -988,10 +988,7 @@ const saveOrder = async (
         varient_name: item.ProductVarient.Product.product_name,
         quantity: item.quantity,
         totalPrice: item.price,
-        discountPrice:
-          item.ProductVarient.sale_percents > 0
-            ? item.price * (1 - item.ProductVarient.sale_percents / 100)
-            : 0,
+        discountPrice: item.ProductVarient.price * item.quantity,
         is_reviewed: false,
         thumbnail:
           item.ProductVarient.ProductClassify !== null &&
@@ -1083,10 +1080,8 @@ const saveOrder = async (
             varient_name: item.ProductVarient.Product.product_name,
             quantity: item.quantity,
             totalPrice: item.price,
-            discountPrice:
-              item.ProductVarient.sale_percents > 0
-                ? item.price * (1 - item.ProductVarient.sale_percents / 100)
-                : 0,
+            discountPrice: item.ProductVarient.price * item.quantity,
+
             is_reviewed: false,
             thumbnail:
               item.ProductVarient.product_classify_id !== null
