@@ -27,7 +27,10 @@ const {
   CartItems,
   ProductReview,
 } = require("../models/Assosiations");
-const { getOrderDetailGHN, createOrderGHN } = require("../services/ghnServices");
+const {
+  getOrderDetailGHN,
+  createOrderGHN,
+} = require("../services/ghnServices");
 
 const dateFormat = require("dateformat");
 const { io } = require("../socket");
@@ -576,7 +579,11 @@ const getShopOrders = async (req, res) => {
     const updatedOrders = await Promise.all(
       orders.map(async (order) => {
         if (order.order_code !== null) {
-          const orderGHNDetailsRes = await getOrderDetailGHN(order.order_code);
+          const orderGHNDetailsRes = await getOrderDetailGHN(
+            order.order_return_code !== null
+              ? order.order_return_code
+              : order.order_code
+          );
           const orderGHNDetails = orderGHNDetailsRes.data;
 
           if (orderGHNDetails && orderGHNDetails.status) {
@@ -779,7 +786,7 @@ const confirmOrderCompleted = async (req, res) => {
 const confirmOrder = async (req, res) => {
   const { shopId, user_order_id } = req.body;
   const { payment_method_id } = req.body;
-  const data = {
+  const data = ({
     note,
     required_note, // required_note: "CHOTHUHANG, CHOXEMHANGKHONGTHU, KHONGCHOXEMHANG",
     from_name, // required
@@ -801,24 +808,23 @@ const confirmOrder = async (req, res) => {
     content,
     weight, // required
     length, // required
-    width, // required 
+    width, // required
     height, // required
     pick_station_id,
     deliver_station_id,
-    // insurance_value, 
+    // insurance_value,
     service_id,
     service_type_id, // required
     coupon,
     pick_shift,
     items, // required
-  } = req.body;
-
+  } = req.body);
 
   if (!shopId || !user_order_id) {
     return res.status(400).json({
       error: true,
       message: "Shop ID or user order ID is required",
-      data: req.body
+      data: req.body,
     });
   }
 
@@ -833,17 +839,31 @@ const confirmOrder = async (req, res) => {
     if (payment_method_id === 1) data.cod_amount = 0;
 
     const requiredFields = [
-      'from_name', 'from_phone', 'from_address', 'from_ward_name', 'from_district_name', 'from_province_name',
-      'to_name', 'to_phone', 'to_address', 'to_ward_code', 'to_district_id', 'weight', 'length', 'width', 'height',
-      'service_type_id', 'items'
+      "from_name",
+      "from_phone",
+      "from_address",
+      "from_ward_name",
+      "from_district_name",
+      "from_province_name",
+      "to_name",
+      "to_phone",
+      "to_address",
+      "to_ward_code",
+      "to_district_id",
+      "weight",
+      "length",
+      "width",
+      "height",
+      "service_type_id",
+      "items",
     ];
-    const missingFields = requiredFields.filter(field => !data[field]);
+    const missingFields = requiredFields.filter((field) => !data[field]);
 
     if (missingFields.length) {
       return res.status(400).json({
         error: true,
-        message: `Missing required fields: ${missingFields.join(', ')}`,
-        missingFields
+        message: `Missing required fields: ${missingFields.join(", ")}`,
+        missingFields,
       });
     }
 
@@ -851,8 +871,9 @@ const confirmOrder = async (req, res) => {
     if (resultGHN.error) {
       return res.status(400).json({
         error: true,
-        message: "Failed to create order with GHN. Please check provided data or try again later.",
-        details: resultGHN.error
+        message:
+          "Failed to create order with GHN. Please check provided data or try again later.",
+        details: resultGHN.error,
       });
     }
     if (resultGHN.data) {
@@ -873,20 +894,20 @@ const confirmOrder = async (req, res) => {
         success: true,
         message: "Order created successfully",
         ghn_data: resultGHN.data,
-        order_data: order
+        order_data: order,
       });
     } else {
       return res.status(400).json({
         error: true,
         message: "Error creating the order",
-        data: resultGHN
+        data: resultGHN,
       });
     }
   } catch (error) {
     return res.status(500).json({
       error: true,
       message: "Server error",
-      details: error.message
+      details: error.message,
     });
   }
 };
@@ -960,15 +981,17 @@ const buyOrderAgain = async (req, res) => {
         if (product.ProductVarient.Product.product_status === 0) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name}  ${product.classify !== "" && "- " + product.classify
-              } đã bị khóa`,
+            message: `Sản phẩm ${product.varient_name}  ${
+              product.classify !== "" && "- " + product.classify
+            } đã bị khóa`,
           });
         }
         if (stock < product.quantity) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
-              } không đủ hàng`,
+            message: `Sản phẩm ${product.varient_name} ${
+              product.classify !== "" && "- " + product.classify
+            } không đủ hàng`,
           });
         }
         const cartItem = await CartItems.findOne({
@@ -984,8 +1007,9 @@ const buyOrderAgain = async (req, res) => {
           if (newQuantity > stock) {
             return res.status(400).json({
               error: true,
-              message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
-                } không đủ hàng`,
+              message: `Sản phẩm ${product.varient_name} ${
+                product.classify !== "" && "- " + product.classify
+              } không đủ hàng`,
             });
           }
           // console.log("price: ", newQuantity * discount_price);
@@ -1062,6 +1086,8 @@ const reviewOrder = async (req, res) => {
     });
   }
 };
+
+const getReviewOrder = async (req, res) => {};
 module.exports = {
   deleteOrder,
   checkPaid,
@@ -1076,5 +1102,5 @@ module.exports = {
   confirmOrderCompleted,
   buyOrderAgain,
   reviewOrder,
-  confirmOrder
+  confirmOrder,
 };
