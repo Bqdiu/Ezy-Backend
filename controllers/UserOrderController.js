@@ -32,7 +32,9 @@ const {
 const {
   getOrderDetailGHN,
   createOrderGHN,
+  cancelOrderGHN 
 } = require("../services/ghnServices");
+
 
 const dateFormat = require("dateformat");
 const { io } = require("../socket");
@@ -836,9 +838,9 @@ const confirmOrder = async (req, res) => {
       return res.status(404).json({ error: true, message: "Order not found" });
     }
 
-    data.cod_amount = order.final_price;
+    data.cod_amount = 0;
     data.payment_type_id = payment_method_id === 1 ? 2 : 1;
-    if (payment_method_id === 1) data.cod_amount = 0;
+    if (payment_method_id === 1) data.cod_amount = order.final_price;
 
     const requiredFields = [
       "from_name",
@@ -1089,6 +1091,125 @@ const reviewOrder = async (req, res) => {
   }
 };
 
+
+const shopCancelOrder = async (req, res) => {
+  try {
+    const { user_order_id, shop_id, order_codes } = req.body;
+
+
+    const order = await UserOrder.findOne({
+      where: {
+        user_order_id,
+      },
+      include: [
+        {
+          model: UserOrderDetails,
+        },
+      ],
+    });
+    if (!order) {
+      return res.status(404).json({
+        error: true,
+        message: "Đơn hàng không tồn tại",
+      });
+    }
+
+    if (order.order_status_id === 3) {
+      if (!Array.isArray(order_codes) || order_codes.length === 0) {
+        return res.status(400).json({
+          error: true,
+          message: "Invalid order codes (order_codes must be an array with at least 1 element)",
+        });
+      }
+
+      if (!shop_id) {
+        return res.status(400).json({
+          error: true,
+          message: "Shop ID is required"
+        });
+      }
+
+      const cancleGHNResult = await cancelOrderGHN(shop_id, order_codes);
+      if (cancleGHNResult.error) {
+        return res.status(400).json({
+          error: true,
+          message: "Failed to cancel order with GHN. Please check provided data or try again later.",
+          details: cancleGHNResult.error
+        });
+      }
+    }
+
+    await order.update({
+      order_status_id: 6,
+      updated_at: new Date(),
+    });
+    await OrderStatusHistory.create({
+      user_order_id,
+      order_status_id: 6,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await Promise.all(
+      order.UserOrderDetails.map(async (product) => {
+        await ProductVarients.increment(
+          { stock: product.quantity },
+          {
+            where: {
+              product_varients_id: product.product_varients_id,
+            },
+          }
+        );
+      })
+    );
+
+    if (order.vouchers_applied !== null) {
+      const vouchersApplied = order.vouchers_applied.split(",").map(Number);
+      await Promise.all(
+        vouchersApplied.map(async (voucherId) => {
+          await DiscountVoucher.increment(
+            { quantity: 1 },
+            {
+              where: {
+                discount_voucher_id: voucherId,
+              },
+            }
+          );
+        })
+      );
+    }
+
+    if (order.payment_method_id === 3 || order.payment_method_id === 4) {
+      const wallet = await UserWallet.findOne({
+        where: {
+          user_id: order.user_id,
+        },
+      });
+      await wallet.update({
+        balance: wallet.balance + order.final_price,
+      });
+      await WalletTransaction.create({
+        user_wallet_id: wallet.user_wallet_id,
+        transaction_type: "Hoàn tiền",
+        amount: order.final_price,
+        transaction_date: new Date(),
+        description: "Hoàn tiền đơn hàng",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Hủy đơn hàng thành công",
+    });
+  } catch (error) {
+    console.log("Lỗi khi hủy đơn hàng: ", error);
+    return res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+
 const getReviewOrder = async (req, res) => {
   const { user_order_id } = req.query;
   try {
@@ -1207,4 +1328,5 @@ module.exports = {
   getReviewOrder,
   getRequestReason,
   sendRequest,
+  shopCancelOrder
 };

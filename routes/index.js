@@ -181,6 +181,7 @@ const {
   confirmOrder,
   buyOrderAgain,
   reviewOrder,
+  shopCancelOrder,
   getReviewOrder,
   fetchRequestReason,
   getRequestReason,
@@ -382,6 +383,7 @@ router.post("/order/complete-order", confirmOrderCompleted);
 router.post("/order/confirm-order", confirmOrder);
 router.post("/order/buy-again", buyOrderAgain);
 router.post("/order/review-order", reviewOrder);
+router.post("/order/shop-cancel-order", shopCancelOrder);
 router.get("/order/get-reviews", getReviewOrder);
 router.get("/order/get-reasons", getRequestReason);
 router.post("/order/send-request", sendRequest);
