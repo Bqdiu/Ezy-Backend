@@ -37,7 +37,33 @@ const {
 
 const dateFormat = require("dateformat");
 const { io } = require("../socket");
-const { fr, da } = require("translate-google/languages");
+const { fr, da, ca } = require("translate-google/languages");
+
+const statusDescriptions = {
+  ready_to_pick: "Mới tạo đơn hàng",
+  picking: "Nhân viên đang lấy hàng",
+  cancel: "Hủy đơn hàng",
+  money_collect_picking: "Đang thu tiền người gửi",
+  picked: "Nhân viên đã lấy hàng",
+  storing: "Hàng đang nằm ở kho",
+  transporting: "Đang luân chuyển hàng",
+  sorting: "Đang phân loại hàng hóa",
+  delivering: "Nhân viên đang giao cho người nhận",
+  money_collect_delivering: "Nhân viên đang thu tiền người nhận",
+  delivered: "Nhân viên đã giao hàng thành công",
+  delivery_fail: "Nhân viên giao hàng thất bại",
+  waiting_to_return: "Đang đợi trả hàng về cho người gửi",
+  return: "Trả hàng",
+  return_transporting: "Đang luân chuyển hàng trả",
+  return_sorting: "Đang phân loại hàng trả",
+  returning: "Nhân viên đang đi trả hàng",
+  return_fail: "Nhân viên trả hàng thất bại",
+  returned: "Nhân viên trả hàng thành công",
+  exception: "Đơn hàng ngoại lệ không nằm trong quy trình",
+  damage: "Hàng bị hư hỏng",
+  lost: "Hàng bị mất",
+};
+
 const checkPaid = async (orderId) => {
   try {
     const order = await UserOrder.findOne({
@@ -226,37 +252,17 @@ const getOrders = async (req, res) => {
       where: whereConditions,
       limit,
       offset,
-      order: [["created_at", "DESC"]],
+      order: [["updated_at", "DESC"]],
     });
 
-    const statusDescriptions = {
-      ready_to_pick: "Mới tạo đơn hàng",
-      picking: "Nhân viên đang lấy hàng",
-      cancel: "Hủy đơn hàng",
-      money_collect_picking: "Đang thu tiền người gửi",
-      picked: "Nhân viên đã lấy hàng",
-      storing: "Hàng đang nằm ở kho",
-      transporting: "Đang luân chuyển hàng",
-      sorting: "Đang phân loại hàng hóa",
-      delivering: "Nhân viên đang giao cho người nhận",
-      money_collect_delivering: "Nhân viên đang thu tiền người nhận",
-      delivered: "Nhân viên đã giao hàng thành công",
-      delivery_fail: "Nhân viên giao hàng thất bại",
-      waiting_to_return: "Đang đợi trả hàng về cho người gửi",
-      return: "Trả hàng",
-      return_transporting: "Đang luân chuyển hàng trả",
-      return_sorting: "Đang phân loại hàng trả",
-      returning: "Nhân viên đang đi trả hàng",
-      return_fail: "Nhân viên trả hàng thất bại",
-      returned: "Nhân viên trả hàng thành công",
-      exception: "Đơn hàng ngoại lệ không nằm trong quy trình",
-      damage: "Hàng bị hư hỏng",
-      lost: "Hàng bị mất",
-    };
     const updatedOrders = await Promise.all(
       orders.map(async (order) => {
         if (order.order_code !== null) {
-          const orderGHNDetailsRes = await getOrderDetailGHN(order.order_code);
+          const orderGHNDetailsRes = await getOrderDetailGHN(
+            order.order_return_code !== null
+              ? order.return_order_code
+              : order.order_code
+          );
           const orderGHNDetails = orderGHNDetailsRes.data;
 
           if (orderGHNDetails && orderGHNDetails.status) {
@@ -302,6 +308,91 @@ const getOrders = async (req, res) => {
     return res
       .status(500)
       .json({ error: true, message: error.message || error });
+  }
+};
+
+const getOrderDetails = async (req, res) => {
+  try {
+    const { user_order_id } = req.query;
+
+    const order = await UserOrder.findOne({
+      where: {
+        user_order_id,
+      },
+      include: [
+        {
+          model: UserOrderDetails,
+
+          include: [
+            {
+              model: ProductVarients,
+              attributes: ["product_varients_id"],
+            },
+          ],
+        },
+        {
+          model: OrderStatus,
+        },
+        {
+          model: OrderStatusHistory,
+        },
+        {
+          model: ReturnRequest,
+          attributes: ["return_request_id", "status_id"],
+          include: [
+            {
+              model: ReturnReason,
+              attributes: ["return_reason_id", "return_reason_name"],
+            },
+          ],
+        },
+      ],
+    });
+    if (order.order_code !== null) {
+      const orderGHNDetailsRes = await getOrderDetailGHN(
+        order.order_return_code !== null
+          ? order.order_return_code
+          : order.order_code
+      );
+      const orderGHNDetails = orderGHNDetailsRes.data;
+      if (orderGHNDetails && orderGHNDetails.status) {
+        await updateOrderStatus({
+          user_order_id: order.user_order_id,
+          status: orderGHNDetails.status,
+        });
+        let logWithDescriptions = [];
+        if (orderGHNDetails.log && orderGHNDetails.log.length > 0) {
+          logWithDescriptions = orderGHNDetails.log.map((logEntry) => ({
+            ...logEntry,
+            description:
+              statusDescriptions[logEntry.status] ||
+              "Trạng thái không xác định", // Thêm mô tả
+          }));
+        }
+
+        return res.status(200).json({
+          success: true,
+          order: {
+            ...order.dataValues,
+            ghn_status: orderGHNDetails.status,
+            ghn_status_description: statusDescriptions[orderGHNDetails.status],
+            log: logWithDescriptions,
+            leadtime: orderGHNDetails.leadtime,
+            updated_date: orderGHNDetails.updated_date,
+          },
+        });
+      }
+    }
+    return res.status(200).json({
+      success: true,
+      order,
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy chi tiết đơn hàng: ", error);
+    return res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
   }
 };
 
@@ -1286,12 +1377,22 @@ const getRequestReason = async (req, res) => {
 
 const sendRequest = async (req, res) => {
   try {
-    const { user_order_id, return_type_id, return_reason_id, note, status_id } =
-      req.body;
+    const {
+      user_order_id,
+      return_type_id,
+      return_reason_id,
+      note,
+      ghn_status,
+    } = req.body;
     const order = await UserOrder.findOne({
       where: {
         user_order_id,
       },
+      include: [
+        {
+          model: UserOrderDetails,
+        },
+      ],
     });
 
     if (!order) {
@@ -1311,10 +1412,90 @@ const sendRequest = async (req, res) => {
       return_type_id,
       return_reason_id,
       note,
-      status_id,
+      status_id:
+        ghn_status === "ready-to-pick" || order.order_code === null ? 2 : 1,
       created_at: new Date(),
       updated_at: new Date(),
     });
+    if (ghn_status === "ready-to-pick" || order.order_code === null) {
+      if (order.order_code !== null) {
+        const order_codes = [order.order_code];
+        const cancelGHNResult = await cancelOrderGHN(
+          order.shop_id,
+          order_codes
+        );
+        if (cancelGHNResult.error) {
+          return res.status(400).json({
+            error: true,
+            message:
+              "Câp nhật trạng thái đơn hàng thất bại, vui lòng thử lại sau",
+          });
+        }
+      }
+      await order.update({
+        order_status_id: 6,
+        updated_at: new Date(),
+        is_canceled_by: 1,
+      });
+      await OrderStatusHistory.create({
+        user_order_id,
+        order_status_id: 6,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await Promise.all(
+        order.UserOrderDetails.map(async (product) => {
+          await ProductVarients.increment(
+            { stock: product.quantity },
+            {
+              where: {
+                product_varients_id: product.product_varients_id,
+              },
+            }
+          );
+        })
+      );
+
+      if (order.vouchers_applied !== null) {
+        const vouchersApplied = order.vouchers_applied.split(",").map(Number);
+        await Promise.all(
+          vouchersApplied.map(async (voucherId) => {
+            await DiscountVoucher.increment(
+              { quantity: 1 },
+              {
+                where: {
+                  discount_voucher_id: voucherId,
+                },
+              }
+            );
+          })
+        );
+      }
+
+      if (order.payment_method_id === 3 || order.payment_method_id === 4) {
+        const wallet = await UserWallet.findOne({
+          where: {
+            user_id: order.user_id,
+          },
+        });
+        await wallet.update({
+          balance: wallet.balance + order.final_price,
+        });
+        await WalletTransaction.create({
+          user_wallet_id: wallet.user_wallet_id,
+          transaction_type: "Hoàn tiền",
+          amount: order.final_price,
+          transaction_date: new Date(),
+          description: "Hoàn tiền đơn hàng",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Hủy đơn hàng thành công",
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -1473,5 +1654,6 @@ module.exports = {
   getRequestReason,
   sendRequest,
   shopCancelOrder,
+  getOrderDetails,
   redeliveryOrder
 };

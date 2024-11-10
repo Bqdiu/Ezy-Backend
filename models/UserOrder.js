@@ -29,6 +29,14 @@ const UserOrder = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    user_address_order_name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    user_address_order_phone_number: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     user_address_id_string: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -133,6 +141,11 @@ const UserOrder = sequelize.define(
       type: DataTypes.TINYINT,
       allowNull: true,
       defaultValue: null,
+    },
+    is_processed: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
+      defaultValue: 0,
     },
   },
   {

@@ -49,14 +49,7 @@ const ReturnRequest = sequelize.define(
         key: "return_type_id",
       },
     },
-    return_reason_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: "return_reason",
-        key: "return_reason_id",
-      },
-    },
+
     note: {
       type: DataTypes.STRING,
       allowNull: false,
