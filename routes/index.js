@@ -195,6 +195,11 @@ const {
   deleteFlashSale,
 } = require("../controllers/FlashSaleController");
 
+const {
+  getReportedCustomers,
+  getShopsWithViolations,
+} = require("../controllers/ViolationController");
+
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
 router.get("/categories_name/:category_id", getCategoriesName);
@@ -392,5 +397,9 @@ router.get("/flash-sales/get-all", getAllFlashSales);
 router.post("/flash-sales/add", addFlashSale);
 router.put("/flash-sales/update/:id", updateFlashSale);
 router.delete("/flash-sales/delete/:id", deleteFlashSale);
+
+//----------------Violation----------------
+router.get("/violations/get-reported-customers", getReportedCustomers);
+router.get("/violations/get-shops-with-violations", getShopsWithViolations);
 
 module.exports = router;
