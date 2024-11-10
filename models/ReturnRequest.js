@@ -61,9 +61,10 @@ const ReturnRequest = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    status: {
-      type: DataTypes.STRING,
+    status_id: {
+      type: DataTypes.TINYINT,
       allowNull: false,
+      defaultValue: 1,
     },
   },
   {

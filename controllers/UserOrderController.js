@@ -1084,7 +1084,9 @@ const reviewOrder = async (req, res) => {
           await ProductReview.create({
             rating: rating.rating,
             review_content: rating.review,
+            user_order_id,
             product_varients_id: rating.product_varients_id,
+            classify: rating.classify,
             user_id,
             created_at: new Date(),
           });
@@ -1283,7 +1285,7 @@ const getRequestReason = async (req, res) => {
 
 const sendRequest = async (req, res) => {
   try {
-    const { user_order_id, return_type_id, return_reason_id, note, status } =
+    const { user_order_id, return_type_id, return_reason_id, note, status_id } =
       req.body;
     const order = await UserOrder.findOne({
       where: {
@@ -1308,7 +1310,7 @@ const sendRequest = async (req, res) => {
       return_type_id,
       return_reason_id,
       note,
-      status,
+      status_id,
       created_at: new Date(),
       updated_at: new Date(),
     });
