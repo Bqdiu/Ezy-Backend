@@ -186,6 +186,7 @@ const {
   fetchRequestReason,
   getRequestReason,
   sendRequest,
+  getOrderDetails,
 } = require("../controllers/UserOrderController");
 
 const {
@@ -387,6 +388,7 @@ router.post("/order/shop-cancel-order", shopCancelOrder);
 router.get("/order/get-reviews", getReviewOrder);
 router.get("/order/get-reasons", getRequestReason);
 router.post("/order/send-request", sendRequest);
+router.get("/order/order-details", getOrderDetails);
 //-----------------FlashSale-----------------
 router.get("/flash-sales/get-all", getAllFlashSales);
 router.post("/flash-sales/add", addFlashSale);

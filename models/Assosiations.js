@@ -182,13 +182,13 @@ RequestSupports.belongsTo(UserAccount, { foreignKey: "requestor_id" });
 UserAccount.hasMany(ReturnRequest, { foreignKey: "user_id" });
 ReturnRequest.belongsTo(UserAccount, { foreignKey: "user_id" });
 
-ReturnReason.hasMany(ReturnRequest, { foreignKey: "request_reason_id" });
-ReturnRequest.belongsTo(ReturnReason, { foreignKey: "request_reason_id" });
+ReturnReason.hasMany(ReturnRequest, { foreignKey: "return_reason_id" });
+ReturnRequest.belongsTo(ReturnReason, { foreignKey: "return_reason_id" });
 
 Shop.hasMany(ReturnRequest, { foreignKey: "shop_id" });
 ReturnRequest.belongsTo(Shop, { foreignKey: "shop_id" });
 
-UserOrder.hasMany(ReturnRequest, { foreignKey: "user_order_id" });
+UserOrder.hasOne(ReturnRequest, { foreignKey: "user_order_id" });
 ReturnRequest.belongsTo(UserOrder, { foreignKey: "user_order_id" });
 
 UserAccount.hasMany(Violations, { foreignKey: "user_id" });

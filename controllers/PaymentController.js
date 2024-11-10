@@ -946,6 +946,8 @@ const saveOrder = async (
       user_id,
       shop_id: validCart[0].shop_id,
       user_address_string: address.address,
+      user_address_order_name: address.full_name,
+      user_address_order_phone_number: address.phone_number,
       user_address_id_string,
       total_quantity: validCart[0].total_quantity,
       total_price: validCart[0].total_price,
