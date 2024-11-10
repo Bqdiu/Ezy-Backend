@@ -129,6 +129,11 @@ const UserOrder = sequelize.define(
       allowNull: false,
       defaultValue: 1,
     },
+    is_canceled_by: {
+      type: DataTypes.TINYINT,
+      allowNull: true,
+      defaultValue: null,
+    },
   },
   {
     tableName: "user_order",

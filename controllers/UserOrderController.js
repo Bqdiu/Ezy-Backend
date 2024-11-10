@@ -32,9 +32,8 @@ const {
 const {
   getOrderDetailGHN,
   createOrderGHN,
-  cancelOrderGHN 
+  cancelOrderGHN,
 } = require("../services/ghnServices");
-
 
 const dateFormat = require("dateformat");
 const { io } = require("../socket");
@@ -357,7 +356,10 @@ const updateOrderStatus = async (data) => {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-    } else if (status === "delivered") {
+    } else if (
+      status === "delivered" &&
+      order.return_expiration_date === null
+    ) {
       await order.update({
         return_expiration_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         updated_at: new Date(),
@@ -636,7 +638,7 @@ const getShopOrders = async (req, res) => {
 
 const cancelOrder = async (req, res) => {
   try {
-    const { user_order_id } = req.body;
+    const { user_order_id, is_canceled_by } = req.body;
     const order = await UserOrder.findOne({
       where: {
         user_order_id,
@@ -653,9 +655,21 @@ const cancelOrder = async (req, res) => {
         message: "Đơn hàng không tồn tại",
       });
     }
+    if (order.order_code !== null) {
+      const order_codes = [order.order_code];
+      const cancelGHNResult = await cancelOrderGHN(order.shop_id, order_codes);
+      if (cancelGHNResult.error) {
+        return res.status(400).json({
+          error: true,
+          message:
+            "Câp nhật trạng thái đơn hàng thất bại, vui lòng thử lại sau",
+        });
+      }
+    }
     await order.update({
       order_status_id: 6,
       updated_at: new Date(),
+      is_canceled_by,
     });
     await OrderStatusHistory.create({
       user_order_id,
@@ -663,6 +677,7 @@ const cancelOrder = async (req, res) => {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
     await Promise.all(
       order.UserOrderDetails.map(async (product) => {
         await ProductVarients.increment(
@@ -708,6 +723,7 @@ const cancelOrder = async (req, res) => {
         transaction_date: new Date(),
         description: "Hoàn tiền đơn hàng",
       });
+      console.log("Hoàn tiền thành công");
     }
 
     return res.status(200).json({
@@ -1091,11 +1107,9 @@ const reviewOrder = async (req, res) => {
   }
 };
 
-
 const shopCancelOrder = async (req, res) => {
   try {
     const { user_order_id, shop_id, order_codes } = req.body;
-
 
     const order = await UserOrder.findOne({
       where: {
@@ -1118,14 +1132,15 @@ const shopCancelOrder = async (req, res) => {
       if (!Array.isArray(order_codes) || order_codes.length === 0) {
         return res.status(400).json({
           error: true,
-          message: "Invalid order codes (order_codes must be an array with at least 1 element)",
+          message:
+            "Invalid order codes (order_codes must be an array with at least 1 element)",
         });
       }
 
       if (!shop_id) {
         return res.status(400).json({
           error: true,
-          message: "Shop ID is required"
+          message: "Shop ID is required",
         });
       }
 
@@ -1133,8 +1148,9 @@ const shopCancelOrder = async (req, res) => {
       if (cancleGHNResult.error) {
         return res.status(400).json({
           error: true,
-          message: "Failed to cancel order with GHN. Please check provided data or try again later.",
-          details: cancleGHNResult.error
+          message:
+            "Failed to cancel order with GHN. Please check provided data or try again later.",
+          details: cancleGHNResult.error,
         });
       }
     }
@@ -1208,7 +1224,6 @@ const shopCancelOrder = async (req, res) => {
     });
   }
 };
-
 
 const getReviewOrder = async (req, res) => {
   const { user_order_id } = req.query;
@@ -1328,5 +1343,5 @@ module.exports = {
   getReviewOrder,
   getRequestReason,
   sendRequest,
-  shopCancelOrder
+  shopCancelOrder,
 };

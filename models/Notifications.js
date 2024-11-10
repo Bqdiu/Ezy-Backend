@@ -17,6 +17,10 @@ const Notifications = sequelize.define(
         key: "user_id",
       },
     },
+    notifications_type: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     title: {
       type: DataTypes.STRING,
       allowNull: false,
