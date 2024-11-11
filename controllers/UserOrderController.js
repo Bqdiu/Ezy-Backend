@@ -28,6 +28,7 @@ const {
   ProductReview,
   ReturnReason,
   ReturnRequest,
+  PaymentMethod,
 } = require("../models/Assosiations");
 const {
   getOrderDetailGHN,
@@ -326,7 +327,7 @@ const getOrderDetails = async (req, res) => {
           include: [
             {
               model: ProductVarients,
-              attributes: ["product_varients_id"],
+              attributes: ["product_varients_id", "product_id"],
             },
           ],
         },
@@ -342,7 +343,12 @@ const getOrderDetails = async (req, res) => {
           include: [
             {
               model: ReturnReason,
-              attributes: ["return_reason_id", "return_reason_name"],
+              attributes: [
+                "return_reason_id",
+                "return_reason_name",
+                "createdAt",
+                "updatedAt",
+              ],
             },
           ],
         },
@@ -355,6 +361,9 @@ const getOrderDetails = async (req, res) => {
               attributes: ["user_id", "username"],
             },
           ],
+        },
+        {
+          model: PaymentMethod,
         },
       ],
     });
@@ -1445,6 +1454,7 @@ const sendRequest = async (req, res) => {
         order_status_id: 6,
         updated_at: new Date(),
         is_canceled_by: 1,
+        is_processed: 1,
       });
       await OrderStatusHistory.create({
         user_order_id,
