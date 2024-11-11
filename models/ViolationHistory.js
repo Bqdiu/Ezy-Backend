@@ -9,6 +9,14 @@ const ViolationHistory = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+    violator_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "user_account",
+        key: "user_id",
+      },
+    },
     action_type: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -22,13 +30,9 @@ const ViolationHistory = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
-    updated_by: {
+    updated_by_id: {
       type: DataTypes.STRING,
       allowNull: false,
-      references: {
-        model: "user_account",
-        key: "user_id",
-      },
     },
   },
   {
