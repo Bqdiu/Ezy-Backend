@@ -9,21 +9,9 @@ const ViolationHistory = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    violation_id: {
-      type: DataTypes.INTEGER,
+    action_type: {
+      type: DataTypes.STRING,
       allowNull: false,
-      references: {
-        model: "violations",
-        key: "violation_id",
-      },
-    },
-    violation_action_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: "violation_actions",
-        key: "violation_action_id",
-      },
     },
     status: {
       type: DataTypes.STRING,
