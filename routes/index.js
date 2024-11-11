@@ -201,6 +201,7 @@ const {
   getReportedCustomers,
   getShopsWithViolations,
 } = require("../controllers/ViolationController");
+const { getReturnRequest } = require("../controllers/ReturnRequestController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -405,5 +406,9 @@ router.delete("/flash-sales/delete/:id", deleteFlashSale);
 //----------------Violation----------------
 router.get("/violations/get-reported-customers", getReportedCustomers);
 router.get("/violations/get-shops-with-violations", getShopsWithViolations);
+
+
+//-----------------ReturnRequest-------------------
+router.get("/return-request/get-return-request", getReturnRequest);
 
 module.exports = router;
