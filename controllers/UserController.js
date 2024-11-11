@@ -564,7 +564,13 @@ const updateEmail = async (req, res) => {
         message: "Không tìm thấy người dùng",
       });
     }
+    const emailHistory = user.email_history
+      ? user.email_history.split(",")
+      : [];
+    emailHistory.push(user.email);
+
     await user.update({
+      email_history: emailHistory.join(","),
       email,
     });
     return res.status(200).json({
