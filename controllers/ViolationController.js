@@ -1,4 +1,5 @@
 const sequelize = require("../config/database");
+const { Op } = require('sequelize');
 const {
     Violations,
     ViolationTypes,
@@ -8,7 +9,6 @@ const {
     Shop,
 } = require('../models/Assosiations');
 const Sequelize = require('sequelize');
-const Op = Sequelize.Op;
 
 const getReportedCustomers = async (req, res) => {
     try {
@@ -162,12 +162,26 @@ const getViolationHistory = async (req, res) => {
         const violationHistory = await ViolationHistory.findAll({
             where: { violator_id: userId },
             attributes: ['violation_history_id', 'action_type', 'status', 'notes', 'updated_by_id', 'updatedAt'],
-            order: [['updatedAt', 'DESC']], // Sắp xếp theo thời gian cập nhật mới nhất
+            order: [['updatedAt', 'DESC']],
         });
+
+        const historyWithUsernames = await Promise.all(
+            violationHistory.map(async (history) => {
+                const user = await UserAccount.findOne({
+                    where: { user_id: history.updated_by_id },
+                    attributes: ['username'],
+                });
+                
+                return {
+                    ...history.toJSON(),
+                    updated_by_username: user ? user.username : null, 
+                };
+            })
+        );
 
         res.status(200).json({
             success: true,
-            data: violationHistory,
+            data: historyWithUsernames,
         });
     } catch (error) {
         console.error("Error fetching violation history:", error);
@@ -178,8 +192,48 @@ const getViolationHistory = async (req, res) => {
     }
 };
 
+const handleViolationResolution = async (req, res) => {
+    const { userId, action_type, notes, updated_by_id } = req.body;
+
+    try {
+        // Bước 1: Thêm bản ghi vào bảng ViolationHistory
+        await ViolationHistory.create({
+            violator_id: userId,
+            action_type,
+            status: 'Đã xử lý',
+            notes,
+            updated_by_id,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        });
+
+        // Bước 2: Cập nhật trạng thái tất cả các vi phạm của user thành "Đã xử lý"
+        await Violations.update(
+            { status: 'Đã xử lý', resolved_date: new Date() },
+            {
+                where: {
+                    user_id: userId,
+                    status: 'Chưa xử lý'
+                }
+            }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: `Vi phạm của người dùng ID ${userId} đã được xử lý thành công.`,
+        });
+    } catch (error) {
+        console.error("Error handling violation resolution:", error);
+        res.status(500).json({
+            error: true,
+            message: error.message || "An error occurred during violation resolution.",
+        });
+    }
+};
+
 module.exports = {
     getReportedCustomers,
     getShopsWithViolations,
     getViolationHistory,
+    handleViolationResolution,
 };
