@@ -80,6 +80,10 @@ const UserAccount = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    is_banned: {
+      type: DataTypes.TINYINT,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "user_account",

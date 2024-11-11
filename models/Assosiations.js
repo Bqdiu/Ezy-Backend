@@ -36,7 +36,7 @@ const Notifications = require("./Notifications");
 const RequestSupports = require("./RequestSupports");
 const ReturnRequest = require("./ReturnRequest");
 const Violations = require("./Violations");
-const ViolationActions = require("./ViolationActions");
+
 const ViolationHistory = require("./ViolationHistory");
 const ViolationTypes = require("./ViolationTypes");
 const ViolationImgs = require("./ViolationImgs");
@@ -194,12 +194,6 @@ ReturnRequest.belongsTo(UserOrder, { foreignKey: "user_order_id" });
 UserAccount.hasMany(Violations, { foreignKey: "user_id" });
 Violations.belongsTo(UserAccount, { foreignKey: "user_id" });
 
-Violations.hasMany(ViolationActions, { foreignKey: "violation_id" });
-ViolationActions.belongsTo(Violations, { foreignKey: "violation_id" });
-
-Violations.hasMany(ViolationHistory, { foreignKey: "violation_id" });
-ViolationHistory.belongsTo(Violations, { foreignKey: "violation_id" });
-
 ViolationTypes.hasMany(Violations, { foreignKey: "violation_type_id" });
 Violations.belongsTo(ViolationTypes, { foreignKey: "violation_type_id" });
 
@@ -259,7 +253,7 @@ module.exports = {
   RequestSupports,
   ReturnRequest,
   Violations,
-  ViolationActions,
+
   ViolationHistory,
   ViolationImgs,
   ViolationTypes,

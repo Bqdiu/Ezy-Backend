@@ -346,6 +346,16 @@ const getOrderDetails = async (req, res) => {
             },
           ],
         },
+        {
+          model: Shop,
+          required: true,
+          include: [
+            {
+              model: UserAccount,
+              attributes: ["user_id", "username"],
+            },
+          ],
+        },
       ],
     });
     if (order.order_code !== null) {
