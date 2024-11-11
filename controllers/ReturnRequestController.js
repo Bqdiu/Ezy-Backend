@@ -31,12 +31,18 @@ const ReturnType = require("../models/ReturnType");
 
 const getReturnRequest = async (req, res) => {
     const { shop_id, return_type_id } = req.query;
-
-    if (!shop_id || !return_type_id) {
+    if (!return_type_id) {
         return res.status(400).json({
-            message: `${!shop_id ? 'Shop id' : 'Return type id'} is required`,
+            message: "Return Type ID is required",
             error: true,
-        });
+        })
+    }
+
+    if(!shop_id){
+        return res.status(400).json({
+            message: "Shop ID is required",
+            error: true,
+        })
     }
 
     try {
@@ -88,6 +94,7 @@ const getReturnRequest = async (req, res) => {
         })
     }
 }
+
 
 module.exports = {
     getReturnRequest,
