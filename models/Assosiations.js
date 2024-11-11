@@ -200,8 +200,8 @@ Violations.belongsTo(ViolationTypes, { foreignKey: "violation_type_id" });
 Violations.hasMany(ViolationImgs, { foreignKey: "violation_id" });
 ViolationImgs.belongsTo(Violations, { foreignKey: "violation_id" });
 
-UserAccount.hasMany(ViolationHistory, { foreignKey: "updated_by" });
-ViolationHistory.belongsTo(UserAccount, { foreignKey: "updated_by" });
+UserAccount.hasMany(ViolationHistory, { foreignKey: "violator_id" });
+ViolationHistory.belongsTo(UserAccount, { foreignKey: "violator_id" });
 
 UserOrder.belongsTo(OrderStatus, { foreignKey: "order_status_id" });
 UserOrder.belongsTo(Shop, { foreignKey: "shop_id" });
