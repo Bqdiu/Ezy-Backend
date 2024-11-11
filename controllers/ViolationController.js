@@ -2,6 +2,8 @@ const sequelize = require("../config/database");
 const {
     Violations,
     ViolationTypes,
+    ViolationImgs,
+    ViolationHistory,
     UserAccount,
     Shop,
 } = require('../models/Assosiations');
@@ -10,7 +12,6 @@ const Op = Sequelize.Op;
 
 const getReportedCustomers = async (req, res) => {
     try {
-        // Lấy danh sách người dùng có ít nhất một vi phạm chưa xử lý
         const reportedCustomers = await UserAccount.findAll({
             where: { role_id: 1 },
             attributes: ['user_id', 'username', 'full_name', 'email'],
@@ -18,19 +19,22 @@ const getReportedCustomers = async (req, res) => {
                 {
                     model: Violations,
                     required: true,
-                    where: { status: 'Chưa xử lý' }, // Chỉ lấy vi phạm chưa xử lý
+                    where: { status: 'Chưa xử lý' },
                     attributes: ['violation_id', 'date_reported', 'status', 'notes'],
                     include: [
                         {
                             model: ViolationTypes,
                             attributes: ['violation_name', 'priority_level'],
                         },
+                        {
+                            model: ViolationImgs,
+                            attributes: ['img_url'],
+                        },
                     ],
                 },
             ],
         });
 
-        // Xử lý dữ liệu đầu ra
         const customersData = reportedCustomers.map((user) => {
             const violation_count = user.Violations.length;
             let warning_level = "Thấp";
@@ -48,6 +52,7 @@ const getReportedCustomers = async (req, res) => {
                 date_reported: violation.date_reported,
                 status: violation.status,
                 notes: violation.notes,
+                imgs: violation.ViolationImgs.map((img) => img.img_url),
             }));
 
             return {
@@ -74,10 +79,8 @@ const getReportedCustomers = async (req, res) => {
     }
 };
 
-
 const getShopsWithViolations = async (req, res) => {
     try {
-        // Lấy danh sách shop có vi phạm chưa xử lý và chỉ lấy chủ shop có role_id = 2
         const shopsWithViolations = await Shop.findAll({
             include: [
                 {
@@ -88,12 +91,16 @@ const getShopsWithViolations = async (req, res) => {
                         {
                             model: Violations,
                             required: true,
-                            where: { status: 'Chưa xử lý' }, // Chỉ lấy vi phạm chưa xử lý
+                            where: { status: 'Chưa xử lý' },
                             attributes: ['violation_id', 'date_reported', 'status', 'notes'],
                             include: [
                                 {
                                     model: ViolationTypes,
                                     attributes: ['violation_name', 'priority_level'],
+                                },
+                                {
+                                    model: ViolationImgs,
+                                    attributes: ['img_url'],
                                 },
                             ],
                         },
@@ -102,7 +109,6 @@ const getShopsWithViolations = async (req, res) => {
             ],
         });
 
-        // Xử lý dữ liệu đầu ra
         const shopData = shopsWithViolations.map((shop) => {
             const owner = shop.UserAccount;
             const violation_count = owner.Violations.length;
@@ -121,6 +127,7 @@ const getShopsWithViolations = async (req, res) => {
                 date_reported: violation.date_reported,
                 status: violation.status,
                 notes: violation.notes,
+                imgs: violation.ViolationImgs.map((img) => img.img_url),
             }));
 
             return {
@@ -148,7 +155,31 @@ const getShopsWithViolations = async (req, res) => {
     }
 };
 
+const getViolationHistory = async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        const violationHistory = await ViolationHistory.findAll({
+            where: { violator_id: userId },
+            attributes: ['violation_history_id', 'action_type', 'status', 'notes', 'updated_by_id', 'updatedAt'],
+            order: [['updatedAt', 'DESC']], // Sắp xếp theo thời gian cập nhật mới nhất
+        });
+
+        res.status(200).json({
+            success: true,
+            data: violationHistory,
+        });
+    } catch (error) {
+        console.error("Error fetching violation history:", error);
+        res.status(500).json({
+            error: true,
+            message: error.message || "An error occurred",
+        });
+    }
+};
+
 module.exports = {
     getReportedCustomers,
     getShopsWithViolations,
+    getViolationHistory,
 };

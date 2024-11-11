@@ -199,6 +199,7 @@ const {
 const {
   getReportedCustomers,
   getShopsWithViolations,
+  getViolationHistory,
 } = require("../controllers/ViolationController");
 
 //------------------Categories-----------------------
@@ -403,5 +404,6 @@ router.delete("/flash-sales/delete/:id", deleteFlashSale);
 //----------------Violation----------------
 router.get("/violations/get-reported-customers", getReportedCustomers);
 router.get("/violations/get-shops-with-violations", getShopsWithViolations);
+router.get("/violations/history/:userId", getViolationHistory);
 
 module.exports = router;
