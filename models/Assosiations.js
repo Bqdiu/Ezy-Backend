@@ -256,6 +256,7 @@ module.exports = {
   CartShop,
   PaymentMethod,
   FlashSales,
+  FlashSaleTimerFrame,
   ShopRegisterFlashSales,
   Notifications,
   RequestSupports,
