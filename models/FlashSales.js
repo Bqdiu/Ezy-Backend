@@ -29,6 +29,7 @@ const FlashSales = sequelize.define(
     status: {
       type: DataTypes.STRING,
       allowNull: false,
+      defaultValue: "waiting",
     },
     createdAt: {
       type: DataTypes.DATE,
@@ -39,7 +40,7 @@ const FlashSales = sequelize.define(
       allowNull: false,
     },
   },
-  {  
+  {
     tableName: "flash_sales",
     timestamps: true,
     charset: "utf8mb4",

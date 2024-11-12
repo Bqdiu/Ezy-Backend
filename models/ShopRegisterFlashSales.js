@@ -46,6 +46,11 @@ const ShopRegisterFlashSales = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    sold: {
+      type: DataTypes.BIGINT,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "shop_register_flash_sales",
