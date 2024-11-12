@@ -42,6 +42,7 @@ const ViolationTypes = require("./ViolationTypes");
 const ViolationImgs = require("./ViolationImgs");
 const ReturnReason = require("./ReturnReason");
 const ReturnType = require("./ReturnType");
+const FlashSaleTimerFrame = require("./FlashSaleTimeFrame");
 // Thiết lập mối quan hệ
 UserAccount.hasMany(UserAddress, { foreignKey: "user_id" });
 UserAddress.belongsTo(UserAccount, { foreignKey: "user_id" });
@@ -164,8 +165,15 @@ CartItems.belongsTo(ProductVarients, { foreignKey: "product_varients_id" });
 PaymentMethod.hasMany(UserOrder, { foreignKey: "payment_method_id" });
 UserOrder.belongsTo(PaymentMethod, { foreignKey: "payment_method_id" });
 
-FlashSales.hasMany(ShopRegisterFlashSales, { foreignKey: "flash_sales_id" });
-ShopRegisterFlashSales.belongsTo(FlashSales, { foreignKey: "flash_sales_id" });
+FlashSales.hasMany(FlashSaleTimerFrame, { foreignKey: "flash_sales_id" });
+FlashSaleTimerFrame.belongsTo(FlashSales, { foreignKey: "flash_sales_id" });
+
+FlashSaleTimerFrame.hasMany(ShopRegisterFlashSales, {
+  foreignKey: "flash_sale_time_frame_id",
+});
+ShopRegisterFlashSales.belongsTo(FlashSaleTimerFrame, {
+  foreignKey: "flash_sale_time_frame_id",
+});
 
 Shop.hasMany(ShopRegisterFlashSales, { foreignKey: "shop_id" });
 ShopRegisterFlashSales.belongsTo(Shop, { foreignKey: "shop_id" });

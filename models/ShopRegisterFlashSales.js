@@ -9,6 +9,14 @@ const ShopRegisterFlashSales = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+    flash_sale_time_frame_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "flash_sale_time_frame",
+        key: "flash_sale_time_frame_id",
+      },
+    },
     shop_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -17,14 +25,7 @@ const ShopRegisterFlashSales = sequelize.define(
         key: "shop_id",
       },
     },
-    flash_sales_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: "flash_sales",
-        key: "flash_sales_id",
-      },
-    },
+
     product_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
