@@ -133,10 +133,6 @@ const deleteFlashSale = async (req, res) => {
 
 const getActiveFlashSalesClient = async (req, res) => {
   try {
-    const { page = 1, limit = 12 } = req.query;
-
-    const offset = (page - 1) * limit;
-
     const flashSales = await FlashSales.findOne({
       where: {
         status: "active",
@@ -149,37 +145,39 @@ const getActiveFlashSalesClient = async (req, res) => {
       },
     });
 
-    const { count, rows: FlashSaleTimeFrame } =
-      await FlashSaleTimerFrame.findAndCountAll({
-        where: {
-          flash_sales_id: flashSales.flash_sales_id,
-          status: "active",
-          started_at: {
-            [Op.lte]: timeInVietnam, // started_at <= thời gian hiện tại
-          },
-          ended_at: {
-            [Op.gt]: timeInVietnam, // ended_at > thời gian hiện tại
-          },
+    const FlashSaleTimeFrame = await FlashSaleTimerFrame.findAll({
+      where: {
+        flash_sales_id: flashSales.flash_sales_id,
+        status: "active",
+        started_at: {
+          [Op.lte]: timeInVietnam, // started_at <= thời gian hiện tại
         },
-        include: [
-          {
-            model: ShopRegisterFlashSales,
-            include: [
-              {
-                model: Product,
-              },
-            ],
-          },
-        ],
-        offset,
-        limit,
-      });
+        ended_at: {
+          [Op.gt]: timeInVietnam, // ended_at > thời gian hiện tại
+        },
+      },
+      include: [
+        {
+          model: ShopRegisterFlashSales,
+          include: [
+            {
+              model: Product,
+              attributes: [
+                "product_id",
+                "product_name",
+                "thumbnail",
+                "sold",
+                "avgRating",
+              ],
+            },
+          ],
+          order: [["sold", "DESC"]],
+        },
+      ],
+      limit: 12,
+    });
 
-    const totalPages = Math.ceil(count / limit);
-
-    return res
-      .status(200)
-      .json({ success: true, data: FlashSaleTimeFrame, totalPages });
+    return res.status(200).json({ success: true, data: FlashSaleTimeFrame });
   } catch (error) {
     console.error("Lỗi khi lấy Flash Sale:", error);
     res
