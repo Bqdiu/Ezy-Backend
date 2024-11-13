@@ -186,6 +186,7 @@ const {
   fetchRequestReason,
   getRequestReason,
   sendRequest,
+  redeliveryOrder,
   getOrderDetails,
 } = require("../controllers/UserOrderController");
 
@@ -207,6 +208,13 @@ const {
   getViolationHistory,
   handleViolationResolution,
 } = require("../controllers/ViolationController");
+const {
+  getReturnRequest,
+  acceptReturnRequest,
+  rejectReturnRequest,
+  getReturnOrder
+} = require("../controllers/ReturnRequestController");
+const { createNotification } = require("../controllers/NotificationsController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -400,6 +408,7 @@ router.post("/order/shop-cancel-order", shopCancelOrder);
 router.get("/order/get-reviews", getReviewOrder);
 router.get("/order/get-reasons", getRequestReason);
 router.post("/order/send-request", sendRequest);
+router.post("/order/redelivery-order", redeliveryOrder);
 router.get("/order/order-details", getOrderDetails);
 //-----------------FlashSale-----------------
 router.get("/flash-sales/get-all", getAllFlashSales);
@@ -417,4 +426,15 @@ router.get("/violations/get-reported-customers", getReportedCustomers);
 router.get("/violations/get-shops-with-violations", getShopsWithViolations);
 router.get("/violations/history/:userId", getViolationHistory);
 router.post("/violations/handle-resolution", handleViolationResolution);
+
+//-----------------ReturnRequest-------------------
+router.get("/return-request/get-return-request", getReturnRequest);
+router.post("/return-request/accept-return-request", acceptReturnRequest);
+router.post("/return-request/reject-return-request", rejectReturnRequest);
+router.get("/return-request/get-return-order", getReturnOrder);
+
+//-----------------Notifications-------------------
+router.post("/notifications/create-notification", createNotification);
+
+
 module.exports = router;

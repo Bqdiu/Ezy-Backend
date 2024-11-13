@@ -955,6 +955,7 @@ const getShopProducts = async (req, res) => {
       ],
       limit: parsedLimit,
       offset: offset,
+      order: [["created_at", "DESC"]],
     });
 
     res.status(200).json({
@@ -1036,6 +1037,7 @@ const searchShopProducts = async (req, res) => {
       ],
       limit: parsedLimit,
       offset: offset,
+      order: [["created_at", "DESC"]],
     });
 
     const totalProducts = await Product.count({
