@@ -109,6 +109,7 @@ const UserOrder = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+
     order_status_id: {
       type: DataTypes.INTEGER,
       allowNull: false,

@@ -12,6 +12,8 @@ const {
   Role,
   ProductReview,
   HistorySearch,
+  ShopRegisterFlashSales,
+  FlashSaleTimerFrame,
 } = require("../models/Assosiations");
 const sequelize = require("../config/database");
 const Sequelize = require("sequelize");
@@ -265,6 +267,27 @@ const getProductDetailsByID = async (req, res) => {
           attributes: {
             exclude: ["product_id"],
           },
+        },
+        {
+          model: ShopRegisterFlashSales,
+          include: [
+            {
+              model: FlashSaleTimerFrame,
+              where: {
+                [Op.or]: [
+                  {
+                    status: "active", // Điều kiện cho flash sale đang diễn ra
+                    started_at: { [Op.lte]: new Date() },
+                    ended_at: { [Op.gt]: new Date() },
+                  },
+                  {
+                    status: "waiting", // Điều kiện cho flash sale sắp diễn ra
+                    started_at: { [Op.gt]: new Date() },
+                  },
+                ],
+              },
+            },
+          ],
         },
       ],
     });
