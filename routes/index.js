@@ -195,13 +195,18 @@ const {
   addFlashSale,
   updateFlashSale,
   deleteFlashSale,
+  getActiveFlashSalesClient,
+  getFlashSaleTimeFrames,
+  addTimeFrame,
+  updateTimeFrame,
+  deleteTimeFrame,
 } = require("../controllers/FlashSaleController");
 
 const {
   getReportedCustomers,
   getShopsWithViolations,
   getViolationHistory,
-  handleViolationResolution
+  handleViolationResolution,
 } = require("../controllers/ViolationController");
 const { getReturnRequest } = require("../controllers/ReturnRequestController");
 
@@ -404,6 +409,11 @@ router.get("/flash-sales/get-all", getAllFlashSales);
 router.post("/flash-sales/add", addFlashSale);
 router.put("/flash-sales/update/:id", updateFlashSale);
 router.delete("/flash-sales/delete/:id", deleteFlashSale);
+router.get("/flash-sales/get-active-flash-sales", getActiveFlashSalesClient);
+router.get("/flash-sales/get-time-frames/:id", getFlashSaleTimeFrames);
+router.post("/flash-sales/add-time-frame/:id", addTimeFrame);
+router.put("/flash-sales/update-time-frame/:id", updateTimeFrame);
+router.delete("/flash-sales/delete-time-frame/:id", deleteTimeFrame);
 
 //----------------Violation----------------
 router.get("/violations/get-reported-customers", getReportedCustomers);
