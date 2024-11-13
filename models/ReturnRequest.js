@@ -59,6 +59,16 @@ const ReturnRequest = sequelize.define(
       allowNull: false,
       defaultValue: 1,
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: DataTypes.NOW,
+    },
   },
   {
     tableName: "return_request",

@@ -260,11 +260,11 @@ const getOrders = async (req, res) => {
     const updatedOrders = await Promise.all(
       orders.map(async (order) => {
         if (order.order_code !== null) {
-          const orderGHNDetailsRes = await getOrderDetailGHN(
+          const code =
             order.order_return_code !== null
-              ? order.return_order_code
-              : order.order_code
-          );
+              ? order.order_return_code
+              : order.order_code;
+          const orderGHNDetailsRes = await getOrderDetailGHN(code);
           const orderGHNDetails = orderGHNDetailsRes.data;
 
           if (orderGHNDetails && orderGHNDetails.status) {
@@ -432,7 +432,7 @@ const updateOrderStatus = async (data) => {
         .json({ error: true, message: "Đơn hàng không tồn tại" });
     }
 
-    if (status === "ready_to_pick" && order.order_status_id !== 3) {
+    if (status === "ready_to_pick" && order.order_status_id !== 3 && order.order_status_id !== 7) {
       await order.update({
         order_status_id: 3,
         updated_at: new Date(),
@@ -443,7 +443,7 @@ const updateOrderStatus = async (data) => {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-    } else if (status === "picked" && order.order_status_id !== 4) {
+    } else if (status === "picked" && order.order_status_id !== 4 && order.order_status_id !== 7) {
       await order.update({
         order_status_id: 4,
         updated_at: new Date(),
@@ -455,7 +455,7 @@ const updateOrderStatus = async (data) => {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-    } else if (status === "cancel" && order.order_status_id !== 6) {
+    } else if (status === "cancel" && order.order_status_id !== 6 && order.order_status_id !== 7) {
       await order.update({
         order_status_id: 6,
         updated_at: new Date(),
@@ -915,8 +915,7 @@ const confirmOrderCompleted = async (req, res) => {
 };
 
 const confirmOrder = async (req, res) => {
-  const { shopId, user_order_id } = req.body;
-  const { payment_method_id } = req.body;
+  const { shopId, user_order_id, payment_method_id, shipping_fee } = req.body;
   const data = ({
     note,
     required_note, // required_note: "CHOTHUHANG, CHOXEMHANGKHONGTHU, KHONGCHOXEMHANG",
@@ -966,7 +965,8 @@ const confirmOrder = async (req, res) => {
     }
 
     data.cod_amount = 0;
-    data.payment_type_id = payment_method_id === 1 ? 2 : 1;
+    data.payment_type_id = shipping_fee > 0 ? 2 : 1;
+
     if (payment_method_id === 1) data.cod_amount = order.final_price;
 
     const requiredFields = [
@@ -1112,17 +1112,15 @@ const buyOrderAgain = async (req, res) => {
         if (product.ProductVarient.Product.product_status === 0) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name}  ${
-              product.classify !== "" && "- " + product.classify
-            } đã bị khóa`,
+            message: `Sản phẩm ${product.varient_name}  ${product.classify !== "" && "- " + product.classify
+              } đã bị khóa`,
           });
         }
         if (stock < product.quantity) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name} ${
-              product.classify !== "" && "- " + product.classify
-            } không đủ hàng`,
+            message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
+              } không đủ hàng`,
           });
         }
         const cartItem = await CartItems.findOne({
@@ -1138,9 +1136,8 @@ const buyOrderAgain = async (req, res) => {
           if (newQuantity > stock) {
             return res.status(400).json({
               error: true,
-              message: `Sản phẩm ${product.varient_name} ${
-                product.classify !== "" && "- " + product.classify
-              } không đủ hàng`,
+              message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
+                } không đủ hàng`,
             });
           }
           // console.log("price: ", newQuantity * discount_price);
@@ -1270,6 +1267,7 @@ const shopCancelOrder = async (req, res) => {
 
     await order.update({
       order_status_id: 6,
+      is_canceled_by: 2,
       updated_at: new Date(),
     });
     await OrderStatusHistory.create({
@@ -1542,6 +1540,131 @@ const sendRequest = async (req, res) => {
   }
 };
 
+const redeliveryOrder = async (req, res) => {
+  const { shopId, user_order_id, payment_method_id, shipping_fee } = req.body;
+
+  const data = ({
+    note,
+    required_note,
+    from_name,
+    from_phone,
+    from_address,
+    from_ward_name,
+    from_district_name,
+    from_province_name,
+    return_phone,
+    return_address,
+    return_district_id,
+    return_ward_code,
+    client_order_code,
+    to_name,
+    to_phone,
+    to_address,
+    to_ward_code,
+    to_district_id,
+    content,
+    weight,
+    length,
+    width,
+    height,
+    pick_station_id,
+    deliver_station_id,
+    service_id,
+    service_type_id,
+    coupon,
+    pick_shift,
+    items,
+  } = req.body);
+
+  if (!shopId || !user_order_id) {
+    return res.status(400).json({
+      error: true,
+      message: "Shop ID or user order ID is required",
+      data: req.body,
+    });
+  }
+
+
+  const requiredFields = [
+    "from_name",
+    "from_phone",
+    "from_address",
+    "from_ward_name",
+    "from_district_name",
+    "from_province_name",
+    "to_name",
+    "to_phone",
+    "to_address",
+    "to_ward_code",
+    "to_district_id",
+    "weight",
+    "length",
+    "width",
+    "height",
+    "service_type_id",
+    "items",
+  ];
+  const missingFields = requiredFields.filter((field) => !data[field]);
+
+  if (missingFields.length) {
+    return res.status(400).json({
+      error: true,
+      message: `Missing required fields: ${missingFields.join(", ")}`,
+      missingFields,
+    });
+  }
+
+  try {
+    const order = await UserOrder.findOne({ where: { user_order_id } });
+    if (!order) {
+      return res.status(404).json({ error: true, message: "Order not found" });
+    }
+
+    data.cod_amount = 0;
+    data.payment_type_id = shipping_fee > 0 ? 2 : 1;
+
+    if (payment_method_id === 1) data.cod_amount = order.final_price;
+
+
+    const resultGHN = await createOrderGHN(shopId, data);
+    if (resultGHN.error) {
+      return res.status(400).json({
+        error: true,
+        message:
+          "Failed to create order with GHN. Please check provided data or try again later.",
+        details: resultGHN.error,
+      });
+    }
+    if (resultGHN.data) {
+      await order.update({
+        order_return_code: resultGHN.data.order_code,
+        updated_at: new Date(),
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Order created successfully",
+        ghn_data: resultGHN.data,
+        order_data: order,
+      });
+    } else {
+      return res.status(400).json({
+        error: true,
+        message: "Error creating the new order with GHN.",
+        details: resultGHN.error || "Unknown error",
+        data: resultGHN,
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      error: true,
+      message: "Server error",
+      details: error.message,
+    });
+  }
+};
+
+
 module.exports = {
   deleteOrder,
   checkPaid,
@@ -1562,4 +1685,5 @@ module.exports = {
   sendRequest,
   shopCancelOrder,
   getOrderDetails,
+  redeliveryOrder,
 };
