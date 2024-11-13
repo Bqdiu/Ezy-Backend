@@ -49,6 +49,11 @@ const UserOrderDetails = sequelize.define(
       type: DataTypes.BIGINT,
       allowNull: false,
     },
+    on_shop_register_flash_sales_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+    },
   },
   {
     tableName: "user_order_details",

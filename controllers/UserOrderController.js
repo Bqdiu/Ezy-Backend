@@ -29,6 +29,7 @@ const {
   ReturnReason,
   ReturnRequest,
   PaymentMethod,
+  ShopRegisterFlashSales,
 } = require("../models/Assosiations");
 const {
   getOrderDetailGHN,
@@ -1472,7 +1473,19 @@ const sendRequest = async (req, res) => {
                 product_varients_id: product.product_varients_id,
               },
             }
-          );
+          ),
+            product.on_shop_register_flash_sales_id !== null &&
+              (await ShopRegisterFlashSales.decrement(
+                {
+                  sold: product.quantity,
+                },
+                {
+                  where: {
+                    shop_register_flash_sales_id:
+                      product.on_shop_register_flash_sales_id,
+                  },
+                }
+              ));
         })
       );
 

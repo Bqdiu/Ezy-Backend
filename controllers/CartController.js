@@ -12,6 +12,8 @@ const {
   UserAccount,
   SubCategory,
   Category,
+  ShopRegisterFlashSales,
+  FlashSaleTimerFrame,
 } = require("../models/Assosiations");
 
 const getCart = async (req, res) => {
@@ -58,22 +60,35 @@ const getCart = async (req, res) => {
               include: [
                 {
                   model: Product,
+
                   include: [
                     {
                       model: ProductClassify,
                     },
+
                     {
-                      model: SubCategory,
+                      model: ShopRegisterFlashSales,
                       include: [
                         {
-                          model: Category,
+                          model: FlashSaleTimerFrame,
+                          where: {
+                            started_at: {
+                              [Op.lte]: new Date(),
+                            },
+                            ended_at: {
+                              [Op.gt]: new Date(),
+                            },
+                          },
                         },
                       ],
                     },
                   ],
-                  attributes: {
-                    exclude: ["description"],
-                  },
+                  attributes: [
+                    "product_id",
+                    "product_name",
+                    "product_status",
+                    "thumbnail",
+                  ],
                   // where: {
                   //   product_status: 1,
                   // },
@@ -101,14 +116,32 @@ const getCart = async (req, res) => {
       order: [["updatedAt", "DESC"]],
     });
 
-    // const filteredCartShop = cartShop.filter((shop) => {
-    //   const allItemsOutOfStock = shop.CartItems.every(
-    //     (item) =>
-    //       item.isOutOfStock === 1 ||
-    //       item.ProductVarient.Product.product_status === 0
-    //   );
-    //   return !allItemsOutOfStock;
-    // });
+    for (const shop of cartShop) {
+      for (const item of shop.CartItems) {
+        let calculatedPrice;
+
+        if (item.ProductVarient.Product.ShopRegisterFlashSales.length > 0) {
+          const flashSale =
+            item.ProductVarient.Product.ShopRegisterFlashSales[0];
+
+          if (
+            flashSale &&
+            flashSale.sold + item.quantity <= flashSale.quantity
+          ) {
+            calculatedPrice = item.quantity * flashSale.flash_sale_price;
+          }
+        } else {
+          calculatedPrice =
+            item.quantity * item.ProductVarient.discounted_price;
+        }
+
+        if (calculatedPrice !== undefined && item.price !== calculatedPrice) {
+          await item.update({
+            price: calculatedPrice,
+          });
+        }
+      }
+    }
 
     const invalidItems = await CartItems.findAll({
       where: {
@@ -279,10 +312,22 @@ const addToCart = async (req, res) => {
               model: Shop,
               attributes: ["shop_id", "shop_name", "shop_status"],
             },
+            {
+              model: ShopRegisterFlashSales,
+              include: [
+                {
+                  model: FlashSaleTimerFrame,
+                  where: {
+                    status: "active",
+                  },
+                },
+              ],
+            },
           ],
         },
       ],
     });
+
     if (!productVarient) {
       return res.status(404).json({
         error: true,
@@ -336,9 +381,13 @@ const addToCart = async (req, res) => {
         product_varients_id: product_varients_id,
       },
     });
+
     const discount_price =
-      parseFloat(productVarient.price) *
-      (1 - parseFloat(productVarient.sale_percents) / 100);
+      productVarient?.Product?.ShopRegisterFlashSales?.length > 0 &&
+      productVarient?.Product?.ShopRegisterFlashSales[0].sold + quantity <=
+        productVarient?.Product?.ShopRegisterFlashSales[0].sold.quantity
+        ? productVarient?.Product?.ShopRegisterFlashSales[0].flash_sale_price
+        : productVarient.discounted_price;
     if (cartItem) {
       const newQuantity = cartItem.quantity + parseInt(quantity);
       if (newQuantity > productVarient.stock) {

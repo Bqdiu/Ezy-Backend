@@ -137,23 +137,23 @@ const getActiveFlashSalesClient = async (req, res) => {
       where: {
         status: "active",
         started_at: {
-          [Op.lte]: timeInVietnam,
+          [Op.lte]: new Date(), // started_at <= thời gian hiện tại
         },
         ended_at: {
-          [Op.gt]: timeInVietnam,
+          [Op.gt]: new Date(), // ended_at > thời gian hiện tại
         },
       },
     });
 
-    const FlashSaleTimeFrame = await FlashSaleTimerFrame.findAll({
+    let FlashSaleTimeFrame = await FlashSaleTimerFrame.findAll({
       where: {
-        flash_sales_id: flashSales.flash_sales_id,
+        flash_sales_id: flashSales?.flash_sales_id,
         status: "active",
         started_at: {
-          [Op.lte]: timeInVietnam, // started_at <= thời gian hiện tại
+          [Op.lte]: new Date(), // started_at <= thời gian hiện tại
         },
         ended_at: {
-          [Op.gt]: timeInVietnam, // ended_at > thời gian hiện tại
+          [Op.gt]: new Date(), // ended_at > thời gian hiện tại
         },
       },
       include: [
@@ -172,10 +172,71 @@ const getActiveFlashSalesClient = async (req, res) => {
             },
           ],
           order: [["sold", "DESC"]],
+          limit: 12,
         },
       ],
-      limit: 12,
     });
+
+    if (FlashSaleTimeFrame.length === 0) {
+      FlashSaleTimeFrame = await FlashSaleTimerFrame.findAll({
+        where: {
+          flash_sales_id: flashSales.flash_sales_id,
+          status: "waiting",
+        },
+        order: [["started_at", "ASC"]],
+        include: [
+          {
+            model: ShopRegisterFlashSales,
+            include: [
+              {
+                model: Product,
+                attributes: [
+                  "product_id",
+                  "product_name",
+                  "thumbnail",
+                  "sold",
+                  "avgRating",
+                ],
+              },
+            ],
+            order: [["sold", "DESC"]],
+            limit: 12,
+          },
+        ],
+
+        limit: 1,
+      });
+
+      if (FlashSaleTimeFrame.length === 0) {
+        FlashSaleTimeFrame = await FlashSaleTimerFrame.findAll({
+          where: {
+            flash_sales_id: flashSales.flash_sales_id,
+            status: "ended",
+          },
+          order: [["ended_at", "DESC"]],
+          include: [
+            {
+              model: ShopRegisterFlashSales,
+              include: [
+                {
+                  model: Product,
+                  attributes: [
+                    "product_id",
+                    "product_name",
+                    "thumbnail",
+                    "sold",
+                    "avgRating",
+                  ],
+                },
+              ],
+              order: [["sold", "DESC"]],
+              limit: 12,
+            },
+          ],
+          limit: 1,
+        });
+      }
+    }
 
     return res.status(200).json({ success: true, data: FlashSaleTimeFrame });
   } catch (error) {
@@ -192,7 +253,7 @@ const getFlashSaleTimeFrames = async (req, res) => {
   try {
     const timeFrames = await FlashSaleTimerFrame.findAll({
       where: { flash_sales_id: id },
-      order: [['started_at', 'ASC']],
+      order: [["started_at", "ASC"]],
     });
 
     if (!timeFrames || timeFrames.length === 0) {
@@ -215,24 +276,42 @@ const getFlashSaleTimeFrames = async (req, res) => {
   }
 };
 
-
 const addTimeFrame = async (req, res) => {
   const { flash_sales_id, started_at, ended_at, status } = req.body;
   try {
     const flashSale = await FlashSales.findByPk(flash_sales_id);
     if (!flashSale) {
-      return res.status(404).json({ success: false, message: "Flash Sale không tồn tại" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Flash Sale không tồn tại" });
     }
 
-    if (new Date(started_at) < new Date(flashSale.started_at) || new Date(ended_at) > new Date(flashSale.ended_at)) {
-      return res.status(400).json({ success: false, message: "Khung giờ phải nằm trong thời gian của Flash Sale" });
+    if (
+      new Date(started_at) < new Date(flashSale.started_at) ||
+      new Date(ended_at) > new Date(flashSale.ended_at)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Khung giờ phải nằm trong thời gian của Flash Sale",
+      });
     }
 
-    const newTimeFrame = await FlashSaleTimerFrame.create({ flash_sales_id, started_at, ended_at, status });
-    res.status(201).json({ success: true, message: "Thêm khung giờ thành công", data: newTimeFrame });
+    const newTimeFrame = await FlashSaleTimerFrame.create({
+      flash_sales_id,
+      started_at,
+      ended_at,
+      status,
+    });
+    res.status(201).json({
+      success: true,
+      message: "Thêm khung giờ thành công",
+      data: newTimeFrame,
+    });
   } catch (error) {
     console.error("Lỗi khi thêm khung giờ:", error);
-    res.status(500).json({ success: false, message: "Đã xảy ra lỗi khi thêm khung giờ" });
+    res
+      .status(500)
+      .json({ success: false, message: "Đã xảy ra lỗi khi thêm khung giờ" });
   }
 };
 
@@ -242,13 +321,21 @@ const updateTimeFrame = async (req, res) => {
   try {
     const timeFrame = await FlashSaleTimerFrame.findByPk(id);
     if (!timeFrame) {
-      return res.status(404).json({ success: false, message: "Khung giờ không tồn tại" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Khung giờ không tồn tại" });
     }
 
     const flashSale = await FlashSales.findByPk(timeFrame.flash_sales_id);
 
-    if (new Date(started_at) < new Date(flashSale.started_at) || new Date(ended_at) > new Date(flashSale.ended_at)) {
-      return res.status(400).json({ success: false, message: "Khung giờ phải nằm trong thời gian của Flash Sale" });
+    if (
+      new Date(started_at) < new Date(flashSale.started_at) ||
+      new Date(ended_at) > new Date(flashSale.ended_at)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Khung giờ phải nằm trong thời gian của Flash Sale",
+      });
     }
 
     timeFrame.started_at = started_at;
@@ -256,10 +343,17 @@ const updateTimeFrame = async (req, res) => {
     timeFrame.status = status;
     await timeFrame.save();
 
-    res.status(200).json({ success: true, message: "Cập nhật khung giờ thành công", data: timeFrame });
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật khung giờ thành công",
+      data: timeFrame,
+    });
   } catch (error) {
     console.error("Lỗi khi cập nhật khung giờ:", error);
-    res.status(500).json({ success: false, message: "Đã xảy ra lỗi khi cập nhật khung giờ" });
+    res.status(500).json({
+      success: false,
+      message: "Đã xảy ra lỗi khi cập nhật khung giờ",
+    });
   }
 };
 
@@ -268,17 +362,22 @@ const deleteTimeFrame = async (req, res) => {
   try {
     const timeFrame = await FlashSaleTimerFrame.findByPk(id);
     if (!timeFrame) {
-      return res.status(404).json({ success: false, message: "Khung giờ không tồn tại" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Khung giờ không tồn tại" });
     }
 
     await timeFrame.destroy();
-    res.status(200).json({ success: true, message: "Xóa khung giờ thành công" });
+    res
+      .status(200)
+      .json({ success: true, message: "Xóa khung giờ thành công" });
   } catch (error) {
     console.error("Lỗi khi xóa khung giờ:", error);
-    res.status(500).json({ success: false, message: "Đã xảy ra lỗi khi xóa khung giờ" });
+    res
+      .status(500)
+      .json({ success: false, message: "Đã xảy ra lỗi khi xóa khung giờ" });
   }
 };
-
 
 module.exports = {
   getAllFlashSales,

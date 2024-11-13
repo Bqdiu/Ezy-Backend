@@ -1,5 +1,5 @@
 const sequelize = require("../config/database");
-const { Op, json } = require("sequelize");
+const { Op, json, where } = require("sequelize");
 const {
   UserAccount,
   ProductVarients,
@@ -12,6 +12,8 @@ const {
   WalletTransaction,
   Shop,
   Product,
+  ShopRegisterFlashSales,
+  FlashSaleTimerFrame,
 } = require("../models/Assosiations");
 const vnpay = require("../services/vnpayService");
 const {
@@ -53,10 +55,59 @@ const checkStock = async (validCart) => {
           {
             model: Product,
             attributes: ["product_status"],
-            include: [{ model: Shop, attributes: ["shop_status"] }],
+            include: [
+              { model: Shop, attributes: ["shop_status"] },
+              {
+                model: ShopRegisterFlashSales,
+                include: [
+                  {
+                    model: FlashSaleTimerFrame,
+                    where: {
+                      status: "active",
+                      started_at: {
+                        [Op.lte]: new Date(),
+                      },
+                      ended_at: {
+                        [Op.gt]: new Date(),
+                      },
+                    },
+                  },
+                ],
+              },
+            ],
           },
         ],
       });
+
+      if (productVarient.Product.ShopRegisterFlashSales.length > 0) {
+        if (
+          productVarient.Product.ShopRegisterFlashSales[0].quantity -
+            productVarient.Product.ShopRegisterFlashSales[0].sold !==
+          0
+        ) {
+          console.log(
+            "quantity: ",
+            productVarient.Product.ShopRegisterFlashSales[0].quantity
+          );
+          console.log(
+            "sold: ",
+            productVarient.Product.ShopRegisterFlashSales[0].sold
+          );
+          console.log("item.quantity: ", item.quantity);
+
+          const isEnoughFlashSaleStock =
+            item.quantity +
+              productVarient.Product.ShopRegisterFlashSales[0].sold <=
+            productVarient.Product.ShopRegisterFlashSales[0].quantity;
+          console.log("isEnoughFlashSaleStock: ", isEnoughFlashSaleStock);
+          if (!isEnoughFlashSaleStock) {
+            return {
+              isEnoughStock: false,
+              message: "Sản phẩm hiện không đủ trong phiên flash sale",
+            };
+          }
+        }
+      }
       if (!productVarient || item.quantity > productVarient.stock) {
         return {
           isEnoughStock: false,
@@ -942,6 +993,7 @@ const saveOrder = async (
       .filter(Boolean)
       .join(",");
     console.log(user_address_id_string);
+
     const order = await UserOrder.create({
       user_id,
       shop_id: validCart[0].shop_id,
@@ -1012,7 +1064,44 @@ const saveOrder = async (
               ? item.ProductVarient.ProductClassify.product_classify_name
               : ""
             : "",
+        on_shop_register_flash_sales_id:
+          item.ProductVarient.Product.ShopRegisterFlashSales.length > 0 &&
+          item.ProductVarient.Product.ShopRegisterFlashSales[0].quantity -
+            item.ProductVarient.Product.ShopRegisterFlashSales[0].sold >
+            0
+            ? item.ProductVarient.Product.ShopRegisterFlashSales[0]
+                .shop_register_flash_sales_id
+            : null,
       });
+
+      console.log(
+        "đúng koooooooooooooo: ",
+        item.ProductVarient.Product.ShopRegisterFlashSales[0].quantity -
+          item.ProductVarient.Product.ShopRegisterFlashSales[0].sold >
+          0
+      );
+      if (item.ProductVarient.Product.ShopRegisterFlashSales.length > 0) {
+        if (
+          item.ProductVarient.Product.ShopRegisterFlashSales[0].quantity -
+            item.ProductVarient.Product.ShopRegisterFlashSales[0].sold >
+          0
+        ) {
+          await ShopRegisterFlashSales.update(
+            {
+              sold:
+                item.ProductVarient.Product.ShopRegisterFlashSales[0].sold +
+                item.quantity,
+            },
+            {
+              where: {
+                shop_register_flash_sales_id:
+                  item.ProductVarient.Product.ShopRegisterFlashSales[0]
+                    .shop_register_flash_sales_id,
+              },
+            }
+          );
+        }
+      }
 
       await CartItems.destroy({
         where: {
@@ -1044,6 +1133,8 @@ const saveOrder = async (
           shop_id: shop.shop_id,
           user_address_string: address.address,
           user_address_id_string: user_address_id_string,
+          user_address_order_name: address.full_name,
+          user_address_order_phone_number: address.phone_number,
           total_quantity: shop.total_quantity,
           total_price: shop.total_price,
           final_price: total.totalPrice,
@@ -1099,7 +1190,38 @@ const saveOrder = async (
                   item.ProductVarient.product_classify_id !== null
                 ? item.ProductVarient.ProductClassify.product_classify_name
                 : "",
+            on_shop_register_flash_sales_id:
+              item.ProductVarient.Product.ShopRegisterFlashSales.length > 0 &&
+              item.ProductVarient.Product.ShopRegisterFlashSales[0].quantity -
+                item.ProductVarient.Product.ShopRegisterFlashSales[0].sold >
+                0
+                ? item.ProductVarient.Product.ShopRegisterFlashSales[0]
+                    .shop_register_flash_sales_id
+                : null,
           });
+          if (item.ProductVarient.Product.ShopRegisterFlashSales.length > 0) {
+            if (
+              item.ProductVarient.Product.ShopRegisterFlashSales[0].quantity -
+                item.ProductVarient.Product.ShopRegisterFlashSales[0].sold >
+              0
+            ) {
+              await ShopRegisterFlashSales.update(
+                {
+                  sold:
+                    item.ProductVarient.Product.ShopRegisterFlashSales[0].sold +
+                    item.quantity,
+                },
+                {
+                  where: {
+                    shop_register_flash_sales_id:
+                      item.ProductVarient.Product.ShopRegisterFlashSales[0]
+                        .shop_register_flash_sales_id,
+                  },
+                }
+              );
+            }
+          }
+
           await CartItems.destroy({
             where: {
               cart_item_id: item.cart_item_id,
