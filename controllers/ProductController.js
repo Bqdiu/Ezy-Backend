@@ -46,7 +46,10 @@ const getAllProducts = async (req, res) => {
 };
 const getLimitSuggestProducts = async (req, res) => {
   try {
-    const userID = 1;
+    const { user_id } = req.query;
+    const subCategoryIds = new Set();
+    //Gợi ý sản phẩm dựa trên danh trên danh mục phụ và lịch sử tìm kiếm của người dùng và phương pháp lấy ngẫu nhiên sản phẩm từ các shop khác nhau
+    // Lấy 15 sub category ngẫu nhiên
     const randomSubCategories = await SubCategory.findAll({
       include: {
         model: Product,
@@ -55,42 +58,102 @@ const getLimitSuggestProducts = async (req, res) => {
       order: sequelize.random(),
       limit: 15,
     });
-    const historySearches = await HistorySearch.findAll({
-      where: { user_id: userID },
-      include: {
-        model: SubCategory,
-      },
-    });
-
-    const subCategoryIds = new Set();
 
     randomSubCategories.forEach((sub) =>
       subCategoryIds.add(sub.sub_category_id)
     );
-    historySearches.forEach((search) =>
-      subCategoryIds.add(search.SubCategory.sub_category_id)
-    );
 
-    const suggestedProducts = await Product.findAll({
+    // Nếu có user_id, lấy lịch sử tìm kiếm và thêm sub category id từ lịch sử
+    if (user_id) {
+      const historySearches = await HistorySearch.findAll({
+        where: { user_id: user_id },
+        include: {
+          model: SubCategory,
+        },
+      });
+
+      historySearches.forEach((search) =>
+        subCategoryIds.add(search.SubCategory.sub_category_id)
+      );
+    }
+
+    const shops = await Shop.findAll({
+      include: [
+        {
+          model: Product,
+          where: {
+            sub_category_id: Array.from(subCategoryIds),
+            stock: { [Sequelize.Op.gt]: 0 },
+            product_status: 1,
+          },
+          required: true,
+        },
+      ],
       where: {
-        sub_category_id: Array.from(subCategoryIds),
-        stock: { [Sequelize.Op.gt]: 0 },
-        product_status: 1,
-        "$Shop.shop_status$": 1,
+        shop_status: 1,
+      },
+    });
+
+    let suggestedProducts = [];
+
+    // Tìm kiếm sản phẩm dựa trên sub category id từ tập hợp subCategoryIds
+    for (const shop of shops) {
+      const products = await Product.findAll({
+        where: {
+          shop_id: shop.shop_id,
+          sub_category_id: Array.from(subCategoryIds),
+          stock: { [Sequelize.Op.gt]: 0 },
+          product_status: 1,
+        },
+        include: [
+          {
+            model: Shop,
+            required: true,
+            attributes: ["shop_name", "shop_id", "shop_status"],
+          },
+        ],
+        order: sequelize.random(),
+        limit: 6, // Giới hạn số sản phẩm từ mỗi shop
+      });
+
+      suggestedProducts = [...suggestedProducts, ...products];
+    }
+
+    // Tìm các flash sale cho sản phẩm đã chọn
+    const flashSales = await ShopRegisterFlashSales.findAll({
+      where: {
+        product_id: suggestedProducts.map((product) => product.product_id),
       },
       include: [
         {
-          model: Shop,
-          attributes: {
-            include: ["shop_name", "shop_id", "shop_status"],
+          model: FlashSaleTimerFrame,
+          required: false,
+          where: {
+            status: "active",
+            started_at: { [Sequelize.Op.lte]: new Date() },
+            ended_at: { [Sequelize.Op.gt]: new Date() },
           },
         },
       ],
-      limit: 48,
+      order: [[{ model: FlashSaleTimerFrame }, "ended_at", "DESC"]],
+      limit: 1,
     });
+
+    // Kết hợp sản phẩm với flash sales
+    const productsWithFlashSales = suggestedProducts.map((product) => {
+      const productFlashSales = flashSales.filter(
+        (sale) => sale.product_id === product.product_id
+      );
+
+      return {
+        ...product.toJSON(),
+        flashSales: productFlashSales,
+      };
+    });
+
     res.status(200).json({
       success: true,
-      data: suggestedProducts,
+      data: productsWithFlashSales,
     });
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu sản phẩm gợi ý: ", error);
@@ -100,12 +163,14 @@ const getLimitSuggestProducts = async (req, res) => {
     });
   }
 };
+
 const getSuggestProducts = async (req, res) => {
   try {
-    const userID = 1;
-    const { pageNumbers = 1, limit = 28 } = req.query;
+    const { user_id, pageNumbers = 1, limit = 28 } = req.query;
     const offset = (pageNumbers - 1) * limit;
+    const subCategoryIds = new Set();
 
+    // Bước 1: Lấy danh mục phụ ngẫu nhiên cho sự đa dạng của sản phẩm
     const randomSubCategories = await SubCategory.findAll({
       include: {
         model: Product,
@@ -114,51 +179,90 @@ const getSuggestProducts = async (req, res) => {
       order: sequelize.random(),
       limit: 15,
     });
-    const historySearches = await HistorySearch.findAll({
-      where: { user_id: userID },
-      include: {
-        model: SubCategory,
-      },
-    });
-
-    const subCategoryIds = new Set();
-
     randomSubCategories.forEach((sub) =>
       subCategoryIds.add(sub.sub_category_id)
     );
-    historySearches.forEach((search) =>
-      subCategoryIds.add(search.SubCategory.sub_category_id)
-    );
 
-    const { count, rows: suggestedProducts } = await Product.findAndCountAll({
+    // Bước 2: Nếu có user_id, thêm danh mục phụ từ lịch sử tìm kiếm
+    if (user_id) {
+      const historySearches = await HistorySearch.findAll({
+        where: { user_id: user_id },
+        include: {
+          model: SubCategory,
+        },
+      });
+      historySearches.forEach((search) =>
+        subCategoryIds.add(search.SubCategory.sub_category_id)
+      );
+    }
+
+    // Bước 3: Lấy các sản phẩm gợi ý từ các shop khác nhau
+    const shops = await Shop.findAll({
+      where: { shop_status: 1 },
+      order: sequelize.random(),
+    });
+
+    let suggestedProducts = [];
+    for (const shop of shops) {
+      const products = await Product.findAll({
+        where: {
+          sub_category_id: Array.from(subCategoryIds),
+          stock: { [Sequelize.Op.gt]: 0 },
+          product_status: 1,
+          shop_id: shop.shop_id,
+        },
+        include: [
+          {
+            model: Shop,
+            attributes: ["shop_name", "shop_id", "shop_status"],
+          },
+        ],
+        limit: Math.ceil(limit / shops.length), // Giới hạn sản phẩm cho mỗi shop
+      });
+      suggestedProducts.push(...products);
+    }
+
+    // Bước 4: Lấy thông tin flash sale
+    const flashSales = await ShopRegisterFlashSales.findAll({
       where: {
-        sub_category_id: Array.from(subCategoryIds),
-        stock: { [Sequelize.Op.gt]: 0 },
-        product_status: 1,
-        "$Shop.shop_status$": 1,
+        product_id: suggestedProducts.map((product) => product.product_id),
       },
       include: [
         {
-          model: Shop,
-          attributes: {
-            include: ["shop_name", "shop_id", "shop_status"],
+          model: FlashSaleTimerFrame,
+          required: false,
+          where: {
+            status: "active",
+            started_at: { [Sequelize.Op.lte]: new Date() },
+            ended_at: { [Sequelize.Op.gt]: new Date() },
           },
         },
       ],
-
-      limit,
-      offset,
+      order: [[{ model: FlashSaleTimerFrame }, "ended_at", "DESC"]],
     });
 
+    // Kết hợp flash sale vào từng sản phẩm
+    const productsWithFlashSales = suggestedProducts.map((product) => {
+      const productFlashSales = flashSales.filter(
+        (sale) => sale.product_id === product.product_id
+      );
+
+      return {
+        ...product.toJSON(),
+        flashSales: productFlashSales,
+      };
+    });
+
+    // Phản hồi dữ liệu với thông tin phân trang
     res.status(200).json({
       success: true,
-      data: suggestedProducts,
-      total: suggestedProducts.length,
+      data: productsWithFlashSales.slice(0, limit),
+      total: productsWithFlashSales.length,
       pageNumbers,
-      totalPages: Math.ceil(count / limit),
+      totalPages: Math.ceil(productsWithFlashSales.length / limit),
     });
   } catch (error) {
-    console.log("Lỗi khi lấy dữ liệu sản phẩm gợi ý: ", error);
+    console.error("Lỗi khi lấy dữ liệu sản phẩm gợi ý:", error);
     res.status(500).json({
       error: true,
       message: error.message || error,
@@ -198,9 +302,41 @@ const getSuggestProductsOfShop = async (req, res) => {
       limit,
     });
 
+    const flashSales = await ShopRegisterFlashSales.findAll({
+      where: {
+        product_id: products.map((product) => product.product_id),
+      },
+      include: [
+        {
+          model: FlashSaleTimerFrame,
+          required: false,
+          where: {
+            status: "active",
+            started_at: { [Sequelize.Op.lte]: new Date() },
+            ended_at: { [Sequelize.Op.gt]: new Date() },
+          },
+        },
+      ],
+      order: [[{ model: FlashSaleTimerFrame }, "ended_at", "DESC"]],
+      limit: 1,
+    });
+
+    const productsWithFlashSales = products.map((product) => {
+      // Tìm flash sale tương ứng cho từng sản phẩm
+      const productFlashSales = flashSales.filter(
+        (sale) => sale.product_id === product.product_id
+      );
+
+      // Thêm flash sale vào sản phẩm
+      return {
+        ...product.toJSON(),
+        flashSales: productFlashSales,
+      };
+    });
+
     res.status(200).json({
       success: true,
-      products,
+      products: productsWithFlashSales,
       totalPage: Math.ceil(count / limit),
     });
   } catch (error) {
@@ -440,9 +576,41 @@ const getAllProductsOfShop = async (req, res) => {
       ],
       limit: 10,
     });
+    const flashSales = await ShopRegisterFlashSales.findAll({
+      where: {
+        product_id: products.map((product) => product.product_id),
+      },
+      include: [
+        {
+          model: FlashSaleTimerFrame,
+          required: false,
+          where: {
+            status: "active",
+            started_at: { [Sequelize.Op.lte]: new Date() },
+            ended_at: { [Sequelize.Op.gt]: new Date() },
+          },
+        },
+      ],
+      order: [[{ model: FlashSaleTimerFrame }, "ended_at", "DESC"]],
+      limit: 1,
+    });
+
+    const productsWithFlashSales = products.map((product) => {
+      // Tìm flash sale tương ứng cho từng sản phẩm
+      const productFlashSales = flashSales.filter(
+        (sale) => sale.product_id === product.product_id
+      );
+
+      // Thêm flash sale vào sản phẩm
+      return {
+        ...product.toJSON(),
+        flashSales: productFlashSales,
+      };
+    });
+
     res.status(200).json({
       success: true,
-      products,
+      products: productsWithFlashSales,
     });
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu sản phẩm của shop: ", error);
@@ -544,10 +712,41 @@ const getProductBySortAndFilter = async (req, res) => {
       limit,
       offset,
     });
+    const flashSales = await ShopRegisterFlashSales.findAll({
+      where: {
+        product_id: products.map((product) => product.product_id),
+      },
+      include: [
+        {
+          model: FlashSaleTimerFrame,
+          required: false,
+          where: {
+            status: "active",
+            started_at: { [Sequelize.Op.lte]: new Date() },
+            ended_at: { [Sequelize.Op.gt]: new Date() },
+          },
+        },
+      ],
+      order: [[{ model: FlashSaleTimerFrame }, "ended_at", "DESC"]],
+      limit: 1,
+    });
+
+    const productsWithFlashSales = products.map((product) => {
+      // Tìm flash sale tương ứng cho từng sản phẩm
+      const productFlashSales = flashSales.filter(
+        (sale) => sale.product_id === product.product_id
+      );
+
+      // Thêm flash sale vào sản phẩm
+      return {
+        ...product.toJSON(),
+        flashSales: productFlashSales,
+      };
+    });
 
     res.status(200).json({
       success: true,
-      products,
+      products: productsWithFlashSales,
       currentPage: pageNumbers,
       totalPages: Math.ceil(count / limit),
     });

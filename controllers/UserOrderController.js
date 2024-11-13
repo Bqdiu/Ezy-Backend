@@ -148,6 +148,17 @@ const deleteOrder = async (orderId, selectedVoucher) => {
             },
           }
         );
+        if (product.on_shop_register_flash_sales_id !== null) {
+          await ShopRegisterFlashSales.increment(
+            { quantity: product.quantity },
+            {
+              where: {
+                on_shop_register_flash_sales_id:
+                  product.on_shop_register_flash_sales_id,
+              },
+            }
+          );
+        }
       });
     }
 
@@ -432,7 +443,11 @@ const updateOrderStatus = async (data) => {
         .json({ error: true, message: "Đơn hàng không tồn tại" });
     }
 
-    if (status === "ready_to_pick" && order.order_status_id !== 3 && order.order_status_id !== 7) {
+    if (
+      status === "ready_to_pick" &&
+      order.order_status_id !== 3 &&
+      order.order_status_id !== 7
+    ) {
       await order.update({
         order_status_id: 3,
         updated_at: new Date(),
@@ -443,7 +458,11 @@ const updateOrderStatus = async (data) => {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-    } else if (status === "picked" && order.order_status_id !== 4 && order.order_status_id !== 7) {
+    } else if (
+      status === "picked" &&
+      order.order_status_id !== 4 &&
+      order.order_status_id !== 7
+    ) {
       await order.update({
         order_status_id: 4,
         updated_at: new Date(),
@@ -455,7 +474,11 @@ const updateOrderStatus = async (data) => {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-    } else if (status === "cancel" && order.order_status_id !== 6 && order.order_status_id !== 7) {
+    } else if (
+      status === "cancel" &&
+      order.order_status_id !== 6 &&
+      order.order_status_id !== 7
+    ) {
       await order.update({
         order_status_id: 6,
         updated_at: new Date(),
@@ -1112,15 +1135,17 @@ const buyOrderAgain = async (req, res) => {
         if (product.ProductVarient.Product.product_status === 0) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name}  ${product.classify !== "" && "- " + product.classify
-              } đã bị khóa`,
+            message: `Sản phẩm ${product.varient_name}  ${
+              product.classify !== "" && "- " + product.classify
+            } đã bị khóa`,
           });
         }
         if (stock < product.quantity) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
-              } không đủ hàng`,
+            message: `Sản phẩm ${product.varient_name} ${
+              product.classify !== "" && "- " + product.classify
+            } không đủ hàng`,
           });
         }
         const cartItem = await CartItems.findOne({
@@ -1136,8 +1161,9 @@ const buyOrderAgain = async (req, res) => {
           if (newQuantity > stock) {
             return res.status(400).json({
               error: true,
-              message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
-                } không đủ hàng`,
+              message: `Sản phẩm ${product.varient_name} ${
+                product.classify !== "" && "- " + product.classify
+              } không đủ hàng`,
             });
           }
           // console.log("price: ", newQuantity * discount_price);
@@ -1584,7 +1610,6 @@ const redeliveryOrder = async (req, res) => {
     });
   }
 
-
   const requiredFields = [
     "from_name",
     "from_phone",
@@ -1625,7 +1650,6 @@ const redeliveryOrder = async (req, res) => {
 
     if (payment_method_id === 1) data.cod_amount = order.final_price;
 
-
     const resultGHN = await createOrderGHN(shopId, data);
     if (resultGHN.error) {
       return res.status(400).json({
@@ -1663,7 +1687,6 @@ const redeliveryOrder = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   deleteOrder,

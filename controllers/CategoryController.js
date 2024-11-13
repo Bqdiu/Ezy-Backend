@@ -21,7 +21,7 @@ const getSubCategories = async (req, res) => {
           category_id,
         },
       });
-      const totalProductEverySubCategoryQuery = `SELECT sub_category.sub_category_id, count(product.product_id) as totalProduct FROM sub_category inner join product on product.sub_category_id = sub_category.sub_category_id WHERE sub_category.category_id = ${category_id} group by sub_category_id;`;
+      const totalProductEverySubCategoryQuery = `SELECT sub_category.sub_category_id, count(product.product_id) as totalProduct FROM sub_category inner join product on product.sub_category_id = sub_category.sub_category_id WHERE sub_category.category_id = ${category_id} and product.stock > 0 group by sub_category_id;`;
 
       const totalProductEverySubCategory = await sequelize.query(
         totalProductEverySubCategoryQuery,
@@ -114,7 +114,7 @@ const addCategory = async (req, res) => {
       message: error.message || error,
     });
   }
-}
+};
 
 const getCategoriesByShop = async (req, res) => {
   const { shop_id } = req.query;
@@ -134,7 +134,7 @@ const getCategoriesByShop = async (req, res) => {
                 shop_id: shop_id,
               },
             },
-          ]
+          ],
         },
       ],
     });
@@ -161,35 +161,34 @@ const deleteCategory = async (req, res) => {
   try {
     const subCategories = await SubCategory.findAll({
       where: {
-        category_id: category_id
-      }
+        category_id: category_id,
+      },
     });
 
     if (subCategories.length > 0) {
       return res.status(400).json({
         error: true,
-        message: "Danh mục đang được sử dụng không thể xóa."
+        message: "Danh mục đang được sử dụng không thể xóa.",
       });
     }
 
     const deletedCategory = await Category.destroy({
       where: {
-        category_id: category_id
-      }
+        category_id: category_id,
+      },
     });
 
     if (!deletedCategory) {
       return res.status(404).json({
         error: true,
-        message: "Danh mục không tồn tại."
+        message: "Danh mục không tồn tại.",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Danh mục đã được xóa thành công."
+      message: "Danh mục đã được xóa thành công.",
     });
-
   } catch (error) {
     console.error("Error deleting category: ", error);
     res.status(500).json({
@@ -202,8 +201,7 @@ const updateCategory = async (req, res) => {
   const { category_id } = req.params;
   const { category_name, thumbnail } = req.body;
 
-  console.log('Update category request:', req.body);
-
+  console.log("Update category request:", req.body);
 
   try {
     const category = await Category.findOne({
@@ -234,7 +232,7 @@ const updateCategory = async (req, res) => {
       data: updatedCategory,
     });
   } catch (error) {
-    if (error.name === 'SequelizeUniqueConstraintError') {
+    if (error.name === "SequelizeUniqueConstraintError") {
       return res.status(400).json({
         error: true,
         message: "Tên danh mục đã tồn tại.",
@@ -243,10 +241,10 @@ const updateCategory = async (req, res) => {
     console.error("Error updating category: ", error);
     res.status(500).json({
       error: true,
-      message: error.message || 'Có lỗi xảy ra khi cập nhật danh mục.',
+      message: error.message || "Có lỗi xảy ra khi cập nhật danh mục.",
     });
   }
-}
+};
 
 const getSubCategoriesByID = async (req, res) => {
   const { sub_category_id } = req.params;
@@ -256,10 +254,10 @@ const getSubCategoriesByID = async (req, res) => {
         sub_category_id,
       },
     });
-    if(!subCategories) {
+    if (!subCategories) {
       return res.status(404).json({
         error: true,
-        message: "Not found sub category"
+        message: "Not found sub category",
       });
     }
     res.status(200).json({
@@ -272,7 +270,7 @@ const getSubCategoriesByID = async (req, res) => {
       message: error.message || error,
     });
   }
-}
+};
 const addSubCategory = async (req, res) => {
   const { category_id } = req.params;
   const { sub_category_name } = req.body;
@@ -303,10 +301,10 @@ const addSubCategory = async (req, res) => {
       message: error.message || error,
     });
   }
-}
+};
 
 const updateSubCategory = async (req, res) => {
-  const { sub_category_id } = req.params; 
+  const { sub_category_id } = req.params;
   const { sub_category_name } = req.body;
 
   try {
@@ -341,7 +339,7 @@ const updateSubCategory = async (req, res) => {
       message: error.message || error,
     });
   }
-}
+};
 
 const deleteSubCategory = async (req, res) => {
   const { sub_category_id } = req.params;
@@ -350,35 +348,34 @@ const deleteSubCategory = async (req, res) => {
     // Check if any products are associated with the subcategory
     const products = await Product.findAll({
       where: {
-        sub_category_id: sub_category_id
-      }
+        sub_category_id: sub_category_id,
+      },
     });
 
     if (products.length > 0) {
       return res.status(400).json({
         error: true,
-        message: "Danh mục con đang được sử dụng không thể xóa."
+        message: "Danh mục con đang được sử dụng không thể xóa.",
       });
     }
 
     const deletedSubCategory = await SubCategory.destroy({
       where: {
-        sub_category_id: sub_category_id
-      }
+        sub_category_id: sub_category_id,
+      },
     });
 
     if (!deletedSubCategory) {
       return res.status(404).json({
         error: true,
-        message: "Danh mục không tồn tại."
+        message: "Danh mục không tồn tại.",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Xóa danh mục thành công."
+      message: "Xóa danh mục thành công.",
     });
-
   } catch (error) {
     console.error("Lổi khi xóa danh mục: ", error);
     res.status(500).json({
@@ -386,7 +383,7 @@ const deleteSubCategory = async (req, res) => {
       message: error.message || error,
     });
   }
-}
+};
 
 module.exports = {
   getAllCategories,
