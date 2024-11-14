@@ -14,6 +14,8 @@ const {
   HistorySearch,
   ShopRegisterFlashSales,
   FlashSaleTimerFrame,
+  ShopRegisterEvents,
+  SaleEvents,
 } = require("../models/Assosiations");
 const sequelize = require("../config/database");
 const Sequelize = require("sequelize");
@@ -112,7 +114,12 @@ const getLimitSuggestProducts = async (req, res) => {
             attributes: ["shop_name", "shop_id", "shop_status"],
           },
         ],
-        order: sequelize.random(),
+        order: [
+          [sequelize.random()],
+          ["sold", "DESC"],
+          ["avgRating", "DESC"],
+          ["visited", "DESC"],
+        ],
         limit: 6, // Giới hạn số sản phẩm từ mỗi shop
       });
 
@@ -139,6 +146,23 @@ const getLimitSuggestProducts = async (req, res) => {
       limit: 1,
     });
 
+    const saleEventsCount = await ShopRegisterEvents.count({
+      where: {
+        shop_id: suggestedProducts.map((product) => product.shop_id),
+      },
+      include: [
+        {
+          model: SaleEvents,
+          required: true,
+          where: {
+            is_actived: true,
+            started_at: { [Sequelize.Op.lte]: new Date() },
+            ended_at: { [Sequelize.Op.gt]: new Date() },
+          },
+        },
+      ],
+    });
+
     // Kết hợp sản phẩm với flash sales
     const productsWithFlashSales = suggestedProducts.map((product) => {
       const productFlashSales = flashSales.filter(
@@ -148,8 +172,16 @@ const getLimitSuggestProducts = async (req, res) => {
       return {
         ...product.toJSON(),
         flashSales: productFlashSales,
+        activeSaleEventsCount: saleEventsCount,
+        activeFlashSales: productFlashSales.length,
       };
     });
+
+    productsWithFlashSales.sort(
+      (a, b) =>
+        b.activeSaleEventsCount - a.activeSaleEventsCount &&
+        b.activeFlashSales - a.activeFlashSales
+    );
 
     res.status(200).json({
       success: true,
@@ -217,6 +249,12 @@ const getSuggestProducts = async (req, res) => {
             attributes: ["shop_name", "shop_id", "shop_status"],
           },
         ],
+        order: [
+          [sequelize.random()],
+          ["sold", "DESC"],
+          ["avgRating", "DESC"],
+          ["visited", "DESC"],
+        ],
         limit: Math.ceil(limit / shops.length), // Giới hạn sản phẩm cho mỗi shop
       });
       suggestedProducts.push(...products);
@@ -241,17 +279,44 @@ const getSuggestProducts = async (req, res) => {
       order: [[{ model: FlashSaleTimerFrame }, "ended_at", "DESC"]],
     });
 
-    // Kết hợp flash sale vào từng sản phẩm
+    const saleEventsCount = await ShopRegisterEvents.count({
+      where: {
+        shop_id: suggestedProducts.map((product) => product.shop_id),
+      },
+      include: [
+        {
+          model: SaleEvents,
+          required: true,
+          where: {
+            is_actived: true,
+            started_at: { [Sequelize.Op.lte]: new Date() },
+            ended_at: { [Sequelize.Op.gt]: new Date() },
+          },
+        },
+      ],
+    });
+
+    // Kết hợp sản phẩm với flash sales
     const productsWithFlashSales = suggestedProducts.map((product) => {
       const productFlashSales = flashSales.filter(
-        (sale) => sale.product_id === product.product_id
+        (sale) =>
+          sale.product_id === product.product_id &&
+          sale.FlashSaleTimeFrame !== null
       );
 
       return {
         ...product.toJSON(),
         flashSales: productFlashSales,
+        activeSaleEventsCount: saleEventsCount,
+        activeFlashSales: productFlashSales.length,
       };
     });
+
+    productsWithFlashSales.sort(
+      (a, b) =>
+        b.activeSaleEventsCount - a.activeSaleEventsCount &&
+        b.activeFlashSales - a.activeFlashSales
+    );
 
     // Phản hồi dữ liệu với thông tin phân trang
     res.status(200).json({

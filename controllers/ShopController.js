@@ -13,6 +13,8 @@ const {
   ProductReview,
   HistorySearch,
   CustomizeShop,
+  ShopRegisterFlashSales,
+  FlashSaleTimerFrame,
 } = require("../models/Assosiations");
 const sequelize = require("../config/database");
 const Sequelize = require("sequelize");
@@ -109,6 +111,7 @@ const getShopDetail = async (req, res) => {
               },
             ],
           },
+
           limit: 6,
         },
         {
@@ -150,6 +153,37 @@ const getShopDetail = async (req, res) => {
         },
       ],
       raw: true,
+    });
+
+    const suggestProducts = await Product.findAll({
+      where: {
+        [Op.and]: [
+          {
+            stock: { [Op.gt]: 0 },
+            avgRating: { [Op.gte]: 4 },
+            sold: { [Op.gt]: 0 },
+            product_status: 1,
+          },
+        ],
+      },
+      include: [
+        {
+          model: ShopRegisterFlashSales,
+          include: [
+            {
+              model: FlashSaleTimerFrame,
+              where: {
+                start_time: {
+                  [Op.lte]: new Date(),
+                },
+                end_time: {
+                  [Op.gte]: new Date(),
+                },
+              },
+            },
+          ],
+        },
+      ],
     });
 
     res.status(200).json({

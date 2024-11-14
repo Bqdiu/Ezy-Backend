@@ -200,6 +200,8 @@ const {
   addTimeFrame,
   updateTimeFrame,
   deleteTimeFrame,
+  getAvailableFlashSalesTimeFrames,
+  getProductByTimeFrame,
 } = require("../controllers/FlashSaleController");
 
 const {
@@ -212,9 +214,11 @@ const {
   getReturnRequest,
   acceptReturnRequest,
   rejectReturnRequest,
-  getReturnOrder
+  getReturnOrder,
 } = require("../controllers/ReturnRequestController");
-const { createNotification } = require("../controllers/NotificationsController");
+const {
+  createNotification,
+} = require("../controllers/NotificationsController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -420,6 +424,11 @@ router.get("/flash-sales/get-time-frames/:id", getFlashSaleTimeFrames);
 router.post("/flash-sales/add-time-frame/:id", addTimeFrame);
 router.put("/flash-sales/update-time-frame/:id", updateTimeFrame);
 router.delete("/flash-sales/delete-time-frame/:id", deleteTimeFrame);
+router.get(
+  "/flash-sales/get-available-time-frames",
+  getAvailableFlashSalesTimeFrames
+);
+router.get("/flash-sales/get-product-by-time-frame", getProductByTimeFrame);
 
 //----------------Violation----------------
 router.get("/violations/get-reported-customers", getReportedCustomers);
@@ -435,6 +444,5 @@ router.get("/return-request/get-return-order", getReturnOrder);
 
 //-----------------Notifications-------------------
 router.post("/notifications/create-notification", createNotification);
-
 
 module.exports = router;
