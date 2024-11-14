@@ -199,7 +199,7 @@ const getLimitSuggestProducts = async (req, res) => {
 const getSuggestProducts = async (req, res) => {
   try {
     const { user_id, pageNumbers = 1, limit = 28 } = req.query;
-    const offset = (pageNumbers - 1) * limit;
+    const offset = (parseInt(pageNumbers, 10) - 1) * parseInt(limit, 10);
     const subCategoryIds = new Set();
 
     // Bước 1: Lấy danh mục phụ ngẫu nhiên cho sự đa dạng của sản phẩm
@@ -255,7 +255,7 @@ const getSuggestProducts = async (req, res) => {
           ["avgRating", "DESC"],
           ["visited", "DESC"],
         ],
-        limit: Math.ceil(limit / shops.length), // Giới hạn sản phẩm cho mỗi shop
+        limit: Math.ceil(parseInt(limit, 10) / shops.length), // Giới hạn sản phẩm cho mỗi shop
       });
       suggestedProducts.push(...products);
     }
@@ -318,10 +318,15 @@ const getSuggestProducts = async (req, res) => {
         b.activeFlashSales - a.activeFlashSales
     );
 
+    const paginatedProducts = productsWithFlashSales.slice(
+      offset,
+      offset + limit
+    );
+
     // Phản hồi dữ liệu với thông tin phân trang
     res.status(200).json({
       success: true,
-      data: productsWithFlashSales.slice(0, limit),
+      data: paginatedProducts,
       total: productsWithFlashSales.length,
       pageNumbers,
       totalPages: Math.ceil(productsWithFlashSales.length / limit),
@@ -339,7 +344,7 @@ const getSuggestProductsOfShop = async (req, res) => {
   try {
     const { shop_id } = req.params;
     const { pageNumbers = 1, limit = 28 } = req.query;
-    const offset = (pageNumbers - 1) * limit;
+    const offset = (parseInt(pageNumbers, 10) - 1) * parseInt(limit, 10);
     const { count, rows: products } = await Product.findAndCountAll({
       where: {
         shop_id,
@@ -364,7 +369,7 @@ const getSuggestProductsOfShop = async (req, res) => {
         },
       ],
       offset,
-      limit,
+      limit: parseInt(limit, 10),
     });
 
     const flashSales = await ShopRegisterFlashSales.findAll({
@@ -1139,9 +1144,39 @@ const getProductBySubCategory = async (req, res) => {
       offset,
     });
 
+    const flashSales = await ShopRegisterFlashSales.findAll({
+      where: {
+        product_id: products.map((product) => product.product_id),
+      },
+      include: [
+        {
+          model: FlashSaleTimerFrame,
+          required: false,
+          where: {
+            status: "active",
+            started_at: { [Sequelize.Op.lte]: new Date() },
+            ended_at: { [Sequelize.Op.gt]: new Date() },
+          },
+        },
+      ],
+      order: [[{ model: FlashSaleTimerFrame }, "ended_at", "DESC"]],
+      limit: 1,
+    });
+
+    const productsWithFlashSales = products.map((product) => {
+      const productFlashSales = flashSales.filter(
+        (sale) => sale.product_id === product.product_id
+      );
+
+      return {
+        ...product.toJSON(),
+        flashSales: productFlashSales,
+      };
+    });
+
     res.status(200).json({
       success: true,
-      products,
+      products: productsWithFlashSales,
       currentPage: pageNumbers,
       totalPages: Math.ceil(count / limit),
     });

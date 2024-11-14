@@ -18,6 +18,10 @@ const Violations = sequelize.define(
         key: "user_id",
       },
     },
+    sender_id: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     violation_type_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
