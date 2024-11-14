@@ -209,6 +209,7 @@ const {
   getShopsWithViolations,
   getViolationHistory,
   handleViolationResolution,
+  getViolationType,
 } = require("../controllers/ViolationController");
 const {
   getReturnRequest,
@@ -435,6 +436,7 @@ router.get("/violations/get-reported-customers", getReportedCustomers);
 router.get("/violations/get-shops-with-violations", getShopsWithViolations);
 router.get("/violations/history/:userId", getViolationHistory);
 router.post("/violations/handle-resolution", handleViolationResolution);
+router.get("/violations/get-violation-types", getViolationType);
 
 //-----------------ReturnRequest-------------------
 router.get("/return-request/get-return-request", getReturnRequest);
