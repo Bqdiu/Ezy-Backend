@@ -437,7 +437,7 @@ router.get("/violations/history/:userId", getViolationHistory);
 router.post("/violations/handle-resolution", handleViolationResolution);
 
 //-----------------ReturnRequest-------------------
-router.get("/return-request/get-return-request", getReturnRequest);
+router.post("/return-request/get-return-request", getReturnRequest);
 router.post("/return-request/accept-return-request", acceptReturnRequest);
 router.post("/return-request/reject-return-request", rejectReturnRequest);
 router.get("/return-request/get-return-order", getReturnOrder);
