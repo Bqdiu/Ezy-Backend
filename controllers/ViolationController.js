@@ -269,6 +269,28 @@ const getViolationType = async (req, res) => {
 
 const sendViolation = async (req, res) => {
   try {
+    const { user_id, sender_id, violation_type_id, notes, imgs } = req.body;
+
+    const violation = await Violations.create({
+      user_id,
+      sender_id,
+      violation_type_id,
+      date_reported: new Date(),
+      status: "Chưa xử lý",
+      notes,
+    });
+
+    const violationImgs = imgs.map((img) => ({
+      violation_id: violation.violation_id,
+      img_url: img,
+    }));
+
+    await ViolationImgs.bulkCreate(violationImgs);
+
+    return res.status(200).json({
+      success: true,
+      message: "Tố cáo thành công",
+    });
   } catch (error) {
     console.error("Error sending violation:", error);
     res.status(500).json({
@@ -284,4 +306,5 @@ module.exports = {
   getViolationHistory,
   handleViolationResolution,
   getViolationType,
+  sendViolation,
 };

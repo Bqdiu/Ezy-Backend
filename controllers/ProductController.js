@@ -228,14 +228,41 @@ const getSuggestProducts = async (req, res) => {
       );
     }
 
+    // Bước 3: Lấy các shop với tổng số lượt visited cao (ưu tiên các shop lớn) và thêm một số shop ngẫu nhiên
+    const topShopLimit = 30; // Số lượng shop lớn muốn ưu tiên
+    const randomShopLimit = 20; // Số lượng shop ngẫu nhiên
+
     // Bước 3: Lấy các sản phẩm gợi ý từ các shop khác nhau
-    const shops = await Shop.findAll({
+    const topShops = await Shop.findAll({
       where: { shop_status: 1 },
-      order: sequelize.random(),
+      attributes: {
+        include: [
+          [
+            sequelize.literal(
+              `(select sum(visited) from product where shop_id = shop.shop_id)`
+            ),
+            "total_visited",
+          ],
+        ],
+      },
+      order: [[sequelize.literal("total_visited"), "DESC"]],
+      limit: topShopLimit,
     });
 
+    const excludedShopIds = topShops.map((shop) => shop.shop_id);
+
+    const randomShops = await Shop.findAll({
+      where: {
+        shop_status: 1,
+        shop_id: { [Sequelize.Op.notIn]: excludedShopIds }, // Loại trừ các shop lớn đã có
+      },
+      order: sequelize.random(),
+      limit: randomShopLimit,
+    });
+    const combinedShops = [...topShops, ...randomShops];
+
     let suggestedProducts = [];
-    for (const shop of shops) {
+    for (const shop of combinedShops) {
       const products = await Product.findAll({
         where: {
           sub_category_id: Array.from(subCategoryIds),
@@ -255,7 +282,7 @@ const getSuggestProducts = async (req, res) => {
           ["avgRating", "DESC"],
           ["visited", "DESC"],
         ],
-        limit: Math.ceil(parseInt(limit, 10) / shops.length), // Giới hạn sản phẩm cho mỗi shop
+        limit: Math.ceil(parseInt(limit, 10) / combinedShops.length), // Giới hạn sản phẩm cho mỗi shop
       });
       suggestedProducts.push(...products);
     }
