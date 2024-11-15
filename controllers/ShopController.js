@@ -26,7 +26,8 @@ const getShops = async (req, res) => {
   try {
     const { keyword = "", pageNumbers = 1, limit = 5 } = req.query;
     const offset = (pageNumbers - 1) * limit;
-    const shops = await Shop.findAll({
+
+    const { count, rows: shops } = await Shop.findAndCountAll({
       attributes: {
         include: [
           [
@@ -50,21 +51,30 @@ const getShops = async (req, res) => {
           [Op.like]: `%${keyword}%`,
         },
       },
+      order: [
+        [
+          sequelize.literal(
+            "(SELECT COUNT(shop_id) from shop_register_events sre inner join sale_events se on sre.sale_events_id = se.sale_events_id where sre.shop_id = Shop.shop_id and se.is_actived = 1 and se.started_at <= NOW() and se.ended_at > NOW())"
+          ),
+          "DESC",
+        ],
+        [
+          sequelize.literal(
+            "(SELECT SUM(visited) FROM product WHERE shop_id = Shop.shop_id)"
+          ),
+          "DESC",
+        ],
+        ["total_ratings", "DESC"],
+      ],
       offset,
       limit,
     });
-    const totalShop = await Shop.count({
-      where: {
-        shop_name: {
-          [Op.like]: `%${keyword}%`,
-        },
-      },
-    });
+
     res.status(200).json({
       success: true,
       message: "Lấy danh sách shop thành công",
       shops,
-      totalPages: Math.ceil(totalShop / limit),
+      totalPages: Math.ceil(count / limit),
     });
   } catch (error) {
     console.log("Lỗi khi lấy danh sách shop: ", error);
