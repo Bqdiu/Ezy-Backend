@@ -300,6 +300,56 @@ const sendViolation = async (req, res) => {
   }
 };
 
+const getUserViolations = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const violations = await Violations.findAll({
+      where: { user_id: userId },
+      attributes: [
+        "violation_id",
+        "violation_type_id",
+        "date_reported",
+        "status",
+        "notes",
+      ],
+      include: [
+        {
+          model: ViolationTypes,
+          attributes: ["violation_name", "priority_level"],
+        },
+        {
+          model: ViolationImgs,
+          attributes: ["img_url"],
+        },
+      ],
+      order: [["date_reported", "DESC"]],
+    });
+
+    const formattedViolations = violations.map((violation) => ({
+      violation_id: violation.violation_id,
+      violation_type: violation.ViolationType.violation_name,
+      priority_level: violation.ViolationType.priority_level,
+      date_reported: violation.date_reported,
+      status: violation.status,
+      notes: violation.notes,
+      imgs: violation.ViolationImgs.map((img) => img.img_url),
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formattedViolations,
+    });
+  } catch (error) {
+    console.error("Error fetching user violations:", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || "An error occurred",
+    });
+  }
+};
+
+
 module.exports = {
   getReportedCustomers,
   getShopsWithViolations,
@@ -307,4 +357,5 @@ module.exports = {
   handleViolationResolution,
   getViolationType,
   sendViolation,
+  getUserViolations,
 };

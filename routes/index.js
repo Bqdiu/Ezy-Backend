@@ -212,6 +212,7 @@ const {
   handleViolationResolution,
   getViolationType,
   sendViolation,
+  getUserViolations,
 } = require("../controllers/ViolationController");
 const {
   getReturnRequest,
@@ -444,6 +445,7 @@ router.get("/violations/history/:userId", getViolationHistory);
 router.post("/violations/handle-resolution", handleViolationResolution);
 router.get("/violations/get-violation-types", getViolationType);
 router.post("/violations/send-violation", sendViolation);
+router.get("/violations/user/:userId", getUserViolations);
 
 //-----------------ReturnRequest-------------------
 router.get("/return-request/get-return-request", getReturnRequest);
