@@ -202,6 +202,7 @@ const {
   deleteTimeFrame,
   getAvailableFlashSalesTimeFrames,
   getProductByTimeFrame,
+  getShopRegisteredProductsByFlashSale,
 } = require("../controllers/FlashSaleController");
 
 const {
@@ -211,6 +212,7 @@ const {
   handleViolationResolution,
   getViolationType,
   sendViolation,
+  getUserViolations,
 } = require("../controllers/ViolationController");
 const {
   getReturnRequest,
@@ -431,6 +433,10 @@ router.get(
   getAvailableFlashSalesTimeFrames
 );
 router.get("/flash-sales/get-product-by-time-frame", getProductByTimeFrame);
+router.get(
+  "/flash-sales/get-shop-registered-products/:id",
+  getShopRegisteredProductsByFlashSale
+);
 
 //----------------Violation----------------
 router.get("/violations/get-reported-customers", getReportedCustomers);
@@ -439,6 +445,7 @@ router.get("/violations/history/:userId", getViolationHistory);
 router.post("/violations/handle-resolution", handleViolationResolution);
 router.get("/violations/get-violation-types", getViolationType);
 router.post("/violations/send-violation", sendViolation);
+router.get("/violations/user/:userId", getUserViolations);
 
 //-----------------ReturnRequest-------------------
 router.post("/return-request/get-return-request", getReturnRequest);
