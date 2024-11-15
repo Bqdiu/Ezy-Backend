@@ -470,6 +470,45 @@ const deleteTimeFrame = async (req, res) => {
   }
 };
 
+const getShopRegisteredProductsByFlashSale = async (req, res) => {
+  const { flash_sales_id } = req.params;
+
+  try {
+    const registeredProducts = await ShopRegisterFlashSales.findAll({
+      include: [
+        {
+          model: FlashSaleTimerFrame,
+          where: { flash_sales_id },
+          attributes: ["flash_sale_time_frame_id", "started_at", "ended_at"],
+        },
+        {
+          model: Product,
+          attributes: ["product_id", "product_name", "thumbnail"],
+        },
+        {
+          model: Shop,
+          attributes: ["shop_id", "shop_name", "logo_url", "shop_description", "business_email", "phone_number"],
+        },
+      ],
+      attributes: ["shop_id", "original_price", "flash_sale_price", "quantity", "sold"],
+    });
+
+    if (registeredProducts.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Không có sản phẩm nào được đăng ký trong flash sale này.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: registeredProducts,
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy sản phẩm đã đăng ký:", error);
+    res.status(500).json({ success: false, message: "Đã xảy ra lỗi khi lấy sản phẩm đã đăng ký." });
+  }
+};
 module.exports = {
   getAllFlashSales,
   addFlashSale,
@@ -482,4 +521,5 @@ module.exports = {
   deleteTimeFrame,
   getAvailableFlashSalesTimeFrames,
   getProductByTimeFrame,
+  getShopRegisteredProductsByFlashSale,
 };
