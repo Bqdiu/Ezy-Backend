@@ -1399,7 +1399,7 @@ const getRequestReason = async (req, res) => {
       reasons = await ReturnReason.findAll({
         where: {
           return_reason_id: {
-            [Op.in]: [1, 2],
+            [Op.in]: [1, 2, 6],
           },
         },
       });
@@ -1487,31 +1487,35 @@ const sendRequest = async (req, res) => {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-
-      await Promise.all(
-        order.UserOrderDetails.map(async (product) => {
-          await ProductVarients.increment(
-            { stock: product.quantity },
-            {
-              where: {
-                product_varients_id: product.product_varients_id,
-              },
-            }
-          ),
-            product.on_shop_register_flash_sales_id !== null &&
-              (await ShopRegisterFlashSales.decrement(
-                {
-                  sold: product.quantity,
+      if (
+        Array.isArray(order.UserOrderDetails) &&
+        order.UserOrderDetails.length > 0
+      ) {
+        await Promise.all(
+          order.UserOrderDetails.map(async (product) => {
+            await ProductVarients.increment(
+              { stock: product.quantity },
+              {
+                where: {
+                  product_varients_id: product.product_varients_id,
                 },
-                {
-                  where: {
-                    shop_register_flash_sales_id:
-                      product.on_shop_register_flash_sales_id,
+              }
+            ),
+              product.on_shop_register_flash_sales_id !== null &&
+                (await ShopRegisterFlashSales.decrement(
+                  {
+                    sold: product.quantity,
                   },
-                }
-              ));
-        })
-      );
+                  {
+                    where: {
+                      shop_register_flash_sales_id:
+                        product.on_shop_register_flash_sales_id,
+                    },
+                  }
+                ));
+          })
+        );
+      }
 
       if (order.vouchers_applied !== null) {
         const vouchersApplied = order.vouchers_applied.split(",").map(Number);
