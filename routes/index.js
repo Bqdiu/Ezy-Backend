@@ -202,6 +202,7 @@ const {
   deleteTimeFrame,
   getAvailableFlashSalesTimeFrames,
   getProductByTimeFrame,
+  getShopRegisteredProductsByFlashSale,
 } = require("../controllers/FlashSaleController");
 
 const {
@@ -431,6 +432,10 @@ router.get(
   getAvailableFlashSalesTimeFrames
 );
 router.get("/flash-sales/get-product-by-time-frame", getProductByTimeFrame);
+router.get(
+  "/flash-sales/get-shop-registered-products/:id",
+  getShopRegisteredProductsByFlashSale
+);
 
 //----------------Violation----------------
 router.get("/violations/get-reported-customers", getReportedCustomers);
