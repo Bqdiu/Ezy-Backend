@@ -1,5 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
+const { tr } = require("translate-google/languages");
 
 const Product = sequelize.define(
   "Product",
@@ -68,7 +69,8 @@ const Product = sequelize.define(
     },
     stock: {
       type: DataTypes.BIGINT,
-      allowNull: false,
+      allowNull: true,
+      defaultValue: 0,
     },
     sold: {
       type: DataTypes.BIGINT,

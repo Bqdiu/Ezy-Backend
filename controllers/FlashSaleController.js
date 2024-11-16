@@ -509,6 +509,93 @@ const getShopRegisteredProductsByFlashSale = async (req, res) => {
     res.status(500).json({ success: false, message: "Đã xảy ra lỗi khi lấy sản phẩm đã đăng ký." });
   }
 };
+const getSuggestFlashSaleForShop = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const offset = (page - 1) * limit;
+
+    const currentDate = new Date();
+
+    const count = await FlashSales.count({
+      where: {
+        [Op.or]: [
+          {
+            status: "active",
+            started_at: {
+              [Op.lte]: currentDate, // started_at <= thời gian hiện tại
+            },
+            ended_at: {
+              [Op.gt]: currentDate, // ended_at > thời gian hiện tại
+            },
+          },
+          {
+            status: "waiting",
+            started_at: {
+              [Op.gt]: currentDate, // started_at > thời gian hiện tại
+            },
+          },
+        ],
+      }
+    });
+
+    const flashSales = await FlashSales.findAll({
+      where: {
+        [Op.or]: [
+          {
+            status: "active",
+            started_at: {
+              [Op.lte]: currentDate,
+            },
+            ended_at: {
+              [Op.gt]: currentDate,
+            },
+          },
+          {
+            status: "waiting",
+            started_at: {
+              [Op.gt]: currentDate,
+            },
+          },
+        ],
+      },
+      include: [
+        {
+          model: FlashSaleTimerFrame,
+        },
+      ],
+      order: [["started_at", "ASC"]],
+      limit,
+      offset,
+    });
+
+    if (flashSales.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Không có Flash Sale nào đang diễn ra hoặc sắp tới",
+      });
+    }
+
+    const totalPages = Math.ceil(count / limit);
+    const currentPage = page;
+
+    return res.status(200).json({
+      success: true,
+      data: flashSales,
+      totalItems: count,
+      totalPages,
+      currentPage,
+      limit,
+    });
+  } catch (error) {
+    console.error("Lỗi khi gợi ý Flash Sale cho cửa hàng:", error.message || error);
+    return res.status(500).json({
+      success: false,
+      message: "Đã xảy ra lỗi khi gợi ý Flash Sale cho cửa hàng",
+    });
+  }
+};
+
 module.exports = {
   getAllFlashSales,
   addFlashSale,
@@ -522,4 +609,5 @@ module.exports = {
   getAvailableFlashSalesTimeFrames,
   getProductByTimeFrame,
   getShopRegisteredProductsByFlashSale,
+  getSuggestFlashSaleForShop
 };

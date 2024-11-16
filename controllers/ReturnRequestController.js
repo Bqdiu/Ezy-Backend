@@ -233,7 +233,7 @@ const acceptReturnRequest = async (req, res) => {
                     });
                 }
 
-                // await adjustStockAndSales(order);
+                await adjustStockAndSales(order);
 
                 await adjustVouchers(order);
 
@@ -298,7 +298,7 @@ const acceptReturnRequest = async (req, res) => {
                 }
 
 
-                // await adjustStockAndSales(order);
+                await adjustStockAndSales(order);
 
                 await adjustVouchers(order);
 
@@ -418,20 +418,34 @@ const getReturnOrder = async (req, res) => {
 
 
 async function adjustStockAndSales(order) {
-    await Promise.all(
-        order.UserOrderDetails.map(async (product) => {
-            await ProductVarients.increment(
-                { stock: product.quantity },
-                { where: { product_varients_id: product.product_varients_id } }
-            );
-            if (product.on_shop_register_flash_sales_id !== null) {
-                await ShopRegisterFlashSales.decrement(
-                    { sold: product.quantity },
-                    { where: { shop_register_flash_sales_id: product.on_shop_register_flash_sales_id } }
+    if (order.order_code !== null) {
+        const order_codes = [order.order_code];
+        const cancelGHNResult = await cancelOrderGHN(order.shop_id, order_codes);
+        if (cancelGHNResult.error) {
+            return res.status(400).json({
+                error: true,
+                message:
+                    "Câp nhật trạng thái đơn hàng thất bại, vui lòng thử lại sau",
+            });
+        }
+    }
+    if (order?.UserOrderDetails?.length > 0) {
+        await Promise.all(
+            order?.UserOrderDetails?.map(async (product) => {
+                await ProductVarients.increment(
+                    { stock: product.quantity },
+                    { where: { product_varients_id: product.product_varients_id } }
                 );
-            }
-        })
-    );
+                if (product.on_shop_register_flash_sales_id !== null) {
+                    await ShopRegisterFlashSales.decrement(
+                        { sold: product.quantity },
+                        { where: { shop_register_flash_sales_id: product.on_shop_register_flash_sales_id } }
+                    );
+                }
+            })
+        );
+    }
+  
 }
 
 async function adjustVouchers(order) {

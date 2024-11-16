@@ -203,6 +203,7 @@ const {
   getAvailableFlashSalesTimeFrames,
   getProductByTimeFrame,
   getShopRegisteredProductsByFlashSale,
+  getSuggestFlashSaleForShop,
 } = require("../controllers/FlashSaleController");
 
 const {
@@ -223,6 +224,7 @@ const {
 const {
   createNotification,
 } = require("../controllers/NotificationsController");
+const { getProductShopRegisterFlashSales, registerProductToFlashSale } = require("../controllers/ShopRegisterFlashSalesController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -437,6 +439,7 @@ router.get(
   "/flash-sales/get-shop-registered-products/:id",
   getShopRegisteredProductsByFlashSale
 );
+router.get("/flash-sales/get-suggest-flash-sale-shop", getSuggestFlashSaleForShop);
 
 //----------------Violation----------------
 router.get("/violations/get-reported-customers", getReportedCustomers);
@@ -455,5 +458,10 @@ router.get("/return-request/get-return-order", getReturnOrder);
 
 //-----------------Notifications-------------------
 router.post("/notifications/create-notification", createNotification);
+
+
+//-----------------ShopRegisterFlashSales-------------------
+router.get("/shop-register-flash-sales/get-product", getProductShopRegisterFlashSales);
+router.post("/shop-register-flash-sales/register-product", registerProductToFlashSale);
 
 module.exports = router;

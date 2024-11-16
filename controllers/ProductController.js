@@ -1393,7 +1393,11 @@ const getShopProducts = async (req, res) => {
   }
 
   try {
-    const { count, rows: products } = await Product.findAndCountAll({
+    const count = await Product.count({
+      where: whereCondition,
+    });
+
+    const products = await Product.findAll({
       where: whereCondition,
       attributes: {
         exclude: ["hasVarient"],
