@@ -188,6 +188,9 @@ const acceptReturnRequest = async (req, res) => {
         if (orderGHNDetails.status === "delivered") {
             data.cod_amount = 0;
             data.payment_type_id = 2;
+            if (returnRequest.return_reason_id === 1 || returnRequest.return_reason_id === 2) {
+                data.payment_type_id = 1;
+            }
             if (order.payment_method_id === 1) data.cod_amount = order.final_price;
 
             const resultGHN = await createOrderGHN(order.shop_id, data);
@@ -219,7 +222,13 @@ const acceptReturnRequest = async (req, res) => {
                             user_id: order.user_id,
                         },
                     });
-                    const final_price = order.final_price - (order.shipping_fee - order.discount_shipping_fee);
+                    let final_price;
+                    if (returnRequest.return_reason_id !== 1 && returnRequest.return_reason_id !== 2) {
+                        final_price = order.final_price - (order.shipping_fee - order.discount_shipping_fee);
+                    }
+                    else {
+                        final_price = order.final_price;
+                    }
                     console.log("final_price", final_price);
                     await wallet.update({
                         balance: wallet.balance + final_price,
@@ -282,7 +291,13 @@ const acceptReturnRequest = async (req, res) => {
                             user_id: order.user_id,
                         },
                     });
-                    const final_price = order.final_price - (order.shipping_fee - order.discount_shipping_fee);
+                    let final_price;
+                    if (returnRequest.return_reason_id !== 1 && returnRequest.return_reason_id !== 2) {
+                        final_price = order.final_price - (order.shipping_fee - order.discount_shipping_fee);
+                    }
+                    else {
+                        final_price = order.final_price;
+                    }
                     console.log("final_price", final_price);
                     await wallet.update({
                         balance: wallet.balance + final_price,
@@ -445,7 +460,7 @@ async function adjustStockAndSales(order) {
             })
         );
     }
-  
+
 }
 
 async function adjustVouchers(order) {
