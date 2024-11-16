@@ -11,17 +11,24 @@ const {
     ReturnRequest,
     UserAccount,
     Shop,
+    UserWallet,
+    WalletTransaction,
+    DiscountVoucher,
+    ShopRegisterFlashSales,
 } = require("../models/Assosiations");
 
 const {
-    createOrderGHN
+    createOrderGHN,
+    getOrderDetailGHN,
+    cancelOrderGHN
 } = require("../services/ghnServices");
 const ReturnType = require("../models/ReturnType");
 const { ca, da } = require("translate-google/languages");
+const e = require("express");
 
 
 const getReturnRequest = async (req, res) => {
-    const { shop_id, return_type_id, limit = 5, page = 1 } = req.query;
+    const { shop_id, return_type_id, limit = 5, page = 1 } = req.body;
     const offset = (page - 1) * limit;
 
     if (!return_type_id || !shop_id) {
@@ -74,7 +81,6 @@ const getReturnRequest = async (req, res) => {
         });
     }
 }
-
 const acceptReturnRequest = async (req, res) => {
     const { return_request_id } = req.body;
     const data = ({
@@ -146,7 +152,6 @@ const acceptReturnRequest = async (req, res) => {
         });
     }
 
-
     try {
         const returnRequest = await ReturnRequest.findOne({
             where: { return_request_id }
@@ -165,47 +170,152 @@ const acceptReturnRequest = async (req, res) => {
         if (!order) {
             return res.status(404).json({ error: true, message: "Order not found" });
         }
-        data.cod_amount = 0;
-        data.payment_type_id = order.shipping_fee > 0 ? 2 : 1;
-        if (order.payment_method_id === 1) data.cod_amount = order.final_price;
 
-        const resultGHN = await createOrderGHN(order.shop_id, data);
-        if (resultGHN.error) {
+        const code =
+            order.order_return_code !== null
+                ? order.order_return_code
+                : order.order_code;
+        const orderGHNDetailsRes = await getOrderDetailGHN(code);
+        const orderGHNDetails = orderGHNDetailsRes.data;
+        if (orderGHNDetails.error) {
             return res.status(400).json({
                 error: true,
-                message:
-                    "Failed to create order with GHN. Please check provided data or try again later.",
-                details: resultGHN.error,
+                message: "Error fetching order details from GHN",
+                details: orderGHNDetails.error,
             });
         }
 
-        if (resultGHN.data) {
-            await order.update({
-                order_return_code: resultGHN.data.order_code,
-                return_request_status: 2, 
-                is_processed : 1,
-                order_status_id: 7,
-                updated_at: new Date(),
-            });
-            await returnRequest.update({
-                status_id: 2,
-                updatedAt: new Date(),
-            });
-            return res.status(200).json({
-                success: true,
-                message: "Order created successfully",
-                ghn_data: resultGHN.data,
-                order_data: order,
-                return_request_data: returnRequest,
-            });
-        } else {
-            return res.status(400).json({
-                error: true,
-                message: "Error creating the new order with GHN.",
-                details: resultGHN.error || "Unknown error",
-                data: resultGHN,
-            });
+        if (orderGHNDetails.status === "delivered") {
+            data.cod_amount = 0;
+            data.payment_type_id = 2;
+            if (order.payment_method_id === 1) data.cod_amount = order.final_price;
+
+            const resultGHN = await createOrderGHN(order.shop_id, data);
+            if (resultGHN.error) {
+                return res.status(400).json({
+                    error: true,
+                    message:
+                        "Failed to create order with GHN. Please check provided data or try again later.",
+                    details: resultGHN.error,
+                });
+            }
+
+            if (resultGHN.data) {
+                await order.update({
+                    order_return_code: resultGHN.data.order_code,
+                    return_request_status: 2,
+                    is_processed: 1,
+                    order_status_id: 7,
+                    updated_at: new Date(),
+                });
+                await returnRequest.update({
+                    status_id: 2,
+                    updatedAt: new Date(),
+                });
+
+                if (order.payment_method_id === 3 || order.payment_method_id === 4) {
+                    const wallet = await UserWallet.findOne({
+                        where: {
+                            user_id: order.user_id,
+                        },
+                    });
+                    const final_price = order.final_price - (order.shipping_fee - order.discount_shipping_fee);
+                    console.log("final_price", final_price);
+                    await wallet.update({
+                        balance: wallet.balance + final_price,
+                    });
+                    await WalletTransaction.create({
+                        user_wallet_id: wallet.user_wallet_id,
+                        transaction_type: "Hoàn tiền",
+                        amount: final_price,
+                        transaction_date: new Date(),
+                        description: "Hoàn tiền đơn hàng",
+                    });
+                }
+
+                await adjustStockAndSales(order);
+
+                await adjustVouchers(order);
+
+                return res.status(200).json({
+                    success: true,
+                    message: "Order created successfully",
+                    ghn_data: resultGHN.data,
+                    order_data: order,
+                    return_request_data: returnRequest,
+                });
+            } else {
+                return res.status(400).json({
+                    error: true,
+                    message: "Error creating the new order with GHN.",
+                    details: resultGHN.error || "Unknown error",
+                    data: resultGHN,
+                });
+            }
         }
+
+        if (orderGHNDetails.status === "ready_to_pick" || orderGHNDetails.status === "picking") {
+            const cancelOrderGHNRes = await cancelOrderGHN(order.shop_id, [code]);
+            if (cancelOrderGHNRes.error) {
+                return res.status(400).json({
+                    error: true,
+                    message: "Error cancelling order with GHN",
+                    details: cancelOrderGHNRes.error,
+                });
+            }
+
+            if (cancelOrderGHNRes.data) {
+                await order.update({
+                    order_status_id: 7,
+                    is_processed: 1,
+                    return_request_status: 2,
+                    updated_at: new Date(),
+                });
+                await returnRequest.update({
+                    status_id: 2,
+                    updatedAt: new Date(),
+                });
+
+                if (order.payment_method_id === 3 || order.payment_method_id === 4) {
+                    const wallet = await UserWallet.findOne({
+                        where: {
+                            user_id: order.user_id,
+                        },
+                    });
+                    const final_price = order.final_price - (order.shipping_fee - order.discount_shipping_fee);
+                    console.log("final_price", final_price);
+                    await wallet.update({
+                        balance: wallet.balance + final_price,
+                    });
+
+                    await WalletTransaction.create({
+                        user_wallet_id: wallet.user_wallet_id,
+                        transaction_type: "Hoàn tiền",
+                        amount: final_price,
+                        transaction_date: new Date(),
+                        description: "Hoàn tiền đơn hàng",
+                    });
+                }
+
+
+                await adjustStockAndSales(order);
+
+                await adjustVouchers(order);
+
+
+                return res.status(200).json({
+                    success: true,
+                    message: "Order cancelled successfully",
+                    data: cancelOrderGHNRes.data,
+                });
+            }
+        }
+        return res.status(400).json({
+            error: true,
+            message: "Order status is not valid for return",
+            order_status: orderGHNDetails.status,
+            notification: "Không thể chấp nhận yêu cầu trả hàng với đơn hàng đang được giao",
+        });
     } catch (error) {
         console.error('Error processing return request:', error);
         return res.status(500).json({
@@ -303,6 +413,52 @@ const getReturnOrder = async (req, res) => {
             message: "Server error",
             details: error.message,
         });
+    }
+}
+
+
+async function adjustStockAndSales(order) {
+    if (order.order_code !== null) {
+        const order_codes = [order.order_code];
+        const cancelGHNResult = await cancelOrderGHN(order.shop_id, order_codes);
+        if (cancelGHNResult.error) {
+            return res.status(400).json({
+                error: true,
+                message:
+                    "Câp nhật trạng thái đơn hàng thất bại, vui lòng thử lại sau",
+            });
+        }
+    }
+    if (order?.UserOrderDetails?.length > 0) {
+        await Promise.all(
+            order?.UserOrderDetails?.map(async (product) => {
+                await ProductVarients.increment(
+                    { stock: product.quantity },
+                    { where: { product_varients_id: product.product_varients_id } }
+                );
+                if (product.on_shop_register_flash_sales_id !== null) {
+                    await ShopRegisterFlashSales.decrement(
+                        { sold: product.quantity },
+                        { where: { shop_register_flash_sales_id: product.on_shop_register_flash_sales_id } }
+                    );
+                }
+            })
+        );
+    }
+  
+}
+
+async function adjustVouchers(order) {
+    if (order.vouchers_applied !== null) {
+        const vouchersApplied = order.vouchers_applied.split(",").map(Number);
+        await Promise.all(
+            vouchersApplied.map(async (voucherId) => {
+                await DiscountVoucher.increment(
+                    { quantity: 1 },
+                    { where: { discount_voucher_id: voucherId } }
+                );
+            })
+        );
     }
 }
 

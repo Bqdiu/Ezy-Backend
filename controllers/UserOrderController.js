@@ -659,12 +659,43 @@ const updateBlockStatus = async (user_order_id) => {
 
 const getShopOrders = async (req, res) => {
   try {
-    const { shop_id, status_id, limit = 10, page = 1 } = req.body;
+    const { shop_id, status_id, limit = 10, page = 1, searchText } = req.body;
+    console.log("body broooooo",req.body);
     const offset = (page - 1) * limit;
     let whereConditions = {
       shop_id,
       ...(status_id !== -1 && { order_status_id: status_id }),
     };
+    let sanitizedSearchText = searchText ? searchText.trim().toLowerCase() : "";
+
+    if (sanitizedSearchText) {
+      whereConditions = {
+        ...whereConditions,
+        [Op.or]: [
+          {
+            user_order_id: {
+              [Op.eq]: isNaN(parseInt(sanitizedSearchText))
+                ? null
+                : parseInt(sanitizedSearchText),
+            },
+          },
+          {
+            "$Shop.shop_name$": {
+              [Op.like]: `%${sanitizedSearchText}%`,
+            },
+          },
+          Sequelize.literal(`
+            EXISTS (
+              SELECT 1
+              FROM user_order_details AS uod
+              WHERE uod.user_order_id = UserOrder.user_order_id
+                AND LOWER(uod.varient_name) LIKE '%${sanitizedSearchText}%'
+            )
+          `),
+        ],
+      };
+    }
+
 
     const { count, rows: orders } = await UserOrder.findAndCountAll({
       where: whereConditions,
@@ -822,6 +853,18 @@ const cancelOrder = async (req, res) => {
             },
           }
         );
+        product.on_shop_register_flash_sales_id !== null &&
+          (await ShopRegisterFlashSales.decrement(
+            {
+              sold: product.quantity,
+            },
+            {
+              where: {
+                shop_register_flash_sales_id:
+                  product.on_shop_register_flash_sales_id,
+              },
+            }
+          ));
       })
     );
 
@@ -1487,6 +1530,31 @@ const sendRequest = async (req, res) => {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
+
+      await Promise.all(
+        order.UserOrderDetails.map(async (product) => {
+          await ProductVarients.increment(
+            { stock: product.quantity },
+            {
+              where: {
+                product_varients_id: product.product_varients_id,
+              },
+            }
+          ),
+            product.on_shop_register_flash_sales_id !== null &&
+            (await ShopRegisterFlashSales.decrement(
+              {
+                sold: product.quantity,
+              },
+              {
+                where: {
+                  shop_register_flash_sales_id:
+                    product.on_shop_register_flash_sales_id,
+                },
+              }
+            ));
+        })
+      );
       if (
         Array.isArray(order.UserOrderDetails) &&
         order.UserOrderDetails.length > 0

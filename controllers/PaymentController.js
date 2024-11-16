@@ -1074,12 +1074,12 @@ const saveOrder = async (
             : null,
       });
 
-      console.log(
-        "đúng koooooooooooooo: ",
-        item.ProductVarient.Product.ShopRegisterFlashSales[0].quantity -
-          item.ProductVarient.Product.ShopRegisterFlashSales[0].sold >
-          0
-      );
+      // console.log(
+      //   "đúng koooooooooooooo: ",
+      //   item.ProductVarient.Product.ShopRegisterFlashSales[0].quantity -
+      //     item.ProductVarient.Product.ShopRegisterFlashSales[0].sold >
+      //     0
+      // );
       if (item.ProductVarient.Product.ShopRegisterFlashSales.length > 0) {
         if (
           item.ProductVarient.Product.ShopRegisterFlashSales[0].quantity -

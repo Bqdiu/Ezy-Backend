@@ -203,6 +203,7 @@ const {
   getAvailableFlashSalesTimeFrames,
   getProductByTimeFrame,
   getShopRegisteredProductsByFlashSale,
+  getSuggestFlashSaleForShop,
 } = require("../controllers/FlashSaleController");
 
 const {
@@ -223,6 +224,7 @@ const {
 const {
   createNotification,
 } = require("../controllers/NotificationsController");
+const { getProductShopRegisterFlashSales, registerProductToFlashSale, unsubscribeFlashSale } = require("../controllers/ShopRegisterFlashSalesController");
 
 const {
   getSupportRequest
@@ -441,6 +443,7 @@ router.get(
   "/flash-sales/get-shop-registered-products/:id",
   getShopRegisteredProductsByFlashSale
 );
+router.get("/flash-sales/get-suggest-flash-sale-shop", getSuggestFlashSaleForShop);
 
 //----------------Violation----------------
 router.get("/violations/get-reported-customers", getReportedCustomers);
@@ -452,7 +455,7 @@ router.get("/violations/user/:userId", getUserViolations);
 router.put("/violations/update-status", updateStatusViolation);
 
 //-----------------ReturnRequest-------------------
-router.get("/return-request/get-return-request", getReturnRequest);
+router.post("/return-request/get-return-request", getReturnRequest);
 router.post("/return-request/accept-return-request", acceptReturnRequest);
 router.post("/return-request/reject-return-request", rejectReturnRequest);
 router.get("/return-request/get-return-order", getReturnOrder);
@@ -460,6 +463,11 @@ router.get("/return-request/get-return-order", getReturnOrder);
 //-----------------Notifications-------------------
 router.post("/notifications/create-notification", createNotification);
 
+
+//-----------------ShopRegisterFlashSales-------------------
+router.get("/shop-register-flash-sales/get-product", getProductShopRegisterFlashSales);
+router.post("/shop-register-flash-sales/register-product", registerProductToFlashSale);
+router.post("/shop-register-flash-sales/unsubscribe-product", unsubscribeFlashSale);
 //-----------------RequestSupport-------------------
 router.get("/request-support/get-support-request", getSupportRequest);
 
