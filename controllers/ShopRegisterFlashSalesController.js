@@ -187,16 +187,12 @@ const unsubscribeFlashSale = async (req, res) => {
             return res.status(400).json({ message: "shop_id, product_id, flash_sale_time_frame_id are required" });
         }
 
-        if (isNaN(shop_id) || isNaN(product_id) || isNaN(flash_sale_time_frame_id)) {
-            return res.status(400).json({ message: "shop_id, product_id, flash_sale_time_frame_id must be numbers" });
+        if ([shop_id, product_id, flash_sale_time_frame_id].some(value => isNaN(value) || value === "")) {
+            return res.status(400).json({ message: "shop_id, product_id, flash_sale_time_frame_id must be valid numbers" });
         }
 
         const shopRegisterFlashSale = await ShopRegisterFlashSales.findOne({
-            where: {
-                shop_id,
-                product_id,
-                flash_sale_time_frame_id
-            }
+            where: { shop_id, product_id, flash_sale_time_frame_id }
         });
 
         if (!shopRegisterFlashSale) {
@@ -207,7 +203,8 @@ const unsubscribeFlashSale = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Flash sale registration deleted successfully"
+            message: "Flash sale registration deleted successfully",
+            data: shopRegisterFlashSale
         });
     } catch (error) {
         console.error("Error unsubscribing from flash sale:", error);
@@ -220,5 +217,6 @@ const unsubscribeFlashSale = async (req, res) => {
 
 module.exports = {
     getProductShopRegisterFlashSales,
-    registerProductToFlashSale
+    registerProductToFlashSale,
+    unsubscribeFlashSale
 }

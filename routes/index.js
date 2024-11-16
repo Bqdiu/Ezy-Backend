@@ -224,7 +224,11 @@ const {
 const {
   createNotification,
 } = require("../controllers/NotificationsController");
-const { getProductShopRegisterFlashSales, registerProductToFlashSale } = require("../controllers/ShopRegisterFlashSalesController");
+const { getProductShopRegisterFlashSales, registerProductToFlashSale, unsubscribeFlashSale } = require("../controllers/ShopRegisterFlashSalesController");
+
+const {
+  getSupportRequest
+} = require("../controllers/RequestSupportController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -463,5 +467,8 @@ router.post("/notifications/create-notification", createNotification);
 //-----------------ShopRegisterFlashSales-------------------
 router.get("/shop-register-flash-sales/get-product", getProductShopRegisterFlashSales);
 router.post("/shop-register-flash-sales/register-product", registerProductToFlashSale);
+router.post("/shop-register-flash-sales/unsubscribe-product", unsubscribeFlashSale);
+//-----------------RequestSupport-------------------
+router.get("/request-support/get-support-request", getSupportRequest);
 
 module.exports = router;
