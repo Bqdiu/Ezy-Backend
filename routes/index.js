@@ -224,6 +224,10 @@ const {
   createNotification,
 } = require("../controllers/NotificationsController");
 
+const {
+  getSupportRequest
+} = require("../controllers/RequestSupportController");
+
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
 router.get("/categories_name/:category_id", getCategoriesName);
@@ -455,5 +459,8 @@ router.get("/return-request/get-return-order", getReturnOrder);
 
 //-----------------Notifications-------------------
 router.post("/notifications/create-notification", createNotification);
+
+//-----------------RequestSupport-------------------
+router.get("/request-support/get-support-request", getSupportRequest);
 
 module.exports = router;
