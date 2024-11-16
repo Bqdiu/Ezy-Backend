@@ -33,6 +33,7 @@ const getVoucherList = async (req, res) => {
 
     const validEvents = await SaleEvents.findAll({
       where: {
+        is_actived: true,
         started_at: {
           [Op.lte]: new Date(), // Thời gian bắt đầu <= ngày hiện tại
         },
@@ -107,7 +108,8 @@ const getVoucherList = async (req, res) => {
       const validCategories = voucher.SaleEvent.SaleEventsOnCategories.map(
         (category) => category.category_id
       );
-
+      console.log("validCategories: ", validCategories);
+      console.log("cartSelected: ", cartSelected[0]?.CartItems);
       const hasValidCategory = cartSelected.some((cartItem) =>
         cartItem?.CartItems?.some((item) =>
           validCategories.includes(
@@ -173,11 +175,9 @@ const getAllVouchers = async (req, res) => {
   try {
     const vouchers = await DiscountVoucher.findAll();
     res.status(200).json({ success: true, vouchers });
-
   } catch (error) {
     console.log("Lỗi fetch voucher: ", error);
     res.status(500).json({ error: true, message: error.message || error });
-    
   }
 };
 
@@ -216,7 +216,9 @@ const addVoucher = async (req, res) => {
     res.status(201).json({ success: true, voucher: newVoucher });
   } catch (error) {
     console.error("Error adding voucher: ", error);
-    res.status(500).json({ error: true, message: error.message || "Server error" });
+    res
+      .status(500)
+      .json({ error: true, message: error.message || "Server error" });
   }
 };
 
@@ -226,7 +228,9 @@ const getAllDiscountVoucherType = async (req, res) => {
     res.status(200).json({ success: true, voucherTypes });
   } catch (error) {
     console.error("Error fetching voucher types: ", error);
-    res.status(500).json({ error: true, message: error.message || "Server error" });
+    res
+      .status(500)
+      .json({ error: true, message: error.message || "Server error" });
   }
 };
 
@@ -252,7 +256,9 @@ const addVoucherByEventId = async (req, res) => {
     // Verify if the sale event exists
     const saleEvent = await SaleEvents.findByPk(sale_events_id);
     if (!saleEvent) {
-      return res.status(404).json({ error: true, message: "Sale event not found." });
+      return res
+        .status(404)
+        .json({ error: true, message: "Sale event not found." });
     }
 
     // Create a new voucher associated with the sale event
@@ -267,14 +273,16 @@ const addVoucherByEventId = async (req, res) => {
       discount_value,
       discount_max_value,
       quantity,
-      started_at: new Date(started_at), 
-      ended_at: new Date(ended_at),   
+      started_at: new Date(started_at),
+      ended_at: new Date(ended_at),
     });
 
     res.status(201).json({ success: true, voucher: newVoucher });
   } catch (error) {
     console.error("Error adding voucher:", error);
-    res.status(500).json({ error: true, message: error.message || "Server error" });
+    res
+      .status(500)
+      .json({ error: true, message: error.message || "Server error" });
   }
 };
 
@@ -298,7 +306,9 @@ const updateVoucher = async (req, res) => {
     // Find the voucher by ID
     const voucher = await DiscountVoucher.findByPk(id);
     if (!voucher) {
-      return res.status(404).json({ error: true, message: "Voucher not found." });
+      return res
+        .status(404)
+        .json({ error: true, message: "Voucher not found." });
     }
 
     // Directly assign values from request, assuming all fields are provided by frontend
@@ -316,10 +326,16 @@ const updateVoucher = async (req, res) => {
       ended_at: ended_at ? new Date(ended_at) : voucher.ended_at,
     });
 
-    res.status(200).json({ success: true, message: "Voucher updated successfully", voucher });
+    res.status(200).json({
+      success: true,
+      message: "Voucher updated successfully",
+      voucher,
+    });
   } catch (error) {
     console.error("Error updating voucher:", error);
-    res.status(500).json({ error: true, message: error.message || "Server error" });
+    res
+      .status(500)
+      .json({ error: true, message: error.message || "Server error" });
   }
 };
 
@@ -330,18 +346,23 @@ const deleteVoucher = async (req, res) => {
     // Find the voucher by ID
     const voucher = await DiscountVoucher.findByPk(id);
     if (!voucher) {
-      return res.status(404).json({ error: true, message: "Voucher not found." });
+      return res
+        .status(404)
+        .json({ error: true, message: "Voucher not found." });
     }
 
     await voucher.destroy();
 
-    res.status(200).json({ success: true, message: "Voucher deleted successfully" });
+    res
+      .status(200)
+      .json({ success: true, message: "Voucher deleted successfully" });
   } catch (error) {
     console.error("Error deleting voucher:", error);
-    res.status(500).json({ error: true, message: error.message || "Server error" });
+    res
+      .status(500)
+      .json({ error: true, message: error.message || "Server error" });
   }
 };
-
 
 module.exports = {
   getVoucherList,

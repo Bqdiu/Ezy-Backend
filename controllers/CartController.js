@@ -65,6 +65,9 @@ const getCart = async (req, res) => {
                     {
                       model: ProductClassify,
                     },
+                    {
+                      model: SubCategory,
+                    },
 
                     {
                       model: ShopRegisterFlashSales,

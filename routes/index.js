@@ -209,10 +209,10 @@ const {
   getReportedCustomers,
   getShopsWithViolations,
   getViolationHistory,
-  handleViolationResolution,
   getViolationType,
   sendViolation,
   getUserViolations,
+  updateStatusViolation,
 } = require("../controllers/ViolationController");
 const {
   getReturnRequest,
@@ -442,10 +442,10 @@ router.get(
 router.get("/violations/get-reported-customers", getReportedCustomers);
 router.get("/violations/get-shops-with-violations", getShopsWithViolations);
 router.get("/violations/history/:userId", getViolationHistory);
-router.post("/violations/handle-resolution", handleViolationResolution);
 router.get("/violations/get-violation-types", getViolationType);
 router.post("/violations/send-violation", sendViolation);
 router.get("/violations/user/:userId", getUserViolations);
+router.put("/violations/update-status", updateStatusViolation);
 
 //-----------------ReturnRequest-------------------
 router.post("/return-request/get-return-request", getReturnRequest);

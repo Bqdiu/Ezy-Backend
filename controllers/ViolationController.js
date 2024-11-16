@@ -21,7 +21,7 @@ const getReportedCustomers = async (req, res) => {
           model: Violations,
           required: true,
           where: { status: "Chưa xử lý" },
-          attributes: ["violation_id", "date_reported", "status", "notes"],
+          attributes: ["violation_id", "date_reported", "status", "notes", "sender_id"],
           include: [
             {
               model: ViolationTypes,
@@ -53,6 +53,7 @@ const getReportedCustomers = async (req, res) => {
         date_reported: violation.date_reported,
         status: violation.status,
         notes: violation.notes,
+        sender_id: violation.sender_id,
         imgs: violation.ViolationImgs.map((img) => img.img_url),
       }));
 
@@ -93,7 +94,7 @@ const getShopsWithViolations = async (req, res) => {
               model: Violations,
               required: true,
               where: { status: "Chưa xử lý" },
-              attributes: ["violation_id", "date_reported", "status", "notes"],
+              attributes: ["violation_id", "date_reported", "status", "notes", "sender_id"],
               include: [
                 {
                   model: ViolationTypes,
@@ -128,6 +129,7 @@ const getShopsWithViolations = async (req, res) => {
         date_reported: violation.date_reported,
         status: violation.status,
         notes: violation.notes,
+        sender_id: violation.sender_id,
         imgs: violation.ViolationImgs.map((img) => img.img_url),
       }));
 
@@ -196,46 +198,6 @@ const getViolationHistory = async (req, res) => {
     res.status(500).json({
       error: true,
       message: error.message || "An error occurred",
-    });
-  }
-};
-
-const handleViolationResolution = async (req, res) => {
-  const { userId, action_type, notes, updated_by_id } = req.body;
-
-  try {
-    // Bước 1: Thêm bản ghi vào bảng ViolationHistory
-    await ViolationHistory.create({
-      violator_id: userId,
-      action_type,
-      status: "Đã xử lý",
-      notes,
-      updated_by_id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    // Bước 2: Cập nhật trạng thái tất cả các vi phạm của user thành "Đã xử lý"
-    await Violations.update(
-      { status: "Đã xử lý", resolved_date: new Date() },
-      {
-        where: {
-          user_id: userId,
-          status: "Chưa xử lý",
-        },
-      }
-    );
-
-    res.status(200).json({
-      success: true,
-      message: `Vi phạm của người dùng ID ${userId} đã được xử lý thành công.`,
-    });
-  } catch (error) {
-    console.error("Error handling violation resolution:", error);
-    res.status(500).json({
-      error: true,
-      message:
-        error.message || "An error occurred during violation resolution.",
     });
   }
 };
@@ -348,14 +310,46 @@ const getUserViolations = async (req, res) => {
     });
   }
 };
+const updateStatusViolation = async (req, res) => {
+  const { reportId, updated_by_id } = req.body;
 
+  try {
+    // 1. Tìm báo cáo theo reportId
+    const report = await Violations.findOne({
+      where: { violation_id: reportId },
+    });
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: "Báo cáo không tồn tại.",
+      });
+    }
+
+    // 2. Cập nhật trạng thái báo cáo thành "Đã xử lý"
+    report.status = "Đã xử lý";
+    report.resolved_date = new Date();
+    await report.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Báo cáo với ID ${reportId} đã được xử lý thành công.`,
+    });
+  } catch (error) {
+    console.error("Error resolving report:", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || "Đã xảy ra lỗi khi xử lý báo cáo.",
+    });
+  }
+};
 
 module.exports = {
   getReportedCustomers,
   getShopsWithViolations,
   getViolationHistory,
-  handleViolationResolution,
   getViolationType,
   sendViolation,
   getUserViolations,
+  updateStatusViolation,
 };

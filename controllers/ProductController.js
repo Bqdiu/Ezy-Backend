@@ -20,7 +20,7 @@ const {
 const sequelize = require("../config/database");
 const Sequelize = require("sequelize");
 const translate = require("translate-google");
-const { de } = require("translate-google/languages");
+const { de, fi } = require("translate-google/languages");
 const { Op } = require("sequelize");
 const getAllProducts = async (req, res) => {
   try {
@@ -195,10 +195,15 @@ const getLimitSuggestProducts = async (req, res) => {
     });
   }
 };
-
 const getSuggestProducts = async (req, res) => {
   try {
-    const { user_id, pageNumbers = 1, limit = 28 } = req.query;
+    const {
+      user_id,
+      pageNumbers = 1,
+      limit = 2,
+      excludeProductIds = [],
+    } = req.query;
+
     const offset = (parseInt(pageNumbers, 10) - 1) * parseInt(limit, 10);
     const subCategoryIds = new Set();
 
@@ -227,65 +232,49 @@ const getSuggestProducts = async (req, res) => {
         subCategoryIds.add(search.SubCategory.sub_category_id)
       );
     }
-
-    // Bước 3: Lấy các shop với tổng số lượt visited cao (ưu tiên các shop lớn) và thêm một số shop ngẫu nhiên
-    const topShopLimit = 30; // Số lượng shop lớn muốn ưu tiên
-    const randomShopLimit = 20; // Số lượng shop ngẫu nhiên
-
-    // Bước 3: Lấy các sản phẩm gợi ý từ các shop khác nhau
-    const topShops = await Shop.findAll({
-      where: { shop_status: 1 },
-      attributes: {
-        include: [
-          [
-            sequelize.literal(
-              `(select sum(visited) from product where shop_id = shop.shop_id)`
-            ),
-            "total_visited",
-          ],
-        ],
-      },
-      order: [[sequelize.literal("total_visited"), "DESC"]],
-      limit: topShopLimit,
-    });
-
-    const excludedShopIds = topShops.map((shop) => shop.shop_id);
-
-    const randomShops = await Shop.findAll({
+    const { count, rows: suggestedProducts } = await Product.findAndCountAll({
       where: {
-        shop_status: 1,
-        shop_id: { [Sequelize.Op.notIn]: excludedShopIds }, // Loại trừ các shop lớn đã có
+        sub_category_id: Array.from(subCategoryIds),
+        stock: { [Sequelize.Op.gt]: 0 },
+        product_status: 1,
+        product_id: { [Sequelize.Op.notIn]: excludeProductIds },
       },
-      order: sequelize.random(),
-      limit: randomShopLimit,
-    });
-    const combinedShops = [...topShops, ...randomShops];
-
-    let suggestedProducts = [];
-    for (const shop of combinedShops) {
-      const products = await Product.findAll({
-        where: {
-          sub_category_id: Array.from(subCategoryIds),
-          stock: { [Sequelize.Op.gt]: 0 },
-          product_status: 1,
-          shop_id: shop.shop_id,
-        },
-        include: [
-          {
-            model: Shop,
-            attributes: ["shop_name", "shop_id", "shop_status"],
+      include: [
+        {
+          model: Shop,
+          attributes: {
+            include: [
+              "shop_name",
+              "shop_id",
+              "shop_status",
+              [
+                sequelize.literal(
+                  "(SELECT SUM(visited) FROM product WHERE shop_id = Shop.shop_id)"
+                ),
+                "total_visited",
+              ],
+            ],
           },
-        ],
-        order: [
-          [sequelize.random()],
-          ["sold", "DESC"],
-          ["avgRating", "DESC"],
-          ["visited", "DESC"],
-        ],
-        limit: Math.ceil(parseInt(limit, 10) / combinedShops.length), // Giới hạn sản phẩm cho mỗi shop
-      });
-      suggestedProducts.push(...products);
-    }
+          where: {
+            shop_status: 1,
+          },
+        },
+      ],
+      order: [
+        [sequelize.random()], // Chọn ngẫu nhiên để đa dạng
+        ["sold", "DESC"], // Ưu tiên sản phẩm bán chạy
+        ["avgRating", "DESC"], // Ưu tiên sản phẩm có đánh giá cao
+        ["visited", "DESC"], // Ưu tiên sản phẩm có lượt xem cao
+        [
+          sequelize.literal(
+            "(SELECT SUM(visited) FROM product WHERE shop_id = Shop.shop_id)"
+          ),
+          "DESC",
+        ], // Ưu tiên shop có tổng lượt xem cao
+      ],
+      limit: parseInt(limit, 10), // Số lượng sản phẩm tối đa
+      offset: offset, // Dùng để phân trang
+    });
 
     // Bước 4: Lấy thông tin flash sale
     const flashSales = await ShopRegisterFlashSales.findAll({
@@ -345,18 +334,13 @@ const getSuggestProducts = async (req, res) => {
         b.activeFlashSales - a.activeFlashSales
     );
 
-    const paginatedProducts = productsWithFlashSales.slice(
-      offset,
-      offset + limit
-    );
-
     // Phản hồi dữ liệu với thông tin phân trang
     res.status(200).json({
       success: true,
-      data: paginatedProducts,
-      total: productsWithFlashSales.length,
+      data: productsWithFlashSales,
+      total: count,
       pageNumbers,
-      totalPages: Math.ceil(productsWithFlashSales.length / limit),
+      totalPages: Math.ceil(count / limit),
     });
   } catch (error) {
     console.error("Lỗi khi lấy dữ liệu sản phẩm gợi ý:", error);
@@ -1054,37 +1038,131 @@ const getProductAndShopBySearch = async (req, res) => {
         },
       ],
 
-      order: filterConditions,
+      order: [
+        ...filterConditions,
+        ["sold", "DESC"], // Ưu tiên sản phẩm bán chạy
+        ["avgRating", "DESC"], // Ưu tiên sản phẩm có đánh giá cao
+        ["visited", "DESC"], // Ưu tiên sản phẩm có lượt xem cao
+        [
+          sequelize.literal(
+            "(SELECT SUM(visited) FROM product WHERE shop_id = Shop.shop_id)"
+          ),
+          "DESC",
+        ],
+      ],
       limit,
       offset,
     });
 
-    const shop = await Shop.findOne({
+    const flashSales = await ShopRegisterFlashSales.findAll({
+      where: {
+        product_id: products.map((product) => product.product_id),
+      },
+      include: [
+        {
+          model: FlashSaleTimerFrame,
+          required: false,
+          where: {
+            status: "active",
+            started_at: { [Sequelize.Op.lte]: new Date() },
+            ended_at: { [Sequelize.Op.gt]: new Date() },
+          },
+        },
+      ],
+      order: [[{ model: FlashSaleTimerFrame }, "ended_at", "DESC"]],
+      limit: 1,
+    });
+
+    const saleEventsCount = await ShopRegisterEvents.count({
+      where: {
+        shop_id: products.map((product) => product.shop_id),
+      },
+      include: [
+        {
+          model: SaleEvents,
+          required: true,
+          where: {
+            is_actived: true,
+            started_at: { [Sequelize.Op.lte]: new Date() },
+            ended_at: { [Sequelize.Op.gt]: new Date() },
+          },
+        },
+      ],
+    });
+
+    const productsWithFlashSales = products.map((product) => {
+      const productFlashSales = flashSales.filter(
+        (sale) =>
+          sale.product_id === product.product_id &&
+          sale.FlashSaleTimeFrame !== null
+      );
+
+      return {
+        ...product.toJSON(),
+        flashSales: productFlashSales,
+        activeSaleEventsCount: saleEventsCount,
+        activeFlashSales: productFlashSales.length,
+      };
+    });
+
+    productsWithFlashSales.sort(
+      (a, b) =>
+        b.activeSaleEventsCount - a.activeSaleEventsCount &&
+        b.activeFlashSales - a.activeFlashSales
+    );
+
+    const shop = await Shop.findAll({
       where: {
         shop_name: {
           [Sequelize.Op.like]: `%${keyword}%`,
         },
+        shop_status: 1,
       },
       include: [
         {
           model: UserAccount,
           attributes: {
             exclude: ["role_id", "password"],
+            include: [
+              [
+                sequelize.literal(
+                  "(SELECT SUM(visited) FROM product WHERE shop_id = Shop.shop_id)"
+                ),
+                "total_visited",
+              ],
+            ],
           },
           include: {
             model: Role,
           },
         },
       ],
+      limit: 1,
+      order: [
+        [
+          sequelize.literal(
+            "(SELECT COUNT(shop_id) from shop_register_events sre inner join sale_events se on sre.sale_events_id = se.sale_events_id where sre.shop_id = Shop.shop_id and se.is_actived = 1 and se.started_at <= NOW() and se.ended_at > NOW())"
+          ),
+          "DESC",
+        ],
+        [
+          sequelize.literal(
+            "(SELECT SUM(visited) FROM product WHERE shop_id = Shop.shop_id)"
+          ),
+          "DESC",
+        ],
+        ["total_ratings", "DESC"],
+      ],
     });
-    if (shop) {
+
+    if (shop?.length > 0) {
       //Tổng sản phẩm của shop
-      const totalProductOfShop = `SELECT COUNT(product_id) as total_product from product where shop_id = ${shop.shop_id}`;
+      const totalProductOfShop = `SELECT COUNT(product_id) as total_product from product where shop_id = ${shop[0]?.shop_id}`;
       const totalProduct = await sequelize.query(totalProductOfShop, {
         type: Sequelize.QueryTypes.SELECT,
       });
 
-      shop.dataValues.total_product = totalProduct
+      shop[0].dataValues.total_product = totalProduct
         ? totalProduct[0]?.total_product
         : 0;
     }
@@ -1092,7 +1170,7 @@ const getProductAndShopBySearch = async (req, res) => {
     res.status(200).json({
       success: true,
       shop,
-      products,
+      products: productsWithFlashSales,
       currentPage: pageNumbers,
       totalPages: Math.ceil(count / limit),
     });
@@ -1160,7 +1238,18 @@ const getProductBySubCategory = async (req, res) => {
 
     const { count, rows: products } = await Product.findAndCountAll({
       where: whereConditions,
-      order: filterConditions,
+      order: [
+        ...filterConditions,
+        ["sold", "DESC"], // Ưu tiên sản phẩm bán chạy
+        ["avgRating", "DESC"], // Ưu tiên sản phẩm có đánh giá cao
+        ["visited", "DESC"], // Ưu tiên sản phẩm có lượt xem cao
+        [
+          sequelize.literal(
+            "(SELECT SUM(visited) FROM product WHERE shop_id = Shop.shop_id)"
+          ),
+          "DESC",
+        ],
+      ],
       include: [
         {
           model: Shop,
@@ -1189,17 +1278,43 @@ const getProductBySubCategory = async (req, res) => {
       order: [[{ model: FlashSaleTimerFrame }, "ended_at", "DESC"]],
       limit: 1,
     });
+    const saleEventsCount = await ShopRegisterEvents.count({
+      where: {
+        shop_id: products.map((product) => product.shop_id),
+      },
+      include: [
+        {
+          model: SaleEvents,
+          required: true,
+          where: {
+            is_actived: true,
+            started_at: { [Sequelize.Op.lte]: new Date() },
+            ended_at: { [Sequelize.Op.gt]: new Date() },
+          },
+        },
+      ],
+    });
 
     const productsWithFlashSales = products.map((product) => {
       const productFlashSales = flashSales.filter(
-        (sale) => sale.product_id === product.product_id
+        (sale) =>
+          sale.product_id === product.product_id &&
+          sale.FlashSaleTimeFrame !== null
       );
 
       return {
         ...product.toJSON(),
         flashSales: productFlashSales,
+        activeSaleEventsCount: saleEventsCount,
+        activeFlashSales: productFlashSales.length,
       };
     });
+
+    productsWithFlashSales.sort(
+      (a, b) =>
+        b.activeSaleEventsCount - a.activeSaleEventsCount &&
+        b.activeFlashSales - a.activeFlashSales
+    );
 
     res.status(200).json({
       success: true,
