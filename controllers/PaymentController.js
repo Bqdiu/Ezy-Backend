@@ -14,6 +14,7 @@ const {
   Product,
   ShopRegisterFlashSales,
   FlashSaleTimerFrame,
+  Notifications,
 } = require("../models/Assosiations");
 const vnpay = require("../services/vnpayService");
 const {
@@ -28,6 +29,7 @@ const {
 const dateFormat = require("dateformat");
 const { io } = require("../socket");
 const { is } = require("translate-google/languages");
+const { title } = require("process");
 const reserveStock = async (validCart) => {
   for (const shop of validCart) {
     for (const item of shop.CartItems) {
@@ -637,6 +639,9 @@ const vnPayIPN = async (req, res) => {
         {
           model: OrderStatusHistory,
         },
+        {
+          model: UserOrderDetails,
+        },
       ],
     });
     if (!verify.isSuccess || !verify.isVerified) {
@@ -674,6 +679,15 @@ const vnPayIPN = async (req, res) => {
             (history) => history.order_status_id === 1
           );
           if (isPaid) {
+            await Notifications.create({
+              user_id: order.user_id,
+              title: "Đơn hàng của bạn đã được xác nhận",
+              content: `Đơn hàng ${order.user_order_id} của bạn đã được xác nhận, chúng tôi sẽ giao hàng trong thời gian sớm nhất`,
+              thumbnail: order.UserOrderDetails[0].thumbnail,
+              notifications_type: "order",
+              created_at: new Date(),
+              updated_at: new Date(),
+            });
             await OrderStatusHistory.create({
               user_order_id: order.user_order_id,
               order_status_id: 2,
@@ -1034,7 +1048,7 @@ const saveOrder = async (
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-
+    let firstThumbnail = "";
     for (const item of validCart[0].CartItems) {
       await UserOrderDetails.create({
         user_order_id: order.user_order_id,
@@ -1073,7 +1087,15 @@ const saveOrder = async (
                 .shop_register_flash_sales_id
             : null,
       });
-
+      if (firstThumbnail === "") {
+        firstThumbnail =
+          item.ProductVarient.ProductClassify !== null &&
+          (item.ProductVarient.ProductClassify?.thumbnail !== null ||
+            item.ProductVarient.ProductClassify?.thumbnail !== "" ||
+            item.ProductVarient.ProductClassify?.thumbnail !== undefined)
+            ? item.ProductVarient.ProductClassify.thumbnail
+            : item.ProductVarient.Product.thumbnail;
+      }
       // console.log(
       //   "đúng koooooooooooooo: ",
       //   item.ProductVarient.Product.ShopRegisterFlashSales[0].quantity -
@@ -1109,6 +1131,21 @@ const saveOrder = async (
         },
       });
     }
+    await Notifications.create({
+      user_id: user_id,
+      notifications_type: "order",
+      title:
+        order_status_id === 1
+          ? "Đơn hàng chờ thanh toán"
+          : "Đặt hàng thành công",
+      thumbnail: firstThumbnail,
+      content:
+        order_status_id === 1
+          ? `Đơn hàng của bạn đang được chờ thanh toán. Vui lòng thanh toán để tiếp tục đơn hàng. Sau 10 phút không thanh toán đơn hàng sẽ tự động hủy`
+          : `Đơn hàng của bạn đã được đặt thành công. Mã đơn hàng: ${order.user_order_id}`,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
   } else if (validCart.length > 1) {
     {
       for (const shop of validCart) {
@@ -1149,6 +1186,7 @@ const saveOrder = async (
           return_expiration_date: null,
           is_blocked: payment_method_id === 3 ? 1 : 0,
         });
+
         if (payment_method_id === 3) {
           io.emit("newOrder", {
             orderID: order.user_order_id,
@@ -1160,12 +1198,15 @@ const saveOrder = async (
             timeStamp: new Date(),
           });
         }
+
         await OrderStatusHistory.create({
           user_order_id: order.user_order_id,
           order_status_id: order_status_id,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
+
+        let firstThumbnail = "";
         for (const item of shop.CartItems) {
           await UserOrderDetails.create({
             user_order_id: order.user_order_id,
@@ -1228,6 +1269,21 @@ const saveOrder = async (
             },
           });
         }
+        await Notifications.create({
+          user_id: user_id,
+          notifications_type: "order",
+          title:
+            order_status_id === 1
+              ? "Đơn hàng chờ thanh toán"
+              : "Đặt hàng thành công",
+          thumbnail: firstThumbnail,
+          content:
+            order_status_id === 1
+              ? `Đơn hàng của bạn đang được chờ thanh toán. Vui lòng thanh toán để tiếp tục đơn hàng. Sau 10 phút không thanh toán đơn hàng sẽ tự động hủy`
+              : `Đơn hàng của bạn đã được đặt thành công. Mã đơn hàng: ${order.user_order_id}`,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
       }
     }
   }

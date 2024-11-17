@@ -36,11 +36,16 @@ const Notifications = sequelize.define(
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,
-    },  
+    },
     updated_at: {
       type: DataTypes.DATE,
       allowNull: true,
-    },  
+    },
+    is_read: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "notifications",

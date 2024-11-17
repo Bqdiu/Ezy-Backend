@@ -30,6 +30,7 @@ const {
   ReturnRequest,
   PaymentMethod,
   ShopRegisterFlashSales,
+  Notifications,
 } = require("../models/Assosiations");
 const {
   getOrderDetailGHN,
@@ -39,7 +40,7 @@ const {
 
 const dateFormat = require("dateformat");
 const { io } = require("../socket");
-const { fr, da, ca } = require("translate-google/languages");
+const { fr, da, ca, no } = require("translate-google/languages");
 
 const statusDescriptions = {
   ready_to_pick: "Mới tạo đơn hàng",
@@ -162,22 +163,35 @@ const deleteOrder = async (orderId, selectedVoucher) => {
       });
     }
 
-    await UserOrder.destroy({
-      where: {
-        user_order_id: orderId,
+    await UserOrder.update(
+      {
+        order_status_id: 6,
+        is_processed: 1,
+        updated_at: new Date(),
+        is_canceled_by: 3,
       },
+      {
+        where: {
+          user_order_id: orderId,
+        },
+      }
+    );
+
+    await OrderStatusHistory.create({
+      user_order_id: orderId,
+      order_status_id: 6,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
-    await UserOrderDetails.destroy({
-      where: {
-        user_order_id: orderId,
-      },
-    });
-
-    await OrderStatusHistory.destroy({
-      where: {
-        user_order_id: orderId,
-      },
+    await Notifications.create({
+      user_id: order.user_id,
+      notifications_type: "order",
+      title: "Đơn hàng đã bị hủy",
+      thumbnail: order.UserOrderDetails[0].thumbnail,
+      content: `Đơn hàng ${orderId} đã bị hủy do quá thời gian chờ thanh toán`,
+      created_at: new Date(),
+      updated_at: new Date(),
     });
     console.log("Đã xóa đơn hàng: ", orderId);
   } catch (error) {
@@ -660,7 +674,7 @@ const updateBlockStatus = async (user_order_id) => {
 const getShopOrders = async (req, res) => {
   try {
     const { shop_id, status_id, limit = 10, page = 1, searchText } = req.body;
-    console.log("body broooooo",req.body);
+    console.log("body broooooo", req.body);
     const offset = (page - 1) * limit;
     let whereConditions = {
       shop_id,
@@ -695,7 +709,6 @@ const getShopOrders = async (req, res) => {
         ],
       };
     }
-
 
     const { count, rows: orders } = await UserOrder.findAndCountAll({
       where: whereConditions,
@@ -1530,6 +1543,15 @@ const sendRequest = async (req, res) => {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
+      await Notifications.create({
+        user_id: order.user_id,
+        notifications_type: "order",
+        title: "Đơn hàng đã bị hủy",
+        thumbnail: order.UserOrderDetails[0].thumbnail,
+        content: `Đơn hàng ${order.user_order_id} đã bị hủy do yêu cầu trả hàng`,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
 
       await Promise.all(
         order.UserOrderDetails.map(async (product) => {
@@ -1542,17 +1564,17 @@ const sendRequest = async (req, res) => {
             }
           ),
             product.on_shop_register_flash_sales_id !== null &&
-            (await ShopRegisterFlashSales.decrement(
-              {
-                sold: product.quantity,
-              },
-              {
-                where: {
-                  shop_register_flash_sales_id:
-                    product.on_shop_register_flash_sales_id,
+              (await ShopRegisterFlashSales.decrement(
+                {
+                  sold: product.quantity,
                 },
-              }
-            ));
+                {
+                  where: {
+                    shop_register_flash_sales_id:
+                      product.on_shop_register_flash_sales_id,
+                  },
+                }
+              ));
         })
       );
       if (
