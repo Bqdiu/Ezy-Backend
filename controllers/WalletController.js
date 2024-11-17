@@ -5,6 +5,7 @@ const {
   UserAccount,
   UserWallet,
   WalletTransaction,
+  Notifications,
 } = require("../models/Assosiations");
 const vnpay = require("../services/vnpayService");
 const {
@@ -88,7 +89,9 @@ const getWalletHistory = async (req, res) => {
     }
     const whereConditions = {
       user_wallet_id,
-      ...(transactionId && { wallet_transaction_id: transactionId }),
+      ...(transactionId && {
+        wallet_transaction_id: transactionId,
+      }),
     };
     if (startDateS && endDateS) {
       console.log("startDateS: ", startDateS);
@@ -250,12 +253,20 @@ const ipnHandler = async (req, res) => {
       case "00":
         // Giao dịch thành công
         await wallet.increment("balance", { by: verify.vnp_Amount });
-        await WalletTransaction.create({
+        const transaction = await WalletTransaction.create({
           user_wallet_id,
           transaction_type: "Nạp tiền vào ví",
-          description: "Mã giao dịch: " + verify.vnp_TxnRef,
+          description: "vnPayCode: " + verify.vnp_TxnRef,
           amount: verify.vnp_Amount,
           transaction_date: new Date(),
+        });
+        await Notifications.create({
+          user_id: wallet.user_id,
+          notifications_type: "wallet",
+          title: "Nạp tiền vào ví thành công",
+          content: `Giao dịch ${transaction.wallet_transaction_id} thành công. Số tiền: ${verify.vnp_Amount} VNĐ đã được cộng vào ví của bạn.`,
+          created_at: new Date(),
+          updated_at: new Date(),
         });
         return res.json({
           status: "success",

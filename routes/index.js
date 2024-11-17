@@ -224,6 +224,8 @@ const {
 const {
   createNotification,
   getNotifications,
+  markAsRead,
+  markNotificationAsRead,
 } = require("../controllers/NotificationsController");
 const {
   getProductShopRegisterFlashSales,
@@ -471,7 +473,8 @@ router.get("/return-request/get-return-order", getReturnOrder);
 //-----------------Notifications-------------------
 router.post("/notifications/create-notification", createNotification);
 router.get("/notifications/get-notifications", getNotifications);
-
+router.get("/notifications/mark-as-read", markAsRead);
+router.get("/notifications/mark-notification-as-read", markNotificationAsRead);
 //-----------------ShopRegisterFlashSales-------------------
 router.get(
   "/shop-register-flash-sales/get-product",

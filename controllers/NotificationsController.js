@@ -39,10 +39,14 @@ const createNotification = async (req, res) => {
 
 const getNotifications = async (req, res) => {
   try {
-    const { user_id, page = 1, limit = 6 } = req.query;
+    const { user_id, page = 1, limit = 6, type = "" } = req.query;
     const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-    const notifications = await Notifications.findAll({
-      where: { user_id: user_id },
+    let whereConditions = { user_id: user_id };
+    if (type !== "") {
+      whereConditions.notifications_type = type;
+    }
+    const { count, rows: notifications } = await Notifications.findAndCountAll({
+      where: whereConditions,
       order: [["created_at", "DESC"]],
       offset,
       limit: parseInt(limit, 10),
@@ -51,10 +55,12 @@ const getNotifications = async (req, res) => {
     const unReadCount = await Notifications.count({
       where: { user_id: user_id, is_read: 0 },
     });
+    const totalPages = Math.ceil(count / limit);
 
     return res.status(200).json({
       success: true,
       data: notifications,
+      totalPages: totalPages,
       unReadCount,
     });
   } catch (error) {
@@ -65,7 +71,48 @@ const getNotifications = async (req, res) => {
   }
 };
 
+const markAsRead = async (req, res) => {
+  try {
+    const { user_id, type = "" } = req.query;
+    let whereConditions = { user_id: user_id };
+    if (type !== "") {
+      whereConditions.notifications_type = type;
+    }
+    await Notifications.update(
+      { is_read: 1 },
+      {
+        where: whereConditions,
+      }
+    );
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.log(error);
+    return res
+      .status(500)
+      .json({ message: error.message || error, error: true });
+  }
+};
+const markNotificationAsRead = async (req, res) => {
+  try {
+    const { notification_id } = req.query;
+    await Notifications.update(
+      { is_read: 1 },
+      {
+        where: { notification_id: notification_id },
+      }
+    );
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.log(error);
+    return res
+      .status(500)
+      .json({ message: error.message || error, error: true });
+  }
+};
 module.exports = {
   createNotification,
   getNotifications,
+  markAsRead,
+  markNotificationAsRead,
 };
