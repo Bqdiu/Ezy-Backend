@@ -75,6 +75,7 @@ const Product = sequelize.define(
     sold: {
       type: DataTypes.BIGINT,
       allowNull: true,
+      defaultValue: 0,
     },
     visited: {
       type: DataTypes.INTEGER,
@@ -97,6 +98,7 @@ const Product = sequelize.define(
     avgRating: {
       type: DataTypes.DOUBLE,
       allowNull: true,
+      defaultValue: 0,
     },
   },
   {

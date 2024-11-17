@@ -223,11 +223,16 @@ const {
 } = require("../controllers/ReturnRequestController");
 const {
   createNotification,
+  getNotifications,
 } = require("../controllers/NotificationsController");
-const { getProductShopRegisterFlashSales, registerProductToFlashSale, unsubscribeFlashSale } = require("../controllers/ShopRegisterFlashSalesController");
+const {
+  getProductShopRegisterFlashSales,
+  registerProductToFlashSale,
+  unsubscribeFlashSale,
+} = require("../controllers/ShopRegisterFlashSalesController");
 
 const {
-  getSupportRequest
+  getSupportRequest,
 } = require("../controllers/RequestSupportController");
 
 //------------------Categories-----------------------
@@ -443,7 +448,10 @@ router.get(
   "/flash-sales/get-shop-registered-products/:id",
   getShopRegisteredProductsByFlashSale
 );
-router.get("/flash-sales/get-suggest-flash-sale-shop", getSuggestFlashSaleForShop);
+router.get(
+  "/flash-sales/get-suggest-flash-sale-shop",
+  getSuggestFlashSaleForShop
+);
 
 //----------------Violation----------------
 router.get("/violations/get-reported-customers", getReportedCustomers);
@@ -462,12 +470,21 @@ router.get("/return-request/get-return-order", getReturnOrder);
 
 //-----------------Notifications-------------------
 router.post("/notifications/create-notification", createNotification);
-
+router.get("/notifications/get-notifications", getNotifications);
 
 //-----------------ShopRegisterFlashSales-------------------
-router.get("/shop-register-flash-sales/get-product", getProductShopRegisterFlashSales);
-router.post("/shop-register-flash-sales/register-product", registerProductToFlashSale);
-router.post("/shop-register-flash-sales/unsubscribe-product", unsubscribeFlashSale);
+router.get(
+  "/shop-register-flash-sales/get-product",
+  getProductShopRegisterFlashSales
+);
+router.post(
+  "/shop-register-flash-sales/register-product",
+  registerProductToFlashSale
+);
+router.post(
+  "/shop-register-flash-sales/unsubscribe-product",
+  unsubscribeFlashSale
+);
 //-----------------RequestSupport-------------------
 router.get("/request-support/get-support-request", getSupportRequest);
 
