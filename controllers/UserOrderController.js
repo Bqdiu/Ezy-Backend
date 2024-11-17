@@ -1491,6 +1491,9 @@ const sendRequest = async (req, res) => {
         {
           model: UserOrderDetails,
         },
+        {
+          model: Shop,
+        },
       ],
     });
 
@@ -1516,6 +1519,17 @@ const sendRequest = async (req, res) => {
       created_at: new Date(),
       updated_at: new Date(),
     });
+
+    await Notifications.create({
+      user_id: order.Shop.user_id,
+      notifications_type: "order",
+      title: "Yêu cầu trả hàng",
+      thumbnail: order.UserOrderDetails[0].thumbnail,
+      content: `Đơn hàng ${order.user_order_id} đã được yêu cầu trả hàng`,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
     if (ghn_status === "ready-to-pick" || order.order_code === null) {
       if (order.order_code !== null) {
         const order_codes = [order.order_code];
@@ -1546,7 +1560,7 @@ const sendRequest = async (req, res) => {
       await Notifications.create({
         user_id: order.user_id,
         notifications_type: "order",
-        title: "Đơn hàng đã bị hủy",
+        title: "Yêu cầu trả hàng được chấp nhận",
         thumbnail: order.UserOrderDetails[0].thumbnail,
         content: `Đơn hàng ${order.user_order_id} đã bị hủy do yêu cầu trả hàng`,
         created_at: new Date(),
@@ -1632,12 +1646,20 @@ const sendRequest = async (req, res) => {
         await wallet.update({
           balance: wallet.balance + order.final_price,
         });
-        await WalletTransaction.create({
+        const transaction = await WalletTransaction.create({
           user_wallet_id: wallet.user_wallet_id,
           transaction_type: "Hoàn tiền",
           amount: order.final_price,
           transaction_date: new Date(),
           description: "Hoàn tiền đơn hàng",
+        });
+        await Notifications.create({
+          user_id: wallet.user_id,
+          notifications_type: "wallet",
+          title: "Hoàn tiền vào ví thành công",
+          content: `Giao dịch ${transaction.wallet_transaction_id} thành công. Số tiền: ${verify.vnp_Amount} VNĐ đã được cộng vào ví của bạn.`,
+          created_at: new Date(),
+          updated_at: new Date(),
         });
       }
 

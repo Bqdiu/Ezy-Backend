@@ -46,6 +46,11 @@ const Notifications = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    url: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: "/",
+    },
   },
   {
     tableName: "notifications",

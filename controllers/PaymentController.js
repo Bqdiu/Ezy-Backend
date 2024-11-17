@@ -688,6 +688,7 @@ const vnPayIPN = async (req, res) => {
               created_at: new Date(),
               updated_at: new Date(),
             });
+
             await OrderStatusHistory.create({
               user_order_id: order.user_order_id,
               order_status_id: 2,
@@ -847,6 +848,16 @@ const checkoutWithEzyWallet = async (req, res) => {
         description: "Thanh toán Ezy",
       });
       transaction_code = `EzyWallet_${user_id}_${transaction.wallet_transaction_id}`;
+      await Notifications.create({
+        user_id,
+        title: "Thanh toán thành công",
+        content: `Bạn đã thanh toán thành công với số tiền ${totalPayment.final}. Mã giao dịch: ${transaction.wallet_transaction_id}`,
+        thumbnail: "",
+        notifications_type: "wallet",
+        created_at: new Date(),
+        updated_at: new Date(),
+        url: `/user/ezy-wallet`,
+      });
       await wallet.save();
     } else {
       return res.status(400).json({
@@ -1131,6 +1142,7 @@ const saveOrder = async (
         },
       });
     }
+    //Thông báo cho người mua
     await Notifications.create({
       user_id: user_id,
       notifications_type: "order",
@@ -1142,10 +1154,24 @@ const saveOrder = async (
       content:
         order_status_id === 1
           ? `Đơn hàng của bạn đang được chờ thanh toán. Vui lòng thanh toán để tiếp tục đơn hàng. Sau 10 phút không thanh toán đơn hàng sẽ tự động hủy`
-          : `Đơn hàng của bạn đã được đặt thành công. Mã đơn hàng: ${order.user_order_id}`,
+          : `Bạn có đơn hàng mới. Mã đơn hàng: ${order.user_order_id}`,
       created_at: new Date(),
       updated_at: new Date(),
+      url: `/user/purchase/order/${order.user_order_id}`,
     });
+    if (order_status_id === 2) {
+      await Notifications.create({
+        user_id: validCart[0]?.Shop?.user_id,
+        notifications_type: "order",
+        title: "Đơn hàng mới",
+        thumbnail: firstThumbnail,
+        content: `Bạn có đơn hàng mới. Mã đơn hàng: ${order.user_order_id}`,
+        created_at: new Date(),
+        updated_at: new Date(),
+        url: `/user/purchase/order/${order.user_order_id}`,
+      });
+    }
+    //Thông báo cho người bán
   } else if (validCart.length > 1) {
     {
       for (const shop of validCart) {
@@ -1269,6 +1295,8 @@ const saveOrder = async (
             },
           });
         }
+
+        //Thông báo cho người mua
         await Notifications.create({
           user_id: user_id,
           notifications_type: "order",
@@ -1283,7 +1311,22 @@ const saveOrder = async (
               : `Đơn hàng của bạn đã được đặt thành công. Mã đơn hàng: ${order.user_order_id}`,
           created_at: new Date(),
           updated_at: new Date(),
+          url: `/user/purchase/order/${order.user_order_id}`,
         });
+
+        //Thông báo cho người bán
+        if (order_status_id === 2) {
+          await Notifications.create({
+            user_id: shop?.Shop?.user_id,
+            notifications_type: "order",
+            title: "Đơn hàng mới",
+            thumbnail: firstThumbnail,
+            content: `Bạn có đơn hàng mới. Mã đơn hàng: ${order.user_order_id}`,
+            created_at: new Date(),
+            updated_at: new Date(),
+            url: `/user/purchase/order/${order.user_order_id}`,
+          });
+        }
       }
     }
   }
