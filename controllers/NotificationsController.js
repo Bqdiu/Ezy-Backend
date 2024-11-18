@@ -12,7 +12,7 @@ const {
 } = require("../models/Assosiations");
 
 const createNotification = async (req, res) => {
-  const { user_id, notifications_type, title, thumbnail, content } = req.body;
+  const { user_id, notifications_type, title, thumbnail, content, url } = req.body;
   if (!user_id || !notifications_type || !title || !content) {
     return res.status(400).json({
       message: "User ID, Notification Type, Title and Content are required",
@@ -27,6 +27,7 @@ const createNotification = async (req, res) => {
       title: title,
       thumbnail: thumbnail,
       content: content,
+      url: url || "",
       created_at: new Date(),
       updated_at: new Date(),
     });

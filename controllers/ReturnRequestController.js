@@ -15,6 +15,7 @@ const {
     WalletTransaction,
     DiscountVoucher,
     ShopRegisterFlashSales,
+    Notifications,
 } = require("../models/Assosiations");
 
 const {
@@ -165,7 +166,13 @@ const acceptReturnRequest = async (req, res) => {
         }
 
         const order = await UserOrder.findOne({
-            where: { user_order_id: returnRequest.user_order_id }
+            where: { user_order_id: returnRequest.user_order_id },
+            include: [
+                {
+                    model: UserOrderDetails,
+                },
+            ],
+
         });
         if (!order) {
             return res.status(404).json({ error: true, message: "Order not found" });
@@ -188,6 +195,9 @@ const acceptReturnRequest = async (req, res) => {
         if (orderGHNDetails.status === "delivered") {
             data.cod_amount = 0;
             data.payment_type_id = 2;
+            if (returnRequest.return_reason_id === 1 || returnRequest.return_reason_id === 2) {
+                data.payment_type_id = 1;
+            }
             if (order.payment_method_id === 1) data.cod_amount = order.final_price;
 
             const resultGHN = await createOrderGHN(order.shop_id, data);
@@ -219,7 +229,13 @@ const acceptReturnRequest = async (req, res) => {
                             user_id: order.user_id,
                         },
                     });
-                    const final_price = order.final_price - (order.shipping_fee - order.discount_shipping_fee);
+                    let final_price;
+                    if (returnRequest.return_reason_id !== 1 && returnRequest.return_reason_id !== 2) {
+                        final_price = order.final_price - (order.shipping_fee - order.discount_shipping_fee);
+                    }
+                    else {
+                        final_price = order.final_price;
+                    }
                     console.log("final_price", final_price);
                     await wallet.update({
                         balance: wallet.balance + final_price,
@@ -236,6 +252,16 @@ const acceptReturnRequest = async (req, res) => {
                 await adjustStockAndSales(order);
 
                 await adjustVouchers(order);
+                await Notifications.create({
+                    user_id: order.user_id,
+                    notifications_type: "order",
+                    title: "Yêu cầu trả hàng",
+                    thumbnail: order.UserOrderDetails[0].thumbnail,
+                    content: `Yêu cầu đã được chấp nhận . Mã đơn hàng: ${order.user_order_id}`,
+                    created_at: new Date(),
+                    updated_at: new Date(),
+                    url: `/user/purchase/order/${order.user_order_id}`,
+                });
 
                 return res.status(200).json({
                     success: true,
@@ -282,7 +308,13 @@ const acceptReturnRequest = async (req, res) => {
                             user_id: order.user_id,
                         },
                     });
-                    const final_price = order.final_price - (order.shipping_fee - order.discount_shipping_fee);
+                    let final_price;
+                    if (returnRequest.return_reason_id !== 1 && returnRequest.return_reason_id !== 2) {
+                        final_price = order.final_price - (order.shipping_fee - order.discount_shipping_fee);
+                    }
+                    else {
+                        final_price = order.final_price;
+                    }
                     console.log("final_price", final_price);
                     await wallet.update({
                         balance: wallet.balance + final_price,
@@ -302,6 +334,16 @@ const acceptReturnRequest = async (req, res) => {
 
                 await adjustVouchers(order);
 
+                await Notifications.create({
+                    user_id: order.user_id,
+                    notifications_type: "order",
+                    title: "Yêu cầu hủy đơn hàng",
+                    thumbnail: order.UserOrderDetails[0].thumbnail,
+                    content: `Yêu cầu đã được chấp nhận . Mã đơn hàng: ${order.user_order_id}`,
+                    created_at: new Date(),
+                    updated_at: new Date(),
+                    url: `/user/purchase/order/${order.user_order_id}`,
+                });
 
                 return res.status(200).json({
                     success: true,
@@ -349,11 +391,36 @@ const rejectReturnRequest = async (req, res) => {
                 error: true,
             })
         }
+
+        const order = await UserOrder.findOne({
+            where: { user_order_id: returnRequest.user_order_id },
+            include: [
+                {
+                    model: UserOrderDetails,
+                },
+            ],
+
+        });
+        if (!order) {
+            return res.status(404).json({ error: true, message: "Order not found" });
+        }
+
         // update return request
         await returnRequest.update({
             status_id: 3,
             updatedAt: new Date(),
         })
+
+        await Notifications.create({
+            user_id: order.user_id,
+            notifications_type: "order",
+            title: "Yêu cầu trả hàng",
+            thumbnail: order.UserOrderDetails[0].thumbnail,
+            content: `Yêu cầu bị từ chối. Mã đơn hàng: ${order.user_order_id}`,
+            created_at: new Date(),
+            updated_at: new Date(),
+            url: `/user/purchase/order/${order.user_order_id}`,
+        });
 
         return res.status(200).json({
             message: "Return request rejected successfully",
@@ -445,7 +512,7 @@ async function adjustStockAndSales(order) {
             })
         );
     }
-  
+
 }
 
 async function adjustVouchers(order) {

@@ -3,7 +3,10 @@ const {
     Shop,
     DiscountVoucher,
     SaleEventsOnCategories,
-    ShopRegisterEvents, 
+    ShopRegisterEvents,
+    Category,
+    Product,
+    SubCategory,
 } = require("../models/Assosiations");
 const { Op } = require("sequelize");
 const sequelize = require("../config/database");
@@ -243,18 +246,18 @@ const getVouchersForEvent = async (req, res) => {
         const vouchers = await DiscountVoucher.findAll({
             where: { sale_events_id: id },
             attributes: [
-                'discount_voucher_id', 
-                'discount_voucher_code', 
-                'discount_voucher_name', 
-                'description', 
-                'discount_type', 
-                'min_order_value', 
-                'discount_value', 
-                'discount_max_value', 
-                'quantity', 
-                'started_at', 
+                'discount_voucher_id',
+                'discount_voucher_code',
+                'discount_voucher_name',
+                'description',
+                'discount_type',
+                'min_order_value',
+                'discount_value',
+                'discount_max_value',
+                'quantity',
+                'started_at',
                 'ended_at',
-                'discount_voucher_type_id' 
+                'discount_voucher_type_id'
             ],
         });
 
@@ -342,7 +345,7 @@ const updateSaleEvent = async (req, res) => {
         // Update the sale event
         await saleEvent.update({
             sale_events_name,
-            thumbnail: thumbnail || saleEvent.thumbnail, 
+            thumbnail: thumbnail || saleEvent.thumbnail,
             started_at: newStartDate,
             ended_at: newEndDate,
         });
@@ -363,48 +366,334 @@ const updateSaleEvent = async (req, res) => {
 
 const activateEvents = async () => {
     try {
-      const now = new Date();
-      const [activatedCount] = await SaleEvents.update(
-        { is_actived: true },
-        {
-          where: {
-            started_at: { [Op.lte]: now },
-            ended_at: { [Op.gt]: now },
-            is_actived: false,
-          },
+        const now = new Date();
+        const [activatedCount] = await SaleEvents.update(
+            { is_actived: true },
+            {
+                where: {
+                    started_at: { [Op.lte]: now },
+                    ended_at: { [Op.gt]: now },
+                    is_actived: false,
+                },
+            }
+        );
+
+        if (activatedCount > 0) {
+            const updatedEvents = await SaleEvents.findAll();
+            io.emit("eventStatusUpdate", updatedEvents);
         }
-      );
-  
-      if (activatedCount > 0) {
-        const updatedEvents = await SaleEvents.findAll();
-        io.emit("eventStatusUpdate", updatedEvents);
-      }
     } catch (error) {
-      console.error("Error activating events:", error);
+        console.error("Error activating events:", error);
     }
-  };
-  
-  const deactivateEvents = async () => {
+};
+
+const deactivateEvents = async () => {
     try {
-      const now = new Date();
-      const [deactivatedCount] = await SaleEvents.update(
-        { is_actived: false },
-        {
-          where: {
-            ended_at: { [Op.lte]: now },
-            is_actived: true,
-          },
+        const now = new Date();
+        const [deactivatedCount] = await SaleEvents.update(
+            { is_actived: false },
+            {
+                where: {
+                    ended_at: { [Op.lte]: now },
+                    is_actived: true,
+                },
+            }
+        );
+
+        if (deactivatedCount > 0) {
+            const updatedEvents = await SaleEvents.findAll();
+            io.emit("eventStatusUpdate", updatedEvents);
         }
-      );
-  
-      if (deactivatedCount > 0) {
-        const updatedEvents = await SaleEvents.findAll();
-        io.emit("eventStatusUpdate", updatedEvents);
-      }
     } catch (error) {
-      console.error("Error deactivating events:", error);
+        console.error("Error deactivating events:", error);
     }
-  };
+};
+
+const getSuggestSaleEventsForShop = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const offset = (page - 1) * limit;
+
+        const currentDate = new Date();
+
+        const count = await SaleEvents.count({
+            where: {
+                started_at: { [Op.gte]: currentDate },
+            },
+        });
+
+
+        const saleEvents = await SaleEvents.findAll({
+            where: {
+                started_at: { [Op.gte]: currentDate },
+            },
+            include: [
+                {
+                    model: SaleEventsOnCategories,
+                    include: [
+                        {
+                            model: Category,
+                        },
+                    ]
+                },
+                {
+                    model: DiscountVoucher,
+                },
+
+            ],
+
+            order: [['started_at', 'ASC']],
+            limit,
+            offset,
+        });
+
+        if (count === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không có sự kiện nào phù hợp',
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: saleEvents,
+            totalItems: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: page,
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy sự kiện gợi ý',
+            error: error.message,
+        });
+    }
+}
+
+const shopRegisterSaleEvent = async (req, res) => {
+    const { shop_id, sale_events_id } = req.body;
+    if (!shop_id || !sale_events_id) {
+        return res.status(400).json({
+            success: false,
+            message: !shop_id ? 'Thiếu shop_id' : 'Thiếu sale_events_id',
+        });
+    }
+    try {
+        const checkExist = await ShopRegisterEvents.findOne({
+            where: {
+                shop_id,
+                sale_events_id,
+            }
+        });
+        if (checkExist) {
+            return res.status(400).json({
+                success: false,
+                message: 'Shop đã đăng ký sự kiện này',
+            });
+        }
+
+        const sale_event = await SaleEvents.findOne({
+            where: {
+                sale_events_id,
+            }
+        });
+
+        if (!sale_event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sự kiện không tồn tại',
+            });
+        }
+
+        if(sale_event.is_actived === true) {
+            return res.status(400).json({
+                success: false,
+                message: 'Sự kiện đang diễn ra, không thể đăng ký',
+            });
+        }
+
+        const register_result = await ShopRegisterEvents.create({
+            shop_id,
+            sale_events_id,
+        });
+        res.status(200).json({
+            success: true,
+            data: register_result,
+            message: 'Đăng ký sự kiện thành công',
+        })
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi đăng ký sự kiện',
+            error: error.message,
+        });
+    }
+}
+
+const checkShopRegistedEvent = async (req, res) => {
+    const { shop_id, sale_events_id } = req.query;
+    if (!shop_id || !sale_events_id) {
+        return res.status(400).json({
+            success: false,
+            message: !shop_id ? 'Thiếu shop_id' : 'Thiếu sale_events_id',
+        });
+    }
+    try {
+        const checkExist = await ShopRegisterEvents.findOne({
+            where: {
+                shop_id,
+                sale_events_id,
+            }
+        });
+        if (checkExist) {
+            return res.status(200).json({
+                success: true,
+                message: 'Shop đã đăng ký sự kiện này',
+            });
+        } else {
+            return res.status(404).json({
+                success: false,
+                message: 'Shop chưa đăng ký sự kiện này',
+            });
+        }
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi kiểm tra đăng ký sự kiện',
+            error: error.message,
+        });
+    }
+}
+
+const getProductsRegistedByCategory = async (req, res) => {
+    const { shop_id } = req.query;
+    if (!shop_id) {
+        return res.status(400).json({
+            success: false,
+            message: 'Thiếu shop_id',
+        });
+    }
+
+    const currentDate = new Date();
+    try {
+        const product = await Product.findAll({
+            where: {
+                shop_id,
+            },
+            include: [
+                {
+                    model: SubCategory,
+                    include: [
+                        {
+                            model: Category,
+                            include: [
+                                {
+                                    model: SaleEventsOnCategories,
+                                    include: [
+                                        {
+                                            model: SaleEvents,
+                                            where: {
+                                                is_actived: true,
+                                                ended_at: { [Op.gt]: currentDate },
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+
+        const filter_product = product.filter(p => p.SubCategory.Category.SaleEventsOnCategories.length > 0);
+
+        if (filter_product.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Shop chưa đăng ký sản phẩm nào',
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: filter_product,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi khi kiểm tra đăng ký sự kiện',
+            error: error.message,
+        });
+    }
+};
+
+const unSubscribeSaleEvent = async (req, res) => {
+    const { shop_id, sale_events_id } = req.body;
+    if (!shop_id || !sale_events_id) {
+        return res.status(400).json({
+            success: false,
+            message: !shop_id ? 'Thiếu shop_id' : 'Thiếu sale_events_id',
+        });
+    }
+
+    try {
+        const checkExist = await ShopRegisterEvents.findOne({
+            where: {
+                shop_id,
+                sale_events_id,
+            }
+        });
+        if (!checkExist) {
+            return res.status(404).json({
+                success: false,
+                message: 'Shop chưa đăng ký sự kiện này',
+            });
+        }
+
+        const sale_event = await SaleEvents.findOne({
+            where: {
+                sale_events_id,
+            }
+        });
+
+        if (!sale_event) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sự kiện không tồn tại',
+            });
+        }
+
+        if(sale_event.is_actived === true) {
+            return res.status(400).json({
+                success: false,
+                message: 'Sự kiện đang diễn ra, không thể hủy đăng ký',
+            });
+        }
+
+        await ShopRegisterEvents.destroy({
+            where: {
+                shop_id,
+                sale_events_id,
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Hủy đăng ký sự kiện thành công',
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi hủy đăng ký sự kiện',
+            error: error.message,
+        });        
+    }
+}
+
 module.exports = {
     getAllSaleEvents,
     addSaleEvent,
@@ -417,4 +706,9 @@ module.exports = {
     updateSaleEvent,
     activateEvents,
     deactivateEvents,
+    getSuggestSaleEventsForShop,
+    shopRegisterSaleEvent,
+    checkShopRegistedEvent,
+    getProductsRegistedByCategory,
+    unSubscribeSaleEvent,
 }
