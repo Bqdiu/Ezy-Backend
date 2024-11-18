@@ -235,6 +235,10 @@ const {
 
 const {
   getSupportRequest,
+  getRequestById,
+  acceptRequestSupport,
+  sendRequestSupport,
+  closeRequestSupport,
 } = require("../controllers/RequestSupportController");
 
 //------------------Categories-----------------------
@@ -490,5 +494,8 @@ router.post(
 );
 //-----------------RequestSupport-------------------
 router.get("/request-support/get-support-request", getSupportRequest);
-
+router.get("/request-support/getRequestById", getRequestById);
+router.get("/request-support/accept-request", acceptRequestSupport);
+router.get("/request-support/send-request", sendRequestSupport);
+router.get("/request-support/close-request", closeRequestSupport);
 module.exports = router;

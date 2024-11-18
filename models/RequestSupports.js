@@ -28,7 +28,7 @@ const RequestSupports = sequelize.define(
     status: {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: "Đang chờ xử lý",
+      defaultValue: "waiting",
     },
   },
   {
