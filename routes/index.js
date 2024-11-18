@@ -161,6 +161,11 @@ const {
   getVouchersForEvent,
   getEventById,
   updateSaleEvent,
+  getSuggestSaleEventsForShop,
+  shopRegisterSaleEvent,
+  checkShopRegistedEvent,
+  getProductsRegistedByCategory,
+  unSubscribeSaleEvent,
 } = require("../controllers/SaleEventController");
 const { ro } = require("translate-google/languages");
 const { getOrderStatus } = require("../controllers/OrderStatusController");
@@ -408,6 +413,11 @@ router.get("/sale-events/get-shops/:id", getShopsForEvent);
 router.get("/sale-events/get-vouchers/:id", getVouchersForEvent);
 router.get("/sale-events/get-event-by-id/:id", getEventById);
 router.put("/sale-events/update-event/:id", updateSaleEvent);
+router.get("/sale-events/get-suggest-sale-events-shop", getSuggestSaleEventsForShop);
+router.get("/sale-events/check-shop-registed", checkShopRegistedEvent);
+router.get("/sale-events/get-products-registed", getProductsRegistedByCategory);
+router.post("/sale-events/shop-register-sale-event", shopRegisterSaleEvent);
+router.post("/sale-events/unsubscribe-sale-event", unSubscribeSaleEvent);
 
 //-----------------Wallet-----------------
 router.post("/wallet/get-wallet", authenticate, getWallet);

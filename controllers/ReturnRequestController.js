@@ -15,6 +15,7 @@ const {
     WalletTransaction,
     DiscountVoucher,
     ShopRegisterFlashSales,
+    Notifications,
 } = require("../models/Assosiations");
 
 const {
@@ -165,7 +166,13 @@ const acceptReturnRequest = async (req, res) => {
         }
 
         const order = await UserOrder.findOne({
-            where: { user_order_id: returnRequest.user_order_id }
+            where: { user_order_id: returnRequest.user_order_id },
+            include: [
+                {
+                    model: UserOrderDetails,
+                },
+            ],
+
         });
         if (!order) {
             return res.status(404).json({ error: true, message: "Order not found" });
@@ -245,6 +252,16 @@ const acceptReturnRequest = async (req, res) => {
                 await adjustStockAndSales(order);
 
                 await adjustVouchers(order);
+                await Notifications.create({
+                    user_id: order.user_id,
+                    notifications_type: "order",
+                    title: "Yêu cầu trả hàng",
+                    thumbnail: order.UserOrderDetails[0].thumbnail,
+                    content: `Yêu cầu đã được chấp nhận . Mã đơn hàng: ${order.user_order_id}`,
+                    created_at: new Date(),
+                    updated_at: new Date(),
+                    url: `/user/purchase/order/${order.user_order_id}`,
+                });
 
                 return res.status(200).json({
                     success: true,
@@ -317,6 +334,16 @@ const acceptReturnRequest = async (req, res) => {
 
                 await adjustVouchers(order);
 
+                await Notifications.create({
+                    user_id: order.user_id,
+                    notifications_type: "order",
+                    title: "Yêu cầu hủy đơn hàng",
+                    thumbnail: order.UserOrderDetails[0].thumbnail,
+                    content: `Yêu cầu đã được chấp nhận . Mã đơn hàng: ${order.user_order_id}`,
+                    created_at: new Date(),
+                    updated_at: new Date(),
+                    url: `/user/purchase/order/${order.user_order_id}`,
+                });
 
                 return res.status(200).json({
                     success: true,
@@ -364,11 +391,36 @@ const rejectReturnRequest = async (req, res) => {
                 error: true,
             })
         }
+
+        const order = await UserOrder.findOne({
+            where: { user_order_id: returnRequest.user_order_id },
+            include: [
+                {
+                    model: UserOrderDetails,
+                },
+            ],
+
+        });
+        if (!order) {
+            return res.status(404).json({ error: true, message: "Order not found" });
+        }
+
         // update return request
         await returnRequest.update({
             status_id: 3,
             updatedAt: new Date(),
         })
+
+        await Notifications.create({
+            user_id: order.user_id,
+            notifications_type: "order",
+            title: "Yêu cầu trả hàng",
+            thumbnail: order.UserOrderDetails[0].thumbnail,
+            content: `Yêu cầu bị từ chối. Mã đơn hàng: ${order.user_order_id}`,
+            created_at: new Date(),
+            updated_at: new Date(),
+            url: `/user/purchase/order/${order.user_order_id}`,
+        });
 
         return res.status(200).json({
             message: "Return request rejected successfully",
