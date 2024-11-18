@@ -1038,7 +1038,19 @@ const confirmOrder = async (req, res) => {
   }
 
   try {
-    const order = await UserOrder.findOne({ where: { user_order_id } });
+    const order = await UserOrder.findOne({
+      where: {
+        user_order_id,
+      },
+      include: [
+        {
+          model: UserOrderDetails,
+        },
+        {
+          model: Shop,
+        },
+      ],
+    });
     if (!order) {
       return res.status(404).json({ error: true, message: "Order not found" });
     }
@@ -1098,6 +1110,17 @@ const confirmOrder = async (req, res) => {
         order_status_id: 3,
         createdAt: new Date(),
         updatedAt: new Date(),
+      });
+
+      await Notifications.create({
+        user_id: order.user_id,
+        notifications_type: "order",
+        title: "Xác nhận đơn hàng",
+        thumbnail: order.UserOrderDetails[0].thumbnail,
+        content:`Đơn hàng được xác nhận. Mã đơn hàng: ${order.user_order_id}`,
+        created_at: new Date(),
+        updated_at: new Date(),
+        url: `/user/purchase/order/${order.user_order_id}`,
       });
 
       return res.status(200).json({
@@ -1404,7 +1427,16 @@ const shopCancelOrder = async (req, res) => {
         description: "Hoàn tiền đơn hàng",
       });
     }
-
+    await Notifications.create({
+      user_id: order.user_id,
+      notifications_type: "order",
+      title: "Hủy đơn hàng",
+      thumbnail: order.UserOrderDetails[0].thumbnail,
+      content: `Đơn hàng của bạn đã bị hủy bởi cửa hàng. Mã đơn hàng: ${order.user_order_id}`,
+      created_at: new Date(),
+      updated_at: new Date(),
+      url: `/user/purchase/order/${order.user_order_id}`,
+    });
     return res.status(200).json({
       success: true,
       message: "Hủy đơn hàng thành công",
