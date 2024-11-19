@@ -330,6 +330,7 @@ const getUserData = async (req, res) => {
   try {
     const uid = req.user.user_id;
     console.log("UID:", uid);
+
     const user = await UserAccount.findOne({
       attributes: {
         exclude: ["password"],
@@ -338,6 +339,21 @@ const getUserData = async (req, res) => {
         user_id: uid,
       },
     });
+
+    // const firebaseUser = await admin.auth().getUserByEmail(user.email);
+
+    // // Lấy danh sách các provider đã liên kết
+    // const providerData = firebaseUser.providerData;
+
+    // if (providerData.length === 0) {
+    //   console.log("Không có provider nào liên kết với tài khoản này.");
+    // } else {
+    //   console.log("Các provider liên kết với tài khoản:", providerData);
+    // }
+
+    // // Kiểm tra email hiện tại
+    // console.log("Email hiện tại của người dùng:", firebaseUser.email);
+
     if (user) {
       res.status(200).json({
         success: true,
