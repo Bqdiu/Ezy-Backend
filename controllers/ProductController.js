@@ -22,6 +22,7 @@ const Sequelize = require("sequelize");
 const translate = require("translate-google");
 const { de, fi } = require("translate-google/languages");
 const { Op } = require("sequelize");
+const { model } = require("mongoose");
 const getAllProducts = async (req, res) => {
   try {
     const products = await Product.findAll({
@@ -242,6 +243,7 @@ const getSuggestProducts = async (req, res) => {
       include: [
         {
           model: Shop,
+
           attributes: {
             include: [
               "shop_name",
@@ -1768,6 +1770,94 @@ const deleteSomeProducts = async (req, res) => {
   }
 };
 
+const getTopProductBySubCategoryID = async (req, res) => {
+  try {
+    const { sub_category_id } = req.query;
+    const products = await Product.findAll({
+      where: {
+        sub_category_id,
+        product_status: 1,
+        stock: {
+          [Sequelize.Op.gt]: 0,
+        },
+        stock: { [Sequelize.Op.gt]: 0 },
+      },
+      include: [
+        {
+          model: Shop,
+        },
+      ],
+      limit: 30,
+      order: [["sold", "DESC"]],
+    });
+    const totalReviews = await ProductReview.findAll({
+      where: {
+        "$ProductVarient.product_id$": products.map(
+          (product) => product.product_id
+        ),
+      },
+      attributes: [
+        [sequelize.fn("COUNT", sequelize.col("review_id")), "total_reviews"],
+      ],
+      include: [
+        {
+          model: ProductVarients,
+          attributes: ["product_id", "product_varients_id"],
+        },
+      ],
+      group: ["review_id"],
+    });
+
+    const flashSales = await ShopRegisterFlashSales.findAll({
+      where: {
+        product_id: products.map((product) => product.product_id),
+      },
+      include: [
+        {
+          model: FlashSaleTimerFrame,
+          required: false,
+          where: {
+            status: "active",
+            started_at: { [Sequelize.Op.lte]: new Date() },
+            ended_at: { [Sequelize.Op.gt]: new Date() },
+          },
+        },
+      ],
+      order: [[{ model: FlashSaleTimerFrame }, "ended_at", "DESC"]],
+      limit: 1,
+    });
+
+    const productsWithFlashSales = products.map((product) => {
+      const productFlashSales = flashSales.filter(
+        (sale) =>
+          sale.product_id === product.product_id &&
+          sale.FlashSaleTimeFrame !== null
+      );
+      const totalReview = totalReviews.find(
+        (review) => review.ProductVarient.product_id === product.product_id
+      );
+
+      return {
+        ...product.toJSON(),
+        flashSales: productFlashSales,
+        total_reviews: totalReview ? totalReview.dataValues.total_reviews : 0,
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: productsWithFlashSales,
+      totalReviews,
+    });
+  } catch (error) {
+    console.log("Error getting top product by sub category id: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
 module.exports = {
   getAllProducts,
   getProductDetailsByID,
@@ -1788,4 +1878,5 @@ module.exports = {
   resetProductStock,
   updateBasicInfoProduct,
   deleteSomeProducts,
+  getTopProductBySubCategoryID,
 };

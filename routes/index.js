@@ -19,6 +19,7 @@ const {
   addSubCategory,
   updateSubCategory,
   deleteSubCategory,
+  getTopSubCategory,
 } = require("../controllers/CategoryController");
 const {
   getAllProducts,
@@ -40,6 +41,7 @@ const {
   resetProductStock,
   updateBasicInfoProduct,
   deleteSomeProducts,
+  getTopProductBySubCategoryID,
 } = require("../controllers/ProductController");
 const { getProductReview } = require("../controllers/ProductReviewController");
 const {
@@ -260,6 +262,7 @@ router.get("/get-sub-categories/:sub_category_id", getSubCategoriesByID);
 router.post("/add-sub-category/:category_id", addSubCategory);
 router.put("/update-sub-category/:sub_category_id", updateSubCategory);
 router.delete("/delete-sub-category/:sub_category_id", deleteSubCategory);
+router.get("/get-top-categories", getTopSubCategory);
 
 //------------------Shop--------------------------------
 router.get("/shop-products", getAllProductsOfShop);
@@ -290,6 +293,7 @@ router.post("/update-product-status", updateProductStatus);
 router.post("/reset-product-stock", resetProductStock);
 router.post("/update-basic-info-product", updateBasicInfoProduct);
 router.post("/delete-some-products", deleteSomeProducts);
+router.get("/get-top-products", getTopProductBySubCategoryID);
 
 //-----------------ProductClassify-------------------
 router.get("/classify-products", getProductClassifyByProductID);
@@ -418,7 +422,10 @@ router.get("/sale-events/get-shops/:id", getShopsForEvent);
 router.get("/sale-events/get-vouchers/:id", getVouchersForEvent);
 router.get("/sale-events/get-event-by-id/:id", getEventById);
 router.put("/sale-events/update-event/:id", updateSaleEvent);
-router.get("/sale-events/get-suggest-sale-events-shop", getSuggestSaleEventsForShop);
+router.get(
+  "/sale-events/get-suggest-sale-events-shop",
+  getSuggestSaleEventsForShop
+);
 router.get("/sale-events/check-shop-registed", checkShopRegistedEvent);
 router.get("/sale-events/get-products-registed", getProductsRegistedByCategory);
 router.post("/sale-events/shop-register-sale-event", shopRegisterSaleEvent);

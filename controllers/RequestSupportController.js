@@ -5,7 +5,7 @@ const {
 } = require("../models/Assosiations");
 const sequelize = require("../config/database");
 const { io, userSocketMap } = require("../socket");
-const { su } = require("translate-google/languages");
+
 const getSupportRequest = async (req, res) => {
   try {
     const supportRequests = await RequestSupports.findAll({
@@ -41,6 +41,7 @@ const sendRequestSupport = async (req, res) => {
     });
 
     if (io) {
+      console.log("SOCKET TỒN TẠI NÈEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
       io.emit("newSupportRequest", {
         message: "Có yêu cầu hỗ trợ mới",
         request_support_id: requestSupport.request_support_id,
@@ -78,6 +79,12 @@ const acceptRequestSupport = async (req, res) => {
         message: "Yêu cầu hỗ trợ đã được nhân viên khác chấp nhận",
       });
     }
+    if (requestSupport.status === "closed") {
+      return res.status(400).json({
+        success: false,
+        message: "Yêu cầu hỗ trợ đã quá hạn",
+      });
+    }
     await requestSupport.update({
       resolver_id: user_id,
       status: "processing",
@@ -92,6 +99,7 @@ const acceptRequestSupport = async (req, res) => {
       ],
     });
     if (io) {
+      console.log("SOCKET TỒN TẠI NÈEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
       const socketId = userSocketMap.get(requestSupport.requestor_id);
       if (socketId) {
         console.log("Emitting supportRequestAccepted to", socketId);
@@ -127,10 +135,12 @@ const closeRequestSupport = async (req, res) => {
       status: "done",
     });
     if (io) {
+      console.log("SOCKET TỒN TẠI NÈEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
       const socketSenderId = userSocketMap.get(requestSupport.requestor_id);
       const socketSupporterId = userSocketMap.get(requestSupport.resolver_id);
       if (socketSenderId && socketSupporterId) {
         console.log("Emitting supportRequestClosed to", socketSenderId);
+        console.log("Emitting supportRequestClosed to", socketSupporterId);
         io.to(socketSenderId).emit("supportRequestClosed", {
           message: "Yêu cầu đã được đóng",
         });
@@ -183,10 +193,47 @@ const getRequestById = async (req, res) => {
   }
 };
 
+const checkStatusOfRequest = async (request_support_id) => {
+  try {
+    const requestSupport = await RequestSupports.findOne({
+      where: { request_support_id: request_support_id },
+    });
+    if (!requestSupport) {
+      console.error(`Request with ID ${request_support_id} not found.`);
+      return false;
+    }
+    return requestSupport.status === "waiting";
+  } catch (error) {
+    console.error("Error checking status of request:", error);
+    return false;
+  }
+};
+
+const updateStatusOfRequest = async (request_support_id) => {
+  try {
+    const requestSupport = await RequestSupports.findOne({
+      where: { request_support_id: request_support_id },
+    });
+    if (!requestSupport) {
+      console.error(`Request with ID ${request_support_id} not found.`);
+      return false;
+    }
+    await requestSupport.update({
+      status: "closed",
+    });
+    return true;
+  } catch (error) {
+    console.error("Error updating status of request:", error);
+    return false;
+  }
+};
+
 module.exports = {
   getSupportRequest,
   sendRequestSupport,
   acceptRequestSupport,
   getRequestById,
   closeRequestSupport,
+  checkStatusOfRequest,
+  updateStatusOfRequest,
 };
