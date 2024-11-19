@@ -240,6 +240,10 @@ const {
 
 const {
   getSupportRequest,
+  getRequestById,
+  acceptRequestSupport,
+  sendRequestSupport,
+  closeRequestSupport,
 } = require("../controllers/RequestSupportController");
 const { getCustomizeShop, createCustomize, addImageCustom, deleteImageCustom, deleteCustomizeShop } = require("../controllers/CustomizeShopController");
 
@@ -508,4 +512,8 @@ router.post("/customize-shop/add-images-customize-shop", addImageCustom);
 router.post("/customize-shop/delete-images-customize-shop", deleteImageCustom);
 router.post("/customize-shop/delete-customize-shop", deleteCustomizeShop);
 
+router.get("/request-support/getRequestById", getRequestById);
+router.get("/request-support/accept-request", acceptRequestSupport);
+router.get("/request-support/send-request", sendRequestSupport);
+router.get("/request-support/close-request", closeRequestSupport);
 module.exports = router;

@@ -2,9 +2,13 @@ const express = require("express");
 const { Server } = require("socket.io");
 const http = require("http");
 const { timeStamp, time } = require("console");
-const cron = require('node-cron');
-const { FlashSales, FlashSaleTimerFrame, SaleEvents } = require("../models/Assosiations");
-const { Op } = require('sequelize');
+const cron = require("node-cron");
+const {
+  FlashSales,
+  FlashSaleTimerFrame,
+  SaleEvents,
+} = require("../models/Assosiations");
+const { Op } = require("sequelize");
 
 const {
   deleteOrder,
@@ -29,8 +33,14 @@ const io = new Server(server, {
 });
 
 let orders = {};
+const userSocketMap = new Map();
 io.on("connection", (socket) => {
+  const userId = socket.handshake.query.user_id; // Lấy user ID từ query params
+  if (userId) {
+    userSocketMap.set(userId, socket.id);
+  }
   console.log("New client connected");
+  console.log("userSocketMap", userSocketMap);
 
   socket.on("cancelOrder", async (data) => {
     console.log("cancelOrder", data);
@@ -85,7 +95,7 @@ io.on("connection", (socket) => {
   });
 
   // Cron job chạy mỗi 2 tiếng để kiểm tra cả việc bắt đầu và kết thúc khung giờ flash sale
-  cron.schedule('0 */2 * * *', async () => {
+  cron.schedule("0 */2 * * *", async () => {
     try {
       const currentTime = new Date();
 
@@ -94,40 +104,47 @@ io.on("connection", (socket) => {
         where: {
           started_at: { [Op.lte]: currentTime },
           ended_at: { [Op.gt]: currentTime },
-          status: 'waiting'
-        }
+          status: "waiting",
+        },
       });
 
       for (const timeFrame of timeFramesToStart) {
-        timeFrame.status = 'active';
+        timeFrame.status = "active";
         await timeFrame.save();
 
-        console.log(`Khung giờ ${timeFrame.flash_sale_time_frame_id} đã bắt đầu`);
-        io.emit('flashSaleTimeFrameStarted', { timeFrameId: timeFrame.flash_sale_time_frame_id });
+        console.log(
+          `Khung giờ ${timeFrame.flash_sale_time_frame_id} đã bắt đầu`
+        );
+        io.emit("flashSaleTimeFrameStarted", {
+          timeFrameId: timeFrame.flash_sale_time_frame_id,
+        });
       }
 
       // Tìm các khung giờ flash sale cần kết thúc
       const timeFramesToEnd = await FlashSaleTimerFrame.findAll({
         where: {
           ended_at: { [Op.lte]: currentTime },
-          status: 'active'
-        }
+          status: "active",
+        },
       });
 
       for (const timeFrame of timeFramesToEnd) {
-        timeFrame.status = 'ended';
+        timeFrame.status = "ended";
         await timeFrame.save();
 
-        console.log(`Khung giờ ${timeFrame.flash_sale_time_frame_id} đã kết thúc`);
-        io.emit('flashSaleTimeFrameEnded', { timeFrameId: timeFrame.flash_sale_time_frame_id });
+        console.log(
+          `Khung giờ ${timeFrame.flash_sale_time_frame_id} đã kết thúc`
+        );
+        io.emit("flashSaleTimeFrameEnded", {
+          timeFrameId: timeFrame.flash_sale_time_frame_id,
+        });
       }
-
     } catch (error) {
-      console.error('Lỗi khi cập nhật khung giờ flash sale:', error);
+      console.error("Lỗi khi cập nhật khung giờ flash sale:", error);
     }
   });
 
-  cron.schedule('0 0 * * *', async () => {
+  cron.schedule("0 0 * * *", async () => {
     try {
       const currentTime = new Date();
 
@@ -136,39 +153,38 @@ io.on("connection", (socket) => {
         where: {
           started_at: { [Op.lte]: currentTime },
           ended_at: { [Op.gt]: currentTime },
-          status: 'waiting'
-        }
+          status: "waiting",
+        },
       });
 
       for (const flashSale of flashSalesToStart) {
-        flashSale.status = 'active';
+        flashSale.status = "active";
         await flashSale.save();
 
         console.log(`Flash sale ${flashSale.flash_sales_id} đã bắt đầu.`);
-        io.emit('flashSaleStarted', { flashSaleId: flashSale.flash_sales_id });
+        io.emit("flashSaleStarted", { flashSaleId: flashSale.flash_sales_id });
       }
 
       const flashSalesToEnd = await FlashSales.findAll({
         where: {
           ended_at: { [Op.lte]: currentTime },
-          status: 'active'
-        }
+          status: "active",
+        },
       });
 
       for (const flashSale of flashSalesToEnd) {
-        flashSale.status = 'ended';
+        flashSale.status = "ended";
         await flashSale.save();
 
         console.log(`Flash sale ${flashSale.flash_sales_id} đã kết thúc.`);
-        io.emit('flashSaleEnded', { flashSaleId: flashSale.flash_sales_id });
+        io.emit("flashSaleEnded", { flashSaleId: flashSale.flash_sales_id });
       }
-
     } catch (error) {
-      console.error('Lỗi khi cập nhật trạng thái flash sale:', error);
+      console.error("Lỗi khi cập nhật trạng thái flash sale:", error);
     }
   });
 
-  cron.schedule('0 0 * * *', async () => {
+  cron.schedule("0 0 * * *", async () => {
     try {
       const currentTime = new Date();
 
@@ -178,7 +194,7 @@ io.on("connection", (socket) => {
           started_at: { [Op.lte]: currentTime },
           ended_at: { [Op.gt]: currentTime },
           is_actived: false,
-        }
+        },
       });
 
       for (const event of eventsToStart) {
@@ -186,7 +202,7 @@ io.on("connection", (socket) => {
         await event.save();
 
         console.log(`Sale event ${event.sale_events_id} has started.`);
-        io.emit('saleEventStarted', { saleEventId: event.sale_events_id });
+        io.emit("saleEventStarted", { saleEventId: event.sale_events_id });
       }
 
       // Find events that need to be deactivated today
@@ -194,7 +210,7 @@ io.on("connection", (socket) => {
         where: {
           ended_at: { [Op.lte]: currentTime },
           is_actived: true,
-        }
+        },
       });
 
       for (const event of eventsToEnd) {
@@ -202,16 +218,16 @@ io.on("connection", (socket) => {
         await event.save();
 
         console.log(`Sale event ${event.sale_events_id} has ended.`);
-        io.emit('saleEventEnded', { saleEventId: event.sale_events_id });
+        io.emit("saleEventEnded", { saleEventId: event.sale_events_id });
       }
-
     } catch (error) {
-      console.error('Error updating SaleEvents statuses:', error);
+      console.error("Error updating SaleEvents statuses:", error);
     }
   });
 
   socket.on("disconnect", () => {
     console.log("Client disconnected");
+    userSocketMap.delete(userId);
   });
 });
 
@@ -219,4 +235,5 @@ module.exports = {
   io,
   app,
   server,
+  userSocketMap,
 };
