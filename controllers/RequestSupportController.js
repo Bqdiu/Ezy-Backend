@@ -15,6 +15,7 @@ const getSupportRequest = async (req, res) => {
           attributes: ["full_name"],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
 
     res.status(200).json({
@@ -39,14 +40,14 @@ const sendRequestSupport = async (req, res) => {
       updatedAt: new Date(),
     });
 
-    // if (io) {
-    //   io.emit("newSupportRequest", {
-    //     message: "Có yêu cầu hỗ trợ mới",
-    //     request_support_id: requestSupport.request_support_id,
-    //     requestor_id: user_id,
-    //     status: "waiting",
-    //   });
-    // }
+    if (io) {
+      io.emit("newSupportRequest", {
+        message: "Có yêu cầu hỗ trợ mới",
+        request_support_id: requestSupport.request_support_id,
+        requestor_id: user_id,
+        status: "waiting",
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -117,6 +118,7 @@ const closeRequestSupport = async (req, res) => {
       const socketSenderId = userSocketMap.get(requestSupport.requestor_id);
       const socketSupporterId = userSocketMap.get(requestSupport.resolver_id);
       if (socketSenderId && socketSupporterId) {
+        console.log("Emitting supportRequestClosed to", socketSenderId);
         io.to(socketSenderId).emit("supportRequestClosed", {
           message: "Yêu cầu đã được đóng",
         });
@@ -141,7 +143,9 @@ const closeRequestSupport = async (req, res) => {
 const getRequestById = async (req, res) => {
   try {
     const { request_support_id } = req.query;
-    const requestSupport = await RequestSupports.findByPk(request_support_id);
+    const requestSupport = await RequestSupports.findOne({
+      where: { request_support_id: request_support_id },
+    });
 
     const supporter = await UserAccount.findByPk(requestSupport.resolver_id);
     const sender = await UserAccount.findOne({
