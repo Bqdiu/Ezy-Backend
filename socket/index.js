@@ -9,7 +9,10 @@ const {
   SaleEvents,
 } = require("../models/Assosiations");
 const { Op } = require("sequelize");
-
+// const {
+//   checkStatusOfRequest,
+//   updateStatusOfRequest,
+// } = require("../controllers/RequestSupportController");
 const {
   deleteOrder,
   checkPaid,
@@ -21,6 +24,7 @@ const {
   activateEvents,
   deactivateEvents,
 } = require("../controllers/SaleEventController");
+
 const app = express();
 //**Socket Connection */
 const server = http.createServer(app);

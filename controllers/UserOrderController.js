@@ -40,7 +40,6 @@ const {
 
 const dateFormat = require("dateformat");
 const { io } = require("../socket");
-const { fr, da, ca, no } = require("translate-google/languages");
 
 const statusDescriptions = {
   ready_to_pick: "Mới tạo đơn hàng",
@@ -192,6 +191,7 @@ const deleteOrder = async (orderId, selectedVoucher) => {
       content: `Đơn hàng ${orderId} đã bị hủy do quá thời gian chờ thanh toán`,
       created_at: new Date(),
       updated_at: new Date(),
+      url: `/user/purchase/order/${orderId}`,
     });
     console.log("Đã xóa đơn hàng: ", orderId);
   } catch (error) {
@@ -1117,7 +1117,7 @@ const confirmOrder = async (req, res) => {
         notifications_type: "order",
         title: "Xác nhận đơn hàng",
         thumbnail: order.UserOrderDetails[0].thumbnail,
-        content:`Đơn hàng được xác nhận. Mã đơn hàng: ${order.user_order_id}`,
+        content: `Đơn hàng được xác nhận. Mã đơn hàng: ${order.user_order_id}`,
         created_at: new Date(),
         updated_at: new Date(),
         url: `/user/purchase/order/${order.user_order_id}`,

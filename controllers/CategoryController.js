@@ -1,6 +1,12 @@
 const { model } = require("mongoose");
-const { SubCategory, Category, Product } = require("../models/Assosiations");
+const {
+  SubCategory,
+  Category,
+  Product,
+  Shop,
+} = require("../models/Assosiations");
 const sequelize = require("../config/database");
+const { Sequelize } = require("sequelize");
 
 const getAllCategories = async (req, res) => {
   try {
@@ -385,6 +391,70 @@ const deleteSubCategory = async (req, res) => {
   }
 };
 
+const getTopSubCategory = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+    const topSubCategories = await SubCategory.findAll({
+      attributes: [
+        "sub_category_id",
+        "sub_category_name",
+        [
+          Sequelize.literal(`
+            (SELECT p.thumbnail
+             FROM product p
+             WHERE p.sub_category_id = SubCategory.sub_category_id
+             ORDER BY p.sold DESC
+             LIMIT 1)
+          `),
+          "thumbnail",
+        ],
+        [
+          Sequelize.literal(`
+            (SELECT sum(p.sold)
+             FROM product p
+             WHERE p.sub_category_id = SubCategory.sub_category_id
+             AND p.stock > 0
+             AND p.product_status = 1
+             AND p.sold > 0)
+          `),
+          "total_sold",
+        ],
+      ],
+
+      having: {
+        total_sold: { [Sequelize.Op.gt]: 0 },
+      },
+      order: [[Sequelize.literal("total_sold"), "DESC"]],
+      limit: parseInt(limit, 10),
+      offset,
+    });
+
+    const count = await SubCategory.count({
+      include: [
+        {
+          model: Product,
+          where: {
+            stock: { [Sequelize.Op.gt]: 0 },
+            product_status: 1,
+            sold: { [Sequelize.Op.gt]: 0 },
+          },
+
+          required: true, // Chỉ đếm những danh mục có ít nhất một sản phẩm thỏa mãn điều kiện
+        },
+      ],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+
+    res.status(200).json({ success: true, data: topSubCategories, totalPages });
+  } catch (error) {
+    console.error("Error fetching top subcategories: ", error);
+    res.status(500).json({ error: true, message: error.message || error });
+  }
+};
+
 module.exports = {
   getAllCategories,
   getAllCategoriesWithSubCategories,
@@ -398,4 +468,5 @@ module.exports = {
   addSubCategory,
   updateSubCategory,
   deleteSubCategory,
+  getTopSubCategory,
 };
