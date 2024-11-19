@@ -66,6 +66,18 @@ const acceptRequestSupport = async (req, res) => {
   try {
     const { request_support_id, user_id } = req.query;
     const requestSupport = await RequestSupports.findByPk(request_support_id);
+    if (requestSupport.status === "done") {
+      return res.status(400).json({
+        success: false,
+        message: "Yêu cầu hỗ trợ đã được xử lý",
+      });
+    }
+    if (requestSupport.status === "processing") {
+      return res.status(400).json({
+        success: false,
+        message: "Yêu cầu hỗ trợ đã được nhân viên khác chấp nhận",
+      });
+    }
     await requestSupport.update({
       resolver_id: user_id,
       status: "processing",
