@@ -20,6 +20,7 @@ const UserWallet = sequelize.define(
     balance: {
       type: DataTypes.BIGINT,
       allowNull: false,
+      defaultValue: 0,
     },
     created_at: {
       type: DataTypes.DATE,

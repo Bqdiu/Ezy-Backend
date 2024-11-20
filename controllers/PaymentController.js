@@ -15,6 +15,7 @@ const {
   ShopRegisterFlashSales,
   FlashSaleTimerFrame,
   Notifications,
+  DiscountVoucherUsage,
 } = require("../models/Assosiations");
 const vnpay = require("../services/vnpayService");
 const {
@@ -1339,6 +1340,25 @@ const saveOrder = async (
     });
     discountVoucher.quantity -= 1;
     await discountVoucher.save();
+
+    const [voucherUsage, created] = await DiscountVoucherUsage.findOrCreate({
+      where: {
+        user_id,
+        discount_voucher_id: discountVoucher.discount_voucher_id,
+      },
+      defaults: {
+        usage: voucher.discountVoucher.usage,
+        total_used: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    if (!created) {
+      await voucherUsage.update({
+        total_used: voucherUsage.total_used + 1,
+        updatedAt: new Date(),
+      });
+    }
   }
   if (voucher.shippingVoucher) {
     const shippingVoucher = await DiscountVoucher.findOne({
@@ -1348,6 +1368,24 @@ const saveOrder = async (
     });
     shippingVoucher.quantity -= 1;
     await shippingVoucher.save();
+    const [voucherUsage, created] = await DiscountVoucherUsage.findOrCreate({
+      where: {
+        user_id,
+        discount_voucher_id: voucher.shippingVoucher.discount_voucher_id,
+      },
+      defaults: {
+        usage: voucher.shippingVoucher.usage,
+        total_used: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    if (!created) {
+      await voucherUsage.update({
+        total_used: voucherUsage.total_used + 1,
+        updatedAt: new Date(),
+      });
+    }
   }
 };
 

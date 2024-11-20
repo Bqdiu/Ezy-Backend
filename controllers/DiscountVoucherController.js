@@ -9,6 +9,7 @@ const {
   SaleEventsUser,
   SaleEventsOnCategories,
   ShopRegisterEvents,
+  DiscountVoucherUsage,
 } = require("../models/Assosiations");
 
 const calculateMaxVoucherValue = (voucher) => {
@@ -92,16 +93,34 @@ const getVoucherList = async (req, res) => {
       ],
     });
 
+    const usedVouchers = await DiscountVoucherUsage.findAll({
+      where: {
+        user_id,
+        discount_voucher_id: {
+          [Op.in]: validVouchers.map((voucher) => voucher.discount_voucher_id),
+        },
+      },
+    });
+
     if (validVouchers.length === 0) {
       return res.status(404).json({
         error: true,
         message: "Không có voucher hợp lệ cho sự kiện này",
       });
     }
+
+    const usageMap = usedVouchers.reduce((acc, usage) => {
+      acc[usage.discount_voucher_id] = usage.total_used; // Sử dụng total_used thay vì usage
+      return acc;
+    }, {});
+
     let cartSelected = cart.filter((item) => item.selected === 1);
     const vouchersWithValidity = validVouchers.map((voucher) => {
       const isOrderValueValid =
         totalPayment?.totalPrice >= voucher.min_order_value;
+      const currentUsage = usageMap[voucher.discount_voucher_id] || 0;
+      const maxUsage = voucher.usage;
+      const isUsageValid = currentUsage < maxUsage;
       console.log("totalPayment: ", totalPayment);
       console.log(voucher.min_order_value);
       console.log("isOrderValueValid: ", isOrderValueValid);
@@ -129,7 +148,10 @@ const getVoucherList = async (req, res) => {
       console.log("shopParticipatesInEvent: ", shopParticipatesInEvent);
 
       const isVoucherValid =
-        isOrderValueValid && hasValidCategory && shopParticipatesInEvent;
+        isUsageValid &&
+        isOrderValueValid &&
+        hasValidCategory &&
+        shopParticipatesInEvent;
       console.log("isVoucherValid: ", isVoucherValid);
       return {
         ...voucher.dataValues,

@@ -4,6 +4,8 @@ const {
   UserAddress,
   UserWallet,
   Shop,
+  SaleEventsUser,
+  SaleEvents,
 } = require("../models/Assosiations");
 const { Op } = require("sequelize");
 const admin = require("../firebase/firebaseAdmin");
@@ -266,6 +268,28 @@ const buyerRegister = async (req, res) => {
       created_at: new Date(),
       updated_at: new Date(),
     });
+    const activeEvents = await SaleEvents.findAll({
+      where: {
+        is_actived: true,
+        started_at: {
+          [Op.lte]: new Date(), // Thời gian bắt đầu <= ngày hiện tại
+        },
+        ended_at: {
+          [Op.gt]: new Date(), // Thời gian kết thúc > ngày hiện tại
+        },
+      },
+    });
+    console.log("Active events:", activeEvents);
+
+    if (activeEvents.length > 0) {
+      const eventUserPairs = activeEvents.map((event) => ({
+        user_id: newUser.user_id,
+        sale_events_id: event.sale_events_id,
+      }));
+      console.log("Event user pairs:", eventUserPairs);
+
+      await SaleEventsUser.bulkCreate(eventUserPairs);
+    }
 
     res.status(201).json({
       success: true,
