@@ -248,6 +248,7 @@ const {
   closeRequestSupport,
 } = require("../controllers/RequestSupportController");
 const { getCustomizeShop, createCustomize, addImageCustom, deleteImageCustom, deleteCustomizeShop } = require("../controllers/CustomizeShopController");
+const { getBestSellerShop, getOrderStatistics, getSalesRevenue } = require("../controllers/StatisticalController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -523,4 +524,11 @@ router.get("/request-support/getRequestById", getRequestById);
 router.get("/request-support/accept-request", acceptRequestSupport);
 router.get("/request-support/send-request", sendRequestSupport);
 router.get("/request-support/close-request", closeRequestSupport);
+
+//-----------------Statistical-------------------
+router.get("/statistical/get-best-seller-shop", getBestSellerShop);
+router.get("/statistical/get-order-statistic", getOrderStatistics);
+router.get("/statistical/get-sales-revenue", getSalesRevenue);
+
+
 module.exports = router;

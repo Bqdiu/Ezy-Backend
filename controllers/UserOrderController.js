@@ -1214,17 +1214,15 @@ const buyOrderAgain = async (req, res) => {
         if (product.ProductVarient.Product.product_status === 0) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name}  ${
-              product.classify !== "" && "- " + product.classify
-            } đã bị khóa`,
+            message: `Sản phẩm ${product.varient_name}  ${product.classify !== "" && "- " + product.classify
+              } đã bị khóa`,
           });
         }
         if (stock < product.quantity) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name} ${
-              product.classify !== "" && "- " + product.classify
-            } không đủ hàng`,
+            message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
+              } không đủ hàng`,
           });
         }
         const cartItem = await CartItems.findOne({
@@ -1240,9 +1238,8 @@ const buyOrderAgain = async (req, res) => {
           if (newQuantity > stock) {
             return res.status(400).json({
               error: true,
-              message: `Sản phẩm ${product.varient_name} ${
-                product.classify !== "" && "- " + product.classify
-              } không đủ hàng`,
+              message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
+                } không đủ hàng`,
             });
           }
           // console.log("price: ", newQuantity * discount_price);
@@ -1610,17 +1607,17 @@ const sendRequest = async (req, res) => {
             }
           ),
             product.on_shop_register_flash_sales_id !== null &&
-              (await ShopRegisterFlashSales.decrement(
-                {
-                  sold: product.quantity,
+            (await ShopRegisterFlashSales.decrement(
+              {
+                sold: product.quantity,
+              },
+              {
+                where: {
+                  shop_register_flash_sales_id:
+                    product.on_shop_register_flash_sales_id,
                 },
-                {
-                  where: {
-                    shop_register_flash_sales_id:
-                      product.on_shop_register_flash_sales_id,
-                  },
-                }
-              ));
+              }
+            ));
         })
       );
       if (
@@ -1638,17 +1635,17 @@ const sendRequest = async (req, res) => {
               }
             ),
               product.on_shop_register_flash_sales_id !== null &&
-                (await ShopRegisterFlashSales.decrement(
-                  {
-                    sold: product.quantity,
+              (await ShopRegisterFlashSales.decrement(
+                {
+                  sold: product.quantity,
+                },
+                {
+                  where: {
+                    shop_register_flash_sales_id:
+                      product.on_shop_register_flash_sales_id,
                   },
-                  {
-                    where: {
-                      shop_register_flash_sales_id:
-                        product.on_shop_register_flash_sales_id,
-                    },
-                  }
-                ));
+                }
+              ));
           })
         );
       }
