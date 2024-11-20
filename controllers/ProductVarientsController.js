@@ -151,7 +151,6 @@ const deleteSomeProductVarients = async (req, res) => {
             await transaction.rollback();
             return res.status(404).json({ message: "Not found product_varients_id" });
         }
-
         await transaction.commit();
         res.status(200).json({
             success: true,
@@ -454,7 +453,27 @@ const updateSomeSaleInfoProductVarients = async (req, res) => {
                 transaction
             });
         }
-
+        // Calculate min price and corresponding sale percent
+        const minPrice = Math.min(...prices);
+        const salePercentForMinPrice = sale_percents[prices.indexOf(minPrice)];
+        // Find product_id from first variant
+        const product_varient = await ProductVarients.findOne({
+            where: { product_varients_id: product_varients_ids[0] }
+        });
+        if (!product_varient) {
+            return res.status(404).json({
+                error: true,
+                message: 'Product variant not found'
+            });
+        }
+        // Update base price and sale percent of product
+        await Product.update({
+            base_price: minPrice,
+            sale_percents: salePercentForMinPrice
+        }, {
+            where: { product_id: product_varient.product_id },
+            transaction
+        });
         await transaction.commit();
         res.status(200).json({
             success: true,
