@@ -57,6 +57,10 @@ const DiscountVoucher = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    usage: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
 
     started_at: {
       type: DataTypes.DATE,

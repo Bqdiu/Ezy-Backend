@@ -43,6 +43,7 @@ const ViolationImgs = require("./ViolationImgs");
 const ReturnReason = require("./ReturnReason");
 const ReturnType = require("./ReturnType");
 const FlashSaleTimerFrame = require("./FlashSaleTimeFrame");
+const DiscountVoucherUsage = require("./DiscountVoucherUsage");
 // Thiết lập mối quan hệ
 UserAccount.hasMany(UserAddress, { foreignKey: "user_id" });
 UserAddress.belongsTo(UserAccount, { foreignKey: "user_id" });
@@ -222,6 +223,16 @@ ReturnRequest.belongsTo(ReturnType, { foreignKey: "return_type_id" });
 UserOrder.hasMany(ProductReview, { foreignKey: "user_order_id" });
 ProductReview.belongsTo(UserOrder, { foreignKey: "user_order_id" });
 
+UserAccount.hasMany(DiscountVoucherUsage, { foreignKey: "user_id" });
+DiscountVoucherUsage.belongsTo(UserAccount, { foreignKey: "user_id" });
+
+DiscountVoucher.hasMany(DiscountVoucherUsage, {
+  foreignKey: "discount_voucher_id",
+});
+DiscountVoucherUsage.belongsTo(DiscountVoucher, {
+  foreignKey: "discount_voucher_id",
+});
+
 module.exports = {
   UserAccount,
   UserAddress,
@@ -267,4 +278,5 @@ module.exports = {
   ViolationImgs,
   ViolationTypes,
   ReturnReason,
+  DiscountVoucherUsage,
 };
