@@ -14,6 +14,10 @@ const FlashSales = sequelize.define(
       allowNull: false,
       timezone: "+07:00",
     },
+    thumbnail: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     started_at: {
       type: DataTypes.DATE,
       allowNull: false,
