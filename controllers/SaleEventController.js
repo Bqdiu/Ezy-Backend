@@ -255,6 +255,7 @@ const getVouchersForEvent = async (req, res) => {
                 'discount_value',
                 'discount_max_value',
                 'quantity',
+                'usage',
                 'started_at',
                 'ended_at',
                 'discount_voucher_type_id'

@@ -20,24 +20,22 @@ const getAllFlashSales = async (req, res) => {
   }
 };
 const addFlashSale = async (req, res) => {
-  const { flash_sales_name, description, started_at, ended_at, status } =
-    req.body;
+  const { flash_sales_name, description, started_at, ended_at, status, thumbnail } = req.body;
 
-  if (
-    !flash_sales_name ||
-    !description ||
-    !started_at ||
-    !ended_at ||
-    !status
-  ) {
+  if (!flash_sales_name || !description || !started_at || !ended_at || !status) {
     return res
       .status(400)
       .json({ success: false, message: "Vui lòng cung cấp đầy đủ thông tin." });
   }
 
+  if (!thumbnail) {
+    return res.status(400).json({ success: false, message: "Vui lòng cung cấp thumbnail hợp lệ." });
+  }
+
   try {
     const newFlashSale = await FlashSales.create({
       flash_sales_name,
+      thumbnail,
       description,
       started_at,
       ended_at,
@@ -58,26 +56,25 @@ const addFlashSale = async (req, res) => {
   }
 };
 
+
 const updateFlashSale = async (req, res) => {
   const { id } = req.params;
-  const { flash_sales_name, description, started_at, ended_at, status } =
-    req.body;
+  const { flash_sales_name, description, started_at, ended_at, status, thumbnail } = req.body;
 
   try {
     // Tìm Flash Sale theo ID
     const flashSale = await FlashSales.findByPk(id);
     if (!flashSale) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Flash Sale không tồn tại" });
+      return res.status(404).json({ success: false, message: "Flash Sale không tồn tại" });
     }
 
     // Cập nhật thông tin
-    flashSale.flash_sales_name = flash_sales_name;
-    flashSale.description = description;
-    flashSale.started_at = started_at;
-    flashSale.ended_at = ended_at;
-    flashSale.status = status;
+    flashSale.flash_sales_name = flash_sales_name || flashSale.flash_sales_name;
+    flashSale.description = description || flashSale.description;
+    flashSale.started_at = started_at || flashSale.started_at;
+    flashSale.ended_at = ended_at || flashSale.ended_at;
+    flashSale.status = status || flashSale.status;
+    flashSale.thumbnail = thumbnail || flashSale.thumbnail; // Giữ nguyên nếu không có thumbnail mới
     flashSale.updatedAt = new Date();
 
     // Lưu lại thay đổi
