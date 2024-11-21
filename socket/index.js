@@ -3,10 +3,12 @@ const { Server } = require("socket.io");
 const http = require("http");
 const { timeStamp, time } = require("console");
 const cron = require("node-cron");
+const admin = require("firebase-admin");
 const {
   FlashSales,
   FlashSaleTimerFrame,
   SaleEvents,
+  UserAccount,
 } = require("../models/Assosiations");
 const { Op } = require("sequelize");
 // const {
@@ -228,6 +230,46 @@ io.on("connection", (socket) => {
       console.error("Error updating SaleEvents statuses:", error);
     }
   });
+  
+  // Cron job chạy mỗi giờ để kiểm tra các tài khoản cần mở khóa
+  cron.schedule("0 */1 * * *", async () => {    
+    console.log("Đang kiểm tra các tài khoản cần mở khóa...");
+    const currentTime = new Date();
+  
+    try {
+      const accountsToUnlock = await UserAccount.findAll({
+        where: {
+          is_banned: 1, // Tài khoản đang bị khóa
+          ban_until: { [Op.lte]: currentTime }, // Đã đến thời điểm mở khóa
+          ban_until: { [Op.not]: null }, // Loại bỏ tài khoản bị cấm vĩnh viễn
+        },
+      });
+  
+      for (const account of accountsToUnlock) {
+        account.is_banned = 0; // Gỡ trạng thái khóa
+        account.ban_until = null; // Xóa thời điểm mở khóa
+        await account.save();
+  
+        // Kích hoạt tài khoản trên Firebase
+        try {
+          await admin.auth().updateUser(account.user_id, { disabled: false });
+          console.log(`Tài khoản Firebase ${account.user_id} đã được kích hoạt.`);
+        } catch (firebaseError) {
+          console.error(
+            `Lỗi kích hoạt tài khoản Firebase ${account.user_id}:`,
+            firebaseError.message
+          );
+        }
+  
+        console.log(`Tài khoản ${account.user_id} đã được mở khóa.`);
+      }
+  
+      console.log("Hoàn tất kiểm tra.");
+    } catch (error) {
+      console.error("Lỗi kiểm tra tài khoản cần mở khóa:", error.message);
+    }
+  });
+  
 
   socket.on("disconnect", () => {
     console.log("Client disconnected");
