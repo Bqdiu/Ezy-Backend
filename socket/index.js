@@ -18,6 +18,7 @@ const {
   checkPaid,
   updateBlockStatus,
   checkBlockStatus,
+  processOrdersInBatches,
 } = require("../controllers/UserOrderController");
 
 const {
@@ -226,6 +227,15 @@ io.on("connection", (socket) => {
       }
     } catch (error) {
       console.error("Error updating SaleEvents statuses:", error);
+    }
+  });
+
+  cron.schedule("* * * * *", async () => {
+    console.log("Processing orders in batches...");
+    try {
+      await processOrdersInBatches(10); // Xử lý mỗi lô 10 đơn hàng
+    } catch (error) {
+      console.error("Lỗi trong quá trình xử lý đơn hàng:", error);
     }
   });
 

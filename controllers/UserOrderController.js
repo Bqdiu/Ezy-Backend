@@ -1214,15 +1214,17 @@ const buyOrderAgain = async (req, res) => {
         if (product.ProductVarient.Product.product_status === 0) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name}  ${product.classify !== "" && "- " + product.classify
-              } đã bị khóa`,
+            message: `Sản phẩm ${product.varient_name}  ${
+              product.classify !== "" && "- " + product.classify
+            } đã bị khóa`,
           });
         }
         if (stock < product.quantity) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
-              } không đủ hàng`,
+            message: `Sản phẩm ${product.varient_name} ${
+              product.classify !== "" && "- " + product.classify
+            } không đủ hàng`,
           });
         }
         const cartItem = await CartItems.findOne({
@@ -1238,8 +1240,9 @@ const buyOrderAgain = async (req, res) => {
           if (newQuantity > stock) {
             return res.status(400).json({
               error: true,
-              message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
-                } không đủ hàng`,
+              message: `Sản phẩm ${product.varient_name} ${
+                product.classify !== "" && "- " + product.classify
+              } không đủ hàng`,
             });
           }
           // console.log("price: ", newQuantity * discount_price);
@@ -1607,17 +1610,17 @@ const sendRequest = async (req, res) => {
             }
           ),
             product.on_shop_register_flash_sales_id !== null &&
-            (await ShopRegisterFlashSales.decrement(
-              {
-                sold: product.quantity,
-              },
-              {
-                where: {
-                  shop_register_flash_sales_id:
-                    product.on_shop_register_flash_sales_id,
+              (await ShopRegisterFlashSales.decrement(
+                {
+                  sold: product.quantity,
                 },
-              }
-            ));
+                {
+                  where: {
+                    shop_register_flash_sales_id:
+                      product.on_shop_register_flash_sales_id,
+                  },
+                }
+              ));
         })
       );
       if (
@@ -1635,17 +1638,17 @@ const sendRequest = async (req, res) => {
               }
             ),
               product.on_shop_register_flash_sales_id !== null &&
-              (await ShopRegisterFlashSales.decrement(
-                {
-                  sold: product.quantity,
-                },
-                {
-                  where: {
-                    shop_register_flash_sales_id:
-                      product.on_shop_register_flash_sales_id,
+                (await ShopRegisterFlashSales.decrement(
+                  {
+                    sold: product.quantity,
                   },
-                }
-              ));
+                  {
+                    where: {
+                      shop_register_flash_sales_id:
+                        product.on_shop_register_flash_sales_id,
+                    },
+                  }
+                ));
           })
         );
       }
@@ -1833,6 +1836,355 @@ const redeliveryOrder = async (req, res) => {
   }
 };
 
+const getOrdersCronjob = async (offset, limit) => {
+  try {
+    console.log("offset", offset);
+    console.log("limit", limit);
+    const orders = await UserOrder.findAll({
+      where: {
+        order_status_id: {
+          [Op.ne]: [6, 7],
+        },
+        is_processed: 0,
+      },
+      include: [
+        {
+          model: UserOrderDetails,
+        },
+        {
+          model: Shop,
+        },
+      ],
+      offset,
+      limit,
+    });
+    console.log("orders", orders);
+    const updatedOrders = await Promise.all(
+      orders.map(async (order) => {
+        if (order.order_code !== null) {
+          const code =
+            order.order_return_code !== null
+              ? order.order_return_code
+              : order.order_code;
+          const orderGHNDetailsRes = await getOrderDetailGHN(code);
+          const orderGHNDetails = orderGHNDetailsRes.data;
+
+          if (orderGHNDetails && orderGHNDetails.status) {
+            return {
+              ...order.dataValues,
+              ghn_status: orderGHNDetails.status,
+              ghn_status_description:
+                statusDescriptions[orderGHNDetails.status],
+              updated_date: orderGHNDetails.updated_date,
+            };
+          }
+        }
+        return order;
+      })
+    );
+    console.log("updatedOrders", updatedOrders);
+    return updatedOrders;
+  } catch (error) {
+    console.log("Lỗi khi lấy đơn hàng: ", error);
+    return [];
+  }
+};
+
+const processOrder = async (orderItem) => {
+  try {
+    const user_order_id = orderItem.user_order_id;
+    const order = await UserOrder.findOne({
+      where: {
+        user_order_id,
+      },
+    });
+
+    const createdAt = new Date(orderItem.created_at);
+    const expiredOrderConfirm =
+      createdAt < new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); //2 ngày
+    if (orderItem?.ghn_status !== null || orderItem?.ghn_status !== undefined) {
+      const status = orderItem.ghn_status;
+      console.log("xử lý đơn hàng giao hàng nhanh");
+      if (!order) {
+        console.log("Đơn hàng không tồn tại");
+        return;
+      }
+      const updatedAt = new Date(order.updated_at); // Chuyển đổi updated_at thành Date object
+      const expiredOrder =
+        updatedAt < new Date(Date.now() - 3 * 24 * 60 * 60 * 1000); //7 ngày
+
+      const expiredOrderNotDelivered =
+        updatedAt < new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+
+      if (
+        status === "ready_to_pick" &&
+        order.order_status_id !== 3 &&
+        order.order_status_id !== 7
+      ) {
+        await order.update({
+          order_status_id: 3,
+          updated_at: new Date(),
+        });
+        await OrderStatusHistory.create({
+          user_order_id,
+          order_status_id: 3,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      } else if (
+        status === "picked" &&
+        order.order_status_id !== 4 &&
+        order.order_status_id !== 7
+      ) {
+        await order.update({
+          order_status_id: 4,
+          updated_at: new Date(),
+        });
+
+        await OrderStatusHistory.create({
+          user_order_id,
+          order_status_id: 4,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      } else if (
+        status === "cancel" &&
+        order.order_status_id !== 6 &&
+        order.order_status_id !== 7
+      ) {
+        await order.update({
+          order_status_id: 6,
+          updated_at: new Date(),
+        });
+
+        await OrderStatusHistory.create({
+          user_order_id,
+          order_status_id: 6,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      } else if (
+        status === "delivered" &&
+        order.return_expiration_date === null
+      ) {
+        await order.update({
+          return_expiration_date: new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000
+          ),
+          updated_at: new Date(),
+        });
+      } else if (
+        status === "delivered" &&
+        expiredOrder &&
+        order.order_status_id !== 5
+      ) {
+        await order.update({
+          order_status_id: 5,
+          updated_at: new Date(),
+        });
+
+        await OrderStatusHistory.create({
+          user_order_id,
+          order_status_id: 5,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      } else if (
+        status === "ready_to_pick" &&
+        expiredOrderNotDelivered &&
+        order.order_status_id !== 6
+      ) {
+        await Notifications.create({
+          user_id: order.Shop.user_id,
+          notifications_type: "order",
+          title: "Đơn hàng đã bị hủy",
+          thumbnail: order.UserOrderDetails[0].thumbnail,
+          content: `Đơn hàng ${order.user_order_id} đã bị hủy do quá thời gian giao hàng`,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+        await Notifications.create({
+          user_id: order.user_id,
+          notifications_type: "order",
+          title: "Đơn hàng của bạn đã bị hủy",
+          thumbnail: order.UserOrderDetails[0].thumbnail,
+          content: `Đơn hàng ${order.user_order_id} đã bị hủy do quá thời gian giao hàng`,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+        await order.update({
+          order_status_id: 6,
+          updated_at: new Date(),
+          is_canceled_by: 1,
+          is_processed: 1,
+        });
+
+        await OrderStatusHistory.create({
+          user_order_id,
+          order_status_id: 6,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        if (order.payment_method_id === 3 || order.payment_method_id === 4) {
+          const wallet = await UserWallet.findOne({
+            where: {
+              user_id: order.user_id,
+            },
+          });
+          await wallet.update({
+            balance: wallet.balance + order.final_price,
+          });
+          const transaction = await WalletTransaction.create({
+            user_wallet_id: wallet.user_wallet_id,
+            transaction_type: "Hoàn tiền",
+            amount: order.final_price,
+            transaction_date: new Date(),
+            description: "Hoàn tiền đơn hàng",
+          });
+          await Notifications.create({
+            user_id: wallet.user_id,
+            notifications_type: "wallet",
+            title: "Hoàn tiền vào ví thành công",
+            content: `Giao dịch ${transaction.wallet_transaction_id} thành công. Số tiền: ${verify.vnp_Amount} VNĐ đã được cộng vào ví của bạn.`,
+            created_at: new Date(),
+            updated_at: new Date(),
+          });
+        }
+        await Promise.all(
+          order.UserOrderDetails.map(async (product) => {
+            await ProductVarients.increment(
+              { stock: product.quantity },
+              {
+                where: {
+                  product_varients_id: product.product_varients_id,
+                },
+              }
+            ),
+              product.on_shop_register_flash_sales_id !== null &&
+                (await ShopRegisterFlashSales.decrement(
+                  {
+                    sold: product.quantity,
+                  },
+                  {
+                    where: {
+                      shop_register_flash_sales_id:
+                        product.on_shop_register_flash_sales_id,
+                    },
+                  }
+                ));
+          })
+        );
+      }
+    } else if (orderItem?.order_status_id === 2 && expiredOrderConfirm) {
+      console.log("xử lý đơn hàng chưa duyệt");
+      await Notifications.create({
+        user_id: orderItem.Shop.user_id,
+        notifications_type: "order",
+        title: "Đơn hàng đã bị hủy",
+        thumbnail: orderItem.UserOrderDetails[0].thumbnail,
+        content: `Đơn hàng ${orderItem.user_order_id} đã bị hủy do quá thời gian xác nhận`,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+      await Notifications.create({
+        user_id: orderItem.user_id,
+        notifications_type: "order",
+        title: "Đơn hàng của bạn đã bị hủy",
+        thumbnail: orderItem.UserOrderDetails[0].thumbnail,
+        content: `Đơn hàng ${orderItem.user_order_id} đã bị hủy do quá thời gian xác nhận`,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+      await order.update({
+        order_status_id: 6,
+        updated_at: new Date(),
+        is_canceled_by: 1,
+        is_processed: 1,
+      });
+
+      await OrderStatusHistory.create({
+        user_order_id,
+        order_status_id: 6,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      if (
+        orderItem.payment_method_id === 3 ||
+        orderItem.payment_method_id === 4
+      ) {
+        const wallet = await UserWallet.findOne({
+          where: {
+            user_id: orderItem.user_id,
+          },
+        });
+        await wallet.update({
+          balance: wallet.balance + orderItem.final_price,
+        });
+        const transaction = await WalletTransaction.create({
+          user_wallet_id: wallet.user_wallet_id,
+          transaction_type: "Hoàn tiền",
+          amount: orderItem.final_price,
+          transaction_date: new Date(),
+          description: "Hoàn tiền đơn hàng",
+        });
+        await Notifications.create({
+          user_id: wallet.user_id,
+          notifications_type: "wallet",
+          title: "Hoàn tiền vào ví thành công",
+          content: `Giao dịch ${transaction.wallet_transaction_id} thành công. Số tiền: ${verify.vnp_Amount} VNĐ đã được cộng vào ví của bạn.`,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+      }
+      await Promise.all(
+        orderItem.UserOrderDetails.map(async (product) => {
+          await ProductVarients.increment(
+            { stock: product.quantity },
+            {
+              where: {
+                product_varients_id: product.product_varients_id,
+              },
+            }
+          ),
+            product.on_shop_register_flash_sales_id !== null &&
+              (await ShopRegisterFlashSales.decrement(
+                {
+                  sold: product.quantity,
+                },
+                {
+                  where: {
+                    shop_register_flash_sales_id:
+                      product.on_shop_register_flash_sales_id,
+                  },
+                }
+              ));
+        })
+      );
+    }
+  } catch (error) {
+    console.log("Lỗi khi xử lý đơn hàng: ", error);
+  }
+};
+
+const processOrdersInBatches = async (batchsize) => {
+  let offset = 0;
+  let hasMore = true;
+  while (hasMore) {
+    const orders = await getOrdersCronjob(offset, batchsize);
+    if (orders.length === 0) {
+      hasMore = false;
+    } else {
+      console.log(`Xử lý lô ${offset / batchsize + 1}...`);
+
+      await Promise.all(orders.map((order) => processOrder(order)));
+      offset += batchsize;
+    }
+  }
+  console.log("Đã xử lý xong tất cả đơn hàng.");
+};
+
 module.exports = {
   deleteOrder,
   checkPaid,
@@ -1854,4 +2206,6 @@ module.exports = {
   shopCancelOrder,
   getOrderDetails,
   redeliveryOrder,
+  getOrdersCronjob,
+  processOrdersInBatches,
 };

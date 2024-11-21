@@ -258,7 +258,13 @@ const getActiveFlashSalesClient = async (req, res) => {
       }
     }
 
-    return res.status(200).json({ success: true, data: FlashSaleTimeFrame });
+    return res
+      .status(200)
+      .json({
+        success: true,
+        data: FlashSaleTimeFrame,
+        flashSales: flashSales,
+      });
   } catch (error) {
     console.error("Lỗi khi lấy Flash Sale:", error);
     res
@@ -487,10 +493,23 @@ const getShopRegisteredProductsByFlashSale = async (req, res) => {
         },
         {
           model: Shop,
-          attributes: ["shop_id", "shop_name", "logo_url", "shop_description", "business_email", "phone_number"],
+          attributes: [
+            "shop_id",
+            "shop_name",
+            "logo_url",
+            "shop_description",
+            "business_email",
+            "phone_number",
+          ],
         },
       ],
-      attributes: ["shop_id", "original_price", "flash_sale_price", "quantity", "sold"],
+      attributes: [
+        "shop_id",
+        "original_price",
+        "flash_sale_price",
+        "quantity",
+        "sold",
+      ],
     });
 
     if (registeredProducts.length === 0) {
@@ -506,7 +525,12 @@ const getShopRegisteredProductsByFlashSale = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi khi lấy sản phẩm đã đăng ký:", error);
-    res.status(500).json({ success: false, message: "Đã xảy ra lỗi khi lấy sản phẩm đã đăng ký." });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Đã xảy ra lỗi khi lấy sản phẩm đã đăng ký.",
+      });
   }
 };
 const getSuggestFlashSaleForShop = async (req, res) => {
@@ -536,7 +560,7 @@ const getSuggestFlashSaleForShop = async (req, res) => {
             },
           },
         ],
-      }
+      },
     });
 
     const flashSales = await FlashSales.findAll({
@@ -588,7 +612,10 @@ const getSuggestFlashSaleForShop = async (req, res) => {
       limit,
     });
   } catch (error) {
-    console.error("Lỗi khi gợi ý Flash Sale cho cửa hàng:", error.message || error);
+    console.error(
+      "Lỗi khi gợi ý Flash Sale cho cửa hàng:",
+      error.message || error
+    );
     return res.status(500).json({
       success: false,
       message: "Đã xảy ra lỗi khi gợi ý Flash Sale cho cửa hàng",
@@ -609,5 +636,5 @@ module.exports = {
   getAvailableFlashSalesTimeFrames,
   getProductByTimeFrame,
   getShopRegisteredProductsByFlashSale,
-  getSuggestFlashSaleForShop
+  getSuggestFlashSaleForShop,
 };
