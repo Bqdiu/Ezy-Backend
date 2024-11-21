@@ -1689,7 +1689,7 @@ const sendRequest = async (req, res) => {
           user_id: wallet.user_id,
           notifications_type: "wallet",
           title: "Hoàn tiền vào ví thành công",
-          content: `Giao dịch ${transaction.wallet_transaction_id} thành công. Số tiền: ${verify.vnp_Amount} VNĐ đã được cộng vào ví của bạn.`,
+          content: `Giao dịch ${transaction.wallet_transaction_id} thành công. Số tiền: ${order.final_price} VNĐ đã được cộng vào ví của bạn.`,
           created_at: new Date(),
           updated_at: new Date(),
         });
@@ -1843,7 +1843,8 @@ const getOrdersCronjob = async (offset, limit) => {
     const orders = await UserOrder.findAll({
       where: {
         order_status_id: {
-          [Op.ne]: [6, 7],
+          // [Op.notIn]: [6, 7],
+          [Op.in]: [2, 3, 4, 5],
         },
         is_processed: 0,
       },
@@ -1859,6 +1860,7 @@ const getOrdersCronjob = async (offset, limit) => {
       limit,
     });
     console.log("orders", orders);
+
     const updatedOrders = await Promise.all(
       orders.map(async (order) => {
         if (order.order_code !== null) {
@@ -1882,7 +1884,7 @@ const getOrdersCronjob = async (offset, limit) => {
         return order;
       })
     );
-    console.log("updatedOrders", updatedOrders);
+
     return updatedOrders;
   } catch (error) {
     console.log("Lỗi khi lấy đơn hàng: ", error);
@@ -1892,6 +1894,7 @@ const getOrdersCronjob = async (offset, limit) => {
 
 const processOrder = async (orderItem) => {
   try {
+    console.log(orderItem);
     const user_order_id = orderItem.user_order_id;
     const order = await UserOrder.findOne({
       where: {
@@ -1900,18 +1903,23 @@ const processOrder = async (orderItem) => {
     });
 
     const createdAt = new Date(orderItem.created_at);
+
     const expiredOrderConfirm =
       createdAt < new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); //2 ngày
-    if (orderItem?.ghn_status !== null || orderItem?.ghn_status !== undefined) {
+    console.log(expiredOrderConfirm);
+    if (orderItem?.order_code) {
       const status = orderItem.ghn_status;
-      console.log("xử lý đơn hàng giao hàng nhanh");
+      console.log(
+        "xử lý đơn hàng giao hàng nhanh, mã đơn hàng: ",
+        user_order_id
+      );
       if (!order) {
         console.log("Đơn hàng không tồn tại");
         return;
       }
       const updatedAt = new Date(order.updated_at); // Chuyển đổi updated_at thành Date object
       const expiredOrder =
-        updatedAt < new Date(Date.now() - 3 * 24 * 60 * 60 * 1000); //7 ngày
+        updatedAt < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); //7 ngày
 
       const expiredOrderNotDelivered =
         updatedAt < new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
@@ -2077,7 +2085,7 @@ const processOrder = async (orderItem) => {
         );
       }
     } else if (orderItem?.order_status_id === 2 && expiredOrderConfirm) {
-      console.log("xử lý đơn hàng chưa duyệt");
+      console.log("xử lý đơn hàng chưa duyệt, mã đơn hàng: ", user_order_id);
       await Notifications.create({
         user_id: orderItem.Shop.user_id,
         notifications_type: "order",
@@ -2099,7 +2107,7 @@ const processOrder = async (orderItem) => {
       await order.update({
         order_status_id: 6,
         updated_at: new Date(),
-        is_canceled_by: 1,
+        is_canceled_by: 2,
         is_processed: 1,
       });
 

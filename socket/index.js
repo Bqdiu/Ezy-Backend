@@ -9,7 +9,9 @@ const {
   FlashSaleTimerFrame,
   SaleEvents,
   UserAccount,
+  RequestSupports,
 } = require("../models/Assosiations");
+
 const { Op } = require("sequelize");
 // const {
 //   checkStatusOfRequest,
@@ -97,6 +99,29 @@ io.on("connection", (socket) => {
         console.log(`Đơn hàng ${orderID} đã cập nhật trạng thái thành công.`);
       } else {
         console.log(`Đơn hàng ${orderID} không thể cập nhật trạng thái.`);
+      }
+    }, delay);
+  });
+
+  socket.on("followNewSupportRequest", async (data) => {
+    const { request_support_id, requestor_id, time } = data;
+    const delay = 2 * 60 * 1000; // 2 phút
+    setTimeout(async () => {
+      const isWaiting = await checkStatusOfRequest(request_support_id);
+      if (isWaiting) {
+        const isClosed = await updateStatusOfRequest(request_support_id);
+        if (isClosed) {
+          console.log(
+            `Yêu cầu hỗ trợ ${request_support_id} của ${requestor_id} đã được đóng.`
+          );
+          io.to(userSocketMap.get(requestor_id)).emit("supportRequestClosed", {
+            message: "Yêu cầu của bạn đã quá hạn",
+          });
+        } else {
+          console.log(
+            `Không thể đóng yêu cầu hỗ trợ ${request_support_id} của ${requestor_id}.`
+          );
+        }
       }
     }, delay);
   });
@@ -231,12 +256,12 @@ io.on("connection", (socket) => {
       console.error("Error updating SaleEvents statuses:", error);
     }
   });
-  
+
   // Cron job chạy mỗi giờ để kiểm tra các tài khoản cần mở khóa
-  cron.schedule("0 */1 * * *", async () => {    
+  cron.schedule("0 */1 * * *", async () => {
     console.log("Đang kiểm tra các tài khoản cần mở khóa...");
     const currentTime = new Date();
-  
+
     try {
       const accountsToUnlock = await UserAccount.findAll({
         where: {
@@ -245,34 +270,36 @@ io.on("connection", (socket) => {
           ban_until: { [Op.not]: null }, // Loại bỏ tài khoản bị cấm vĩnh viễn
         },
       });
-  
+
       for (const account of accountsToUnlock) {
         account.is_banned = 0; // Gỡ trạng thái khóa
         account.ban_until = null; // Xóa thời điểm mở khóa
         await account.save();
-  
+
         // Kích hoạt tài khoản trên Firebase
         try {
           await admin.auth().updateUser(account.user_id, { disabled: false });
-          console.log(`Tài khoản Firebase ${account.user_id} đã được kích hoạt.`);
+          console.log(
+            `Tài khoản Firebase ${account.user_id} đã được kích hoạt.`
+          );
         } catch (firebaseError) {
           console.error(
             `Lỗi kích hoạt tài khoản Firebase ${account.user_id}:`,
             firebaseError.message
           );
         }
-  
+
         console.log(`Tài khoản ${account.user_id} đã được mở khóa.`);
       }
-  
+
       console.log("Hoàn tất kiểm tra.");
     } catch (error) {
       console.error("Lỗi kiểm tra tài khoản cần mở khóa:", error.message);
     }
   });
-  
 
-  cron.schedule("* * * * *", async () => {
+  // * * * * *: 1 phút
+  cron.schedule("0 0 * * *", async () => {
     console.log("Processing orders in batches...");
     try {
       await processOrdersInBatches(10); // Xử lý mỗi lô 10 đơn hàng
@@ -286,6 +313,41 @@ io.on("connection", (socket) => {
     userSocketMap.delete(userId);
   });
 });
+
+const checkStatusOfRequest = async (request_support_id) => {
+  try {
+    const requestSupport = await RequestSupports.findOne({
+      where: { request_support_id: request_support_id },
+    });
+    if (!requestSupport) {
+      console.error(`Request with ID ${request_support_id} not found.`);
+      return false;
+    }
+    return requestSupport.status === "waiting";
+  } catch (error) {
+    console.error("Error checking status of request:", error);
+    return false;
+  }
+};
+
+const updateStatusOfRequest = async (request_support_id) => {
+  try {
+    const requestSupport = await RequestSupports.findOne({
+      where: { request_support_id: request_support_id },
+    });
+    if (!requestSupport) {
+      console.error(`Request with ID ${request_support_id} not found.`);
+      return false;
+    }
+    await requestSupport.update({
+      status: "closed",
+    });
+    return true;
+  } catch (error) {
+    console.error("Error updating status of request:", error);
+    return false;
+  }
+};
 
 module.exports = {
   io,
