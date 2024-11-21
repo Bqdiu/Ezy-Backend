@@ -1,6 +1,8 @@
 const {
     Product,
     UserOrder,
+    UserOrderDetails,
+    ProductVarients,
 } = require("../models/Assosiations");
 
 const sequelize = require("../config/database");
@@ -17,14 +19,56 @@ const getBestSellerShop = async (req, res) => {
         const products = await Product.findAll({
             where: {
                 shop_id,
+                sold: {
+                    [Op.gt]: 0,
+                },
             },
-            limit: 10,
+            include: [
+                {
+                    model: ProductVarients,
+                    include: [
+                        {
+                            model: UserOrderDetails,
+                            include: [
+                                {
+                                    model: UserOrder,
+                                    where: {
+                                        order_status_id: 5,
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
             order: [["sold", "DESC"]],
+            limit: 5,
         });
+
+        // get sum total price of each UserOrder in ProductVarients if UserOrde is not null
+
+        const total_price_revenue = products.map((product) => {
+            const total_price = product.ProductVarients.map((product_varient) => {
+                const total_price = product_varient.UserOrderDetails.reduce((acc, userOrderDetail) => {
+                    if (userOrderDetail.UserOrder) {
+                        return acc + userOrderDetail.UserOrder.total_price;
+                    }
+                    return acc;
+                }, 0);
+                return total_price;
+            });
+            return total_price.reduce((acc, price) => acc + price, 0);
+        }
+        );
+
+
 
         res.status(200).json({
             success: true,
-            data: products,
+            data: {
+                products: products, 
+                total_price_revenue: total_price_revenue,
+            },
         });
     } catch (error) {
         console.log("Error getting best seller shop: ", error);
@@ -129,19 +173,26 @@ const getSalesRevenue = async (req, res) => {
     if (!shop_id) {
         return res.status(400).json({
             error: true,
-            message: "Missing shop_id",
+            message: "Thiếu shop_id",
         });
     }
 
-    // Xác định khoảng thời gian mặc định là 3 tháng gần nhất
     const now = new Date();
-    const defaultEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Ngày cuối cùng của tháng hiện tại
-    const defaultStartDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Ngày đầu tiên của tháng 3 tháng trước
+    const defaultEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Ngày cuối của tháng hiện tại
+    const defaultStartDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Ngày đầu của 3 tháng trước
 
-    const parsedStartDate = start_date ? new Date(start_date) : defaultStartDate;
-    const parsedEndDate = end_date ? new Date(end_date) : defaultEndDate;
+    const parsedStartDate = start_date && !isNaN(new Date(start_date)) ? new Date(start_date) : defaultStartDate;
+    const parsedEndDate = end_date && !isNaN(new Date(end_date)) ? new Date(end_date) : defaultEndDate;
+
+    if (parsedStartDate > parsedEndDate) {
+        return res.status(400).json({
+            error: true,
+            message: "start_date phải trước end_date",
+        });
+    }
 
     try {
+        // Revenue by month
         const revenueByMonth = await UserOrder.findAll({
             attributes: [
                 [fn("MONTH", col("created_at")), "month"],
@@ -155,9 +206,10 @@ const getSalesRevenue = async (req, res) => {
                     [Op.between]: [parsedStartDate, parsedEndDate],
                 },
             },
-            group: ["month", "year"],
+            group: [fn("MONTH", col("created_at")), fn("YEAR", col("created_at"))],
         });
 
+        // Revenue by year
         const revenueByYear = await UserOrder.findAll({
             attributes: [
                 [fn("YEAR", col("created_at")), "year"],
@@ -170,26 +222,70 @@ const getSalesRevenue = async (req, res) => {
                     [Op.between]: [parsedStartDate, parsedEndDate],
                 },
             },
-            group: ["year"],
-        })
+            group: [fn("YEAR", col("created_at"))],
+        });
 
+        // Revenue by day
+        const revenueByDay = await UserOrder.findAll({
+            attributes: [
+                [fn("DAY", col("created_at")), "day"],
+                [fn("MONTH", col("created_at")), "month"],
+                [fn("YEAR", col("created_at")), "year"],
+                [fn("SUM", col("total_price")), "total_revenue"],
+            ],
+            where: {
+                shop_id,
+                order_status_id: 5,
+                created_at: {
+                    [Op.between]: [parsedStartDate, parsedEndDate],
+                },
+            },
+            group: [
+                fn("DAY", col("created_at")),
+                fn("MONTH", col("created_at")),
+                fn("YEAR", col("created_at")),
+            ],
+        });
+
+        // Revenue by week
+        const revenueByWeek = await UserOrder.findAll({
+            attributes: [
+                [fn("WEEK", col("created_at")), "week"],
+                [fn("YEAR", col("created_at")), "year"],
+                [fn("SUM", col("total_price")), "total_revenue"],
+            ],
+            where: {
+                shop_id,
+                order_status_id: 5,
+                created_at: {
+                    [Op.between]: [parsedStartDate, parsedEndDate],
+                },
+            },
+            group: [fn("WEEK", col("created_at")), fn("YEAR", col("created_at"))],
+        });
         return res.status(200).json({
             success: true,
             data: {
+                revenueByDay,
+                revenueByWeek,
                 revenueByMonth,
                 revenueByYear,
                 start_date: parsedStartDate,
                 end_date: parsedEndDate,
-            }
+            },
         });
-
     } catch (error) {
+        console.error(error); // Ghi log lỗi
         return res.status(500).json({
             error: true,
-            message: error.message || error,
+            message: "Đã xảy ra lỗi khi lấy doanh thu.",
         });
     }
 };
+
+
+
+
 
 module.exports = {
     getBestSellerShop,
