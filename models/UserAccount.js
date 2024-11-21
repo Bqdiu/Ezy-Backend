@@ -84,6 +84,10 @@ const UserAccount = sequelize.define(
       type: DataTypes.TINYINT,
       defaultValue: 0,
     },
+    ban_until: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    }
   },
   {
     tableName: "user_account",

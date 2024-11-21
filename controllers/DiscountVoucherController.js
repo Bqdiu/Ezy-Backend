@@ -216,6 +216,7 @@ const addVoucher = async (req, res) => {
       discount_value,
       discount_max_value,
       quantity,
+      usage,
       started_at,
       ended_at,
     } = req.body;
@@ -231,6 +232,7 @@ const addVoucher = async (req, res) => {
       discount_value,
       discount_max_value,
       quantity,
+      usage,
       started_at,
       ended_at,
     });
@@ -268,6 +270,7 @@ const addVoucherByEventId = async (req, res) => {
       discount_value,
       discount_max_value,
       quantity,
+      usage,
       started_at,
       ended_at,
     } = req.body;
@@ -295,6 +298,7 @@ const addVoucherByEventId = async (req, res) => {
       discount_value,
       discount_max_value,
       quantity,
+      usage,
       started_at: new Date(started_at),
       ended_at: new Date(ended_at),
     });
@@ -321,6 +325,7 @@ const updateVoucher = async (req, res) => {
       discount_value,
       discount_max_value,
       quantity,
+      usage,
       started_at,
       ended_at,
     } = req.body;
@@ -344,6 +349,7 @@ const updateVoucher = async (req, res) => {
       discount_value,
       discount_max_value,
       quantity,
+      usage,
       started_at: started_at ? new Date(started_at) : voucher.started_at,
       ended_at: ended_at ? new Date(ended_at) : voucher.ended_at,
     });

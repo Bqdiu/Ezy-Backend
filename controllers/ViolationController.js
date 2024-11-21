@@ -1,6 +1,7 @@
 const sequelize = require("../config/database");
 const admin = require("../firebase/firebaseAdmin");
 const { Op } = require("sequelize");
+const nodemailer = require("nodemailer");
 const {
   Violations,
   ViolationTypes,
@@ -16,17 +17,16 @@ const getReportedCustomers = async (req, res) => {
   try {
     const reportedCustomers = await UserAccount.findAll({
       where: { role_id: 1 }, // Chỉ lấy khách hàng
-      attributes: ["user_id", "username", "full_name", "email"],
+      attributes: ["user_id", "username", "full_name", "email", "is_banned"],
       include: [
         {
           model: Violations,
-          required: true, // Chỉ lấy user có vi phạm
           attributes: ["status"],
         },
       ],
     });
 
-    // Tính toán số lượng vi phạm
+    // Tính toán số lượng vi phạm và phân loại trạng thái
     const customersData = reportedCustomers.map((user) => {
       const pendingCount = user.Violations.filter((v) => v.status === "Chưa xử lý").length;
       const resolvedCount = user.Violations.filter((v) => v.status === "Đã xử lý").length;
@@ -40,15 +40,13 @@ const getReportedCustomers = async (req, res) => {
         resolved_count: resolvedCount,
         total_violations: pendingCount + resolvedCount,
         role_id: user.role_id,
+        is_banned: user.is_banned, // Thêm trạng thái khóa
       };
     });
 
-    // Lọc user có total_violations > 0
-    const filteredCustomers = customersData.filter((user) => user.total_violations > 0);
-
     res.status(200).json({
       success: true,
-      data: filteredCustomers,
+      data: customersData,
     });
   } catch (error) {
     console.error("Error fetching reported customers:", error);
@@ -65,14 +63,12 @@ const getShopsWithViolations = async (req, res) => {
       include: [
         {
           model: UserAccount,
-          where: { role_id: 2 },
-          attributes: ["user_id", "username", "full_name", "email"],
+          where: { role_id: 2 }, // Chủ shop
+          attributes: ["user_id", "username", "full_name", "email", "is_banned"],
           include: [
             {
               model: Violations,
-              required: true,
-              where: { status: "Chưa xử lý" },
-              attributes: ["violation_id", "date_reported", "status", "notes", "sender_id"], // Chỉ lấy sender_id
+              attributes: ["violation_id", "status", "date_reported", "notes", "sender_id"],
               include: [
                 {
                   model: ViolationTypes,
@@ -91,18 +87,10 @@ const getShopsWithViolations = async (req, res) => {
 
     const shopData = shopsWithViolations.map((shop) => {
       const owner = shop.UserAccount;
-      const violation_count = owner.Violations.length;
+      const violations = owner.Violations;
 
-      const violations = owner.Violations.map((violation) => ({
-        violation_id: violation.violation_id,
-        sender_id: violation.sender_id, // Chỉ trả về mã người gửi
-        violation_type: violation.ViolationType.violation_name,
-        priority_level: violation.ViolationType.priority_level,
-        date_reported: violation.date_reported,
-        status: violation.status,
-        notes: violation.notes,
-        imgs: violation.ViolationImgs.map((img) => img.img_url),
-      }));
+      const pendingCount = violations.filter((v) => v.status === "Chưa xử lý").length;
+      const resolvedCount = violations.filter((v) => v.status === "Đã xử lý").length;
 
       return {
         shop_id: shop.shop_id,
@@ -110,8 +98,18 @@ const getShopsWithViolations = async (req, res) => {
         owner_id: owner.user_id,
         owner_name: owner.full_name,
         email: owner.email,
-        violation_count,
-        violations,
+        is_banned: owner.is_banned,
+        pending_count: pendingCount,
+        resolved_count: resolvedCount,
+        violations: violations.map((v) => ({
+          violation_id: v.violation_id,
+          violation_type: v.ViolationType.violation_name,
+          priority_level: v.ViolationType.priority_level,
+          date_reported: v.date_reported,
+          status: v.status,
+          notes: v.notes,
+          imgs: v.ViolationImgs.map((img) => img.img_url),
+        })),
       };
     });
 
@@ -120,10 +118,10 @@ const getShopsWithViolations = async (req, res) => {
       data: shopData,
     });
   } catch (error) {
-    console.error("Error fetching shops with violations:", error);
+    console.error("Error fetching shop violations:", error);
     res.status(500).json({
-      error: true,
-      message: error.message || "An error occurred",
+      success: false,
+      message: "An error occurred",
     });
   }
 };
@@ -231,6 +229,31 @@ const sendViolation = async (req, res) => {
     });
   }
 };
+const getReportedShops = async (req, res) => {
+  try {
+    const reportedShops = await UserAccount.findAll({
+      where: { role_id: 2 },
+      include: [
+        {
+          model: Violations,
+          attributes: ["status", "violation_type", "notes", "resolved_date"],
+        },
+      ],
+    });
+
+    const formattedData = reportedShops.map((shop) => ({
+      user_id: shop.user_id,
+      full_name: shop.full_name,
+      email: shop.email,
+      pending_count: shop.Violations.filter((v) => v.status === "Chưa xử lý").length,
+      resolved_count: shop.Violations.filter((v) => v.status === "Đã xử lý").length,
+    }));
+
+    res.status(200).json({ success: true, data: formattedData });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error fetching shop violations" });
+  }
+};
 
 const getUserViolations = async (req, res) => {
   const { userId } = req.params;
@@ -289,6 +312,7 @@ const updateStatusViolation = async (req, res) => {
   const { reportId, updated_by_id } = req.body;
 
   try {
+    // Tìm báo cáo theo ID
     const report = await Violations.findOne({ where: { violation_id: reportId } });
 
     if (!report) {
@@ -299,15 +323,28 @@ const updateStatusViolation = async (req, res) => {
     report.resolved_date = new Date();
     await report.save();
 
+    // Tìm thông tin người vi phạm
+    const violator = await UserAccount.findOne({ where: { user_id: report.user_id } });
+    if (!violator) {
+      return res.status(404).json({ success: false, message: "Người vi phạm không tồn tại." });
+    }
+
+    // Gọi logic xử lý vi phạm
     const result = await processViolationPolicy(report.user_id, report.violation_type_id, updated_by_id);
+
+    // Gửi email thông báo
+    const subject = "Thông báo xử lý vi phạm";
+    const text = `Kính gửi ${violator.full_name},\n\nBáo cáo vi phạm của bạn đã được xử lý. Quyết định: ${result.penalty}.\nNếu bạn có thắc mắc, vui lòng liên hệ với bộ phận hỗ trợ.\n\nTrân trọng,\nHệ thống quản lý.`; 
+
+    await sendEmail(violator.email, subject, text);
 
     res.status(200).json({
       success: true,
-      message: `Báo cáo với ID ${reportId} đã được xử lý.`,
+      message: `Báo cáo với ID ${reportId} đã được xử lý và email đã được gửi.`,
       result,
     });
   } catch (error) {
-    console.error("Error resolving report:", error);
+    console.error("Error resolving report or sending email:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Đã xảy ra lỗi khi xử lý báo cáo.",
@@ -318,51 +355,34 @@ const updateStatusViolation = async (req, res) => {
 
 const processViolationPolicy = async (userId, violationTypeId, currentAdminId) => {
   try {
-    // Đếm số lần vi phạm cùng loại
     const violationCount = await ViolationHistory.count({
       where: { violator_id: userId, action_type: violationTypeId },
     });
 
     let penalty = "Cảnh báo";
-    let banDuration = 0;
+    let banUntil = null; // Không khóa
 
-    // Áp dụng chính sách
+    // Áp dụng chính sách vi phạm
     if (violationCount === 2) {
       penalty = "Khóa tài khoản 3 ngày";
-      banDuration = 3;
+      banUntil = new Date();
+      banUntil.setDate(banUntil.getDate() + 3); // Khóa 3 ngày
     } else if (violationCount === 3) {
       penalty = "Khóa tài khoản 7 ngày";
-      banDuration = 7;
+      banUntil = new Date();
+      banUntil.setDate(banUntil.getDate() + 7); // Khóa 7 ngày
     } else if (violationCount === 4) {
       penalty = "Khóa tài khoản 30 ngày";
-      banDuration = 30;
+      banUntil = new Date();
+      banUntil.setDate(banUntil.getDate() + 30); // Khóa 30 ngày
     } else if (violationCount >= 5) {
       penalty = "Cấm vĩnh viễn";
+      banUntil = null; // Đặt là null để biểu thị cấm vĩnh viễn
     }
 
-    // Nếu quyết định là khóa tài khoản hoặc cấm vĩnh viễn
-    if (banDuration > 0 || penalty === "Cấm vĩnh viễn") {
-      const user = await UserAccount.findOne({ where: { user_id: userId } });
-      if (!user) {
-        throw new Error("Tài khoản không tồn tại.");
-      }
-
-      // Cập nhật trạng thái trong cơ sở dữ liệu
-      user.is_banned = true;
-
-      // Nếu không phải cấm vĩnh viễn, đặt ngày hết hạn khóa tài khoản
-      if (banDuration > 0) {
-        const banUntil = new Date();
-        banUntil.setDate(banUntil.getDate() + banDuration);
-        user.ban_until = banUntil;
-      } else {
-        user.ban_until = null; // Cấm vĩnh viễn
-      }
-
-      await user.save();
-
-      // Vô hiệu hóa tài khoản trên Firebase
-      await admin.auth().updateUser(userId, { disabled: true });
+    // Cập nhật trạng thái tài khoản nếu cần
+    if (banUntil !== null || penalty === "Cấm vĩnh viễn") {
+      await lockAccount(userId, banUntil);
     }
 
     // Lưu lịch sử xử phạt
@@ -374,12 +394,32 @@ const processViolationPolicy = async (userId, violationTypeId, currentAdminId) =
       updated_by_id: currentAdminId,
     });
 
-    return { penalty, banDuration };
+    return { penalty, banUntil };
   } catch (error) {
-    console.error("Error processing violation policy:", error);
+    console.error("Lỗi xử lý chính sách vi phạm:", error.message);
     throw error;
   }
 };
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.google_email,
+    pass: process.env.google_app_password,
+  },
+});
+const sendEmail = async (to, subject, text) => {
+  const mailOptions = {
+    from: "your-email@gmail.com", // Email gửi
+    to,                          // Email người nhận
+    subject,                     // Tiêu đề
+    text,                        // Nội dung
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
+
 module.exports = {
   getReportedCustomers,
   getShopsWithViolations,
