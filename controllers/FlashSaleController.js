@@ -20,16 +20,31 @@ const getAllFlashSales = async (req, res) => {
   }
 };
 const addFlashSale = async (req, res) => {
-  const { flash_sales_name, description, started_at, ended_at, status, thumbnail } = req.body;
+  const {
+    flash_sales_name,
+    description,
+    started_at,
+    ended_at,
+    status,
+    thumbnail,
+  } = req.body;
 
-  if (!flash_sales_name || !description || !started_at || !ended_at || !status) {
+  if (
+    !flash_sales_name ||
+    !description ||
+    !started_at ||
+    !ended_at ||
+    !status
+  ) {
     return res
       .status(400)
       .json({ success: false, message: "Vui lòng cung cấp đầy đủ thông tin." });
   }
 
   if (!thumbnail) {
-    return res.status(400).json({ success: false, message: "Vui lòng cung cấp thumbnail hợp lệ." });
+    return res
+      .status(400)
+      .json({ success: false, message: "Vui lòng cung cấp thumbnail hợp lệ." });
   }
 
   try {
@@ -56,16 +71,24 @@ const addFlashSale = async (req, res) => {
   }
 };
 
-
 const updateFlashSale = async (req, res) => {
   const { id } = req.params;
-  const { flash_sales_name, description, started_at, ended_at, status, thumbnail } = req.body;
+  const {
+    flash_sales_name,
+    description,
+    started_at,
+    ended_at,
+    status,
+    thumbnail,
+  } = req.body;
 
   try {
     // Tìm Flash Sale theo ID
     const flashSale = await FlashSales.findByPk(id);
     if (!flashSale) {
-      return res.status(404).json({ success: false, message: "Flash Sale không tồn tại" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Flash Sale không tồn tại" });
     }
 
     // Cập nhật thông tin
@@ -132,25 +155,27 @@ const getActiveFlashSalesClient = async (req, res) => {
   try {
     let flashSales = await FlashSales.findOne({
       where: {
-        [Op.or]: [
-          {
-            status: "active",
-            started_at: {
-              [Op.lte]: new Date(), // started_at <= thời gian hiện tại
-            },
-            ended_at: {
-              [Op.gt]: new Date(), // ended_at > thời gian hiện tại
-            },
-          },
-          {
-            status: "waiting",
-            started_at: {
-              [Op.gt]: new Date(), // started_at > thời gian hiện tại
-            },
-          },
-        ],
+        status: "active",
+        started_at: {
+          [Op.lte]: new Date(), // started_at <= thời gian hiện tại
+        },
+        ended_at: {
+          [Op.gt]: new Date(), // ended_at > thời gian hiện tại
+        },
       },
     });
+    if (!flashSales) {
+      flashSales = await FlashSales.findOne({
+        where: {
+          status: "waiting",
+          started_at: {
+            [Op.gt]: new Date(), // started_at > thời gian hiện tại
+          },
+        },
+        order: [["started_at", "ASC"]],
+        limit: 1,
+      });
+    }
 
     if (!flashSales) {
       flashSales = await FlashSales.findOne({
@@ -255,13 +280,11 @@ const getActiveFlashSalesClient = async (req, res) => {
       }
     }
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        data: FlashSaleTimeFrame,
-        flashSales: flashSales,
-      });
+    return res.status(200).json({
+      success: true,
+      data: FlashSaleTimeFrame,
+      flashSales: flashSales,
+    });
   } catch (error) {
     console.error("Lỗi khi lấy Flash Sale:", error);
     res
@@ -522,12 +545,10 @@ const getShopRegisteredProductsByFlashSale = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi khi lấy sản phẩm đã đăng ký:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Đã xảy ra lỗi khi lấy sản phẩm đã đăng ký.",
-      });
+    res.status(500).json({
+      success: false,
+      message: "Đã xảy ra lỗi khi lấy sản phẩm đã đăng ký.",
+    });
   }
 };
 const getSuggestFlashSaleForShop = async (req, res) => {
