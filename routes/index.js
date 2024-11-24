@@ -221,6 +221,9 @@ const {
   sendViolation,
   getUserViolations,
   updateStatusViolation,
+  markReportAsViewed,
+  revokeAccountViolationHandling,
+  addViolationHistory
 } = require("../controllers/ViolationController");
 const {
   getReturnRequest,
@@ -248,7 +251,12 @@ const {
   closeRequestSupport,
 } = require("../controllers/RequestSupportController");
 const { getCustomizeShop, createCustomize, addImageCustom, deleteImageCustom, deleteCustomizeShop } = require("../controllers/CustomizeShopController");
-const { getBestSellerShop, getOrderStatistics, getSalesRevenue } = require("../controllers/StatisticalController");
+const { 
+  getBestSellerShop, 
+  getOrderStatistics, 
+  getSalesRevenue,
+  getPlatformRevenue
+} = require("../controllers/StatisticalController");
 
 //------------------Categories-----------------------
 router.get("/categories", getAllCategories);
@@ -486,6 +494,9 @@ router.get("/violations/get-violation-types", getViolationType);
 router.post("/violations/send-violation", sendViolation);
 router.get("/violations/user/:userId", getUserViolations);
 router.put("/violations/update-status", updateStatusViolation);
+router.put("/violations/mark-as-viewed", markReportAsViewed);
+router.put("/violations/revoke-account/:id", revokeAccountViolationHandling);
+router.post("/violations/add-violation-history", addViolationHistory);
 
 //-----------------ReturnRequest-------------------
 router.post("/return-request/get-return-request", getReturnRequest);
@@ -529,6 +540,6 @@ router.get("/request-support/close-request", closeRequestSupport);
 router.get("/statistical/get-best-seller-shop", getBestSellerShop);
 router.get("/statistical/get-order-statistic", getOrderStatistics);
 router.get("/statistical/get-sales-revenue", getSalesRevenue);
-
+router.get("/statistical/get-platform-revenue", getPlatformRevenue);
 
 module.exports = router;
