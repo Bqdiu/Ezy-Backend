@@ -66,6 +66,7 @@ const {
   getAddresses,
   getDefaultAddress,
   getUserDataByUserId,
+  createUser,
 } = require("../controllers/UserController");
 const {
   getAllRole,
@@ -378,6 +379,7 @@ router.post("/check-otp", checkOTP);
 router.post("/fetch_user_data", authenticate, getUserData);
 router.post("/logout", authenticate, logOut);
 router.post("/update-setup-status", authenticate, updateSetupStatus);
+router.post("/create-user", createUser);
 //-----------------Address-----------------
 router.get("/address/get-address", getAddresses);
 router.post("/address/add-address", addAddress);

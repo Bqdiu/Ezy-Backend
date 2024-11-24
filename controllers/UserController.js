@@ -890,6 +890,81 @@ const getDefaultAddress = async (req, res) => {
   }
 };
 
+const createUser = async (req, res) => {
+  const {
+    user_id,
+    username,
+    fullname,
+    email,
+    phoneNumber = null,
+    gender = null,
+    dob = null,
+    isVerified = 0,
+    avtUrl = null,
+    role_id,
+  } = req.body;
+
+  console.log("Request body:", req.body);
+
+  // Kiểm tra các trường bắt buộc
+  if (!email || !username || !fullname || !role_id) {
+    return res.status(400).json({
+      error: true,
+      message: "Email, username, fullname và role_id là bắt buộc.",
+    });
+  }
+
+  try {
+    // Kiểm tra xem user đã tồn tại chưa
+    const userExists = await UserAccount.findOne({
+      where: {
+        [Op.or]: [{ email: email }, { username: username }],
+      },
+    });
+
+    if (userExists) {
+      return res.status(400).json({
+        error: true,
+        message: "User đã tồn tại.",
+      });
+    }
+
+    // Tạo user mới
+    const newUser = await UserAccount.create({
+      user_id,
+      username,
+      full_name: fullname,
+      email,
+      phone_number: phoneNumber,
+      gender,
+      dob,
+      role_id, // Vai trò được truyền từ request
+      avt_url: avtUrl,
+      isVerified,
+    });
+
+    // Tạo ví cho user
+    await UserWallet.create({
+      user_id: newUser.user_id,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    res.status(201).json({
+      success: true,
+      user: newUser,
+      message: "User được tạo thành công.",
+    });
+  } catch (error) {
+    console.error("Lỗi khi tạo user:", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || "Đã xảy ra lỗi.",
+    });
+  }
+};
+
+
 module.exports = {
   getAllUser,
   checkEmailExists,
@@ -912,4 +987,5 @@ module.exports = {
   removeAddress,
   getDefaultAddress,
   getUserDataByUserId,
+  createUser,
 };
