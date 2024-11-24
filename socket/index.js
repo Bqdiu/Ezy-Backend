@@ -10,9 +10,13 @@ const {
   SaleEvents,
   UserAccount,
   RequestSupports,
+  UserOrder,
+  Shop,
+  UserWallet,
+  WalletTransaction,
 } = require("../models/Assosiations");
 
-const { Op } = require("sequelize");
+const { Op, fn, col } = require("sequelize");
 // const {
 //   checkStatusOfRequest,
 //   updateStatusOfRequest,
@@ -20,7 +24,7 @@ const { Op } = require("sequelize");
 const {
   deleteOrder,
   checkPaid,
-  updateBlockStatus,
+  updateBlockStatus, 
   checkBlockStatus,
   processOrdersInBatches,
 } = require("../controllers/UserOrderController");
@@ -348,6 +352,73 @@ const updateStatusOfRequest = async (request_support_id) => {
     return false;
   }
 };
+
+cron.schedule("* * * * MON", async () => {
+  console.log("Running weekly shop revenue distribution...");
+
+  const today = new Date();
+  const lastWeek = new Date(today);
+  lastWeek.setDate(today.getDate() - 7);
+
+  try {
+    // Fetch all shops
+    const shops = await Shop.findAll({
+      include: [
+        {
+          model: UserAccount,
+          where: { role_id: 2 }, // Shop owners
+        },
+      ],
+    });
+
+    for (const shop of shops) {
+      const shopId = shop.shop_id;
+      const ownerId = shop.UserAccount.user_id;
+
+      // Calculate total revenue for the last 7 days
+      const totalRevenueData = await UserOrder.findAll({
+        attributes: [[fn("SUM", col("total_price")), "total_revenue"]],
+        where: {
+          shop_id: shopId,
+          order_status_id: 5,
+          created_at: {
+            [Op.between]: [lastWeek, today],
+          },
+        },
+      });
+
+      const totalRevenue = parseFloat(totalRevenueData[0]?.dataValues?.total_revenue || 0);
+      const netRevenue = totalRevenue * 0.96; // Deduct 4% platform fee
+
+      if (netRevenue > 0) {
+        // Update wallet balance
+        const wallet = await UserWallet.findOne({ where: { user_id: ownerId } });
+        if (wallet) {
+          wallet.balance += netRevenue;
+          await wallet.save();
+
+          // Log the transaction
+          await WalletTransaction.create({
+            user_wallet_id: wallet.user_wallet_id,
+            transaction_type: "Doanh thu",
+            amount: netRevenue,
+            description: "Doanh thu cửa hàng",
+          });
+
+          console.log(`Transferred ${netRevenue} to shop owner ${ownerId} for shop ${shopId}.`);
+        } else {
+          console.error(`Wallet not found for shop owner ${ownerId}.`);
+        }
+      } else {
+        console.log(`No revenue to transfer for shop ${shopId} (Owner: ${ownerId})`);
+      }
+    }
+
+    console.log("Weekly shop revenue distribution completed.");
+  } catch (error) {
+    console.error("Error in weekly revenue distribution:", error);
+  }
+});
 
 module.exports = {
   io,
