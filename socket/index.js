@@ -353,7 +353,8 @@ const updateStatusOfRequest = async (request_support_id) => {
   }
 };
 
-cron.schedule("* * * * MON", async () => {
+// Cron job chạy hàng tuần vào 0h thứ 2
+cron.schedule("0 0 * * 1", async () => {
   console.log("Running weekly shop revenue distribution...");
 
   const today = new Date();
@@ -366,7 +367,7 @@ cron.schedule("* * * * MON", async () => {
       include: [
         {
           model: UserAccount,
-          where: { role_id: 2 }, // Shop owners
+          where: { role_id: 2 }, 
         },
       ],
     });
@@ -381,6 +382,7 @@ cron.schedule("* * * * MON", async () => {
         where: {
           shop_id: shopId,
           order_status_id: 5,
+          return_expiration_date: null,
           created_at: {
             [Op.between]: [lastWeek, today],
           },
@@ -388,7 +390,7 @@ cron.schedule("* * * * MON", async () => {
       });
 
       const totalRevenue = parseFloat(totalRevenueData[0]?.dataValues?.total_revenue || 0);
-      const netRevenue = totalRevenue * 0.96; // Deduct 4% platform fee
+      const netRevenue = totalRevenue * 0.96;
 
       if (netRevenue > 0) {
         // Update wallet balance
