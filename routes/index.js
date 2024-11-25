@@ -67,6 +67,8 @@ const {
   getDefaultAddress,
   getUserDataByUserId,
   createUser,
+  lockAccount,
+  unlockAccount,
 } = require("../controllers/UserController");
 const {
   getAllRole,
@@ -380,6 +382,8 @@ router.post("/fetch_user_data", authenticate, getUserData);
 router.post("/logout", authenticate, logOut);
 router.post("/update-setup-status", authenticate, updateSetupStatus);
 router.post("/create-user", createUser);
+router.post("/lock-account", lockAccount);
+router.post("/unlock-account", unlockAccount);
 //-----------------Address-----------------
 router.get("/address/get-address", getAddresses);
 router.post("/address/add-address", addAddress);
