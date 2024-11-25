@@ -439,6 +439,61 @@ const sendEmail = async (to, subject, notes, action_type, full_name, banUntil = 
   await transporter.sendMail(mailOptions);
 };
 
+const sendShopOwnerEmail = async (to, subject, notes, action_type, full_name, shop_name, banUntil = null, violationHistoryId) => {
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #000; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 5px;">
+      <div style="background-color: #f44336; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0;">
+        <img src="cid:logo" alt="Company Logo" style="max-width: 150px; margin-bottom: 10px;" />
+        <h1 style="margin: 0;">Xử lý tài khoản chủ cửa hàng</h1>
+      </div>
+      <div style="padding: 20px;">
+        <p>Xin chào <strong>${full_name}</strong>,</p>
+        <p>Chúng tôi xin thông báo rằng tài khoản của bạn, được liên kết với cửa hàng <strong>${shop_name}</strong>, đã bị xử lý vì vi phạm nội quy hệ thống.</p>
+        <p>Dưới đây là chi tiết xử lý:</p>
+        <ul style="list-style-type: none; padding: 0;">
+          <li><strong>Mã xử lý:</strong> ${violationHistoryId}</li>
+          <li><strong>Nội dung vi phạm:</strong> ${notes}</li>
+          <li><strong>Quyết định xử lý:</strong> ${action_type}</li>
+          ${banUntil ? `<li><strong>Thời gian khóa tài khoản:</strong> Đến ${banUntil.toLocaleString()}</li>` : ""}
+        </ul>
+        <p style="margin-top: 20px; color: #f44336;">
+          ${action_type === "Cảnh cáo" 
+            ? "Đây là cảnh cáo chính thức. Nếu vi phạm tiếp tục xảy ra, chúng tôi sẽ áp dụng biện pháp mạnh mẽ hơn." 
+            : "Tài khoản của bạn sẽ bị hạn chế quyền truy cập theo quyết định trên."}
+        </p>
+        <p style="margin-top: 20px;">
+          Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ với bộ phận hỗ trợ qua email 
+          <a href="mailto:support@example.com" style="color: #f44336; text-decoration: none;">support@example.com</a>.
+        </p>
+        <p>Trân trọng,<br />
+          <strong>Nhóm Quản lý Tài khoản Ezy</strong>
+        </p>
+      </div>
+      <div style="background-color: #f9f9f9; padding: 10px; text-align: center; border-top: 1px solid #ddd; font-size: 12px; color: #777;">
+        Email này được gửi tự động, vui lòng không trả lời trực tiếp. <br />
+        Để biết thêm thông tin, hãy truy cập 
+        <a href="https://example.com/support" style="color: #f44336; text-decoration: none;">Trung tâm hỗ trợ</a>.
+      </div>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: process.env.google_email,
+    to,
+    subject: `Mã xử lý: ${violationHistoryId} - ${subject}`,
+    html: emailHtml,
+    attachments: [
+      {
+        filename: "logo.png",
+        path: "https://res.cloudinary.com/dhzjvbdnu/image/upload/v1732433034/jnaxjxdcdyu2y1efkw6u.png",
+        cid: "logo",
+      },
+    ],
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
 
 
 
@@ -522,7 +577,10 @@ const addViolationHistory = async (req, res) => {
   }
 
   try {
-    const user = await UserAccount.findOne({ where: { user_id: violator_id } });
+    const user = await UserAccount.findOne({
+      where: { user_id: violator_id },
+      include: [{ model: Shop }], // Include shop details
+    });
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found." });
@@ -551,7 +609,7 @@ const addViolationHistory = async (req, res) => {
       }
     }
 
-    // Create violation history record and capture the ID
+    // Create violation history record
     const violationHistory = await ViolationHistory.create({
       violator_id,
       action_type,
@@ -561,11 +619,25 @@ const addViolationHistory = async (req, res) => {
     });
 
     const violationHistoryId = violationHistory.violation_history_id;
-
     const subject = `Thông báo xử lý vi phạm`;
 
-    console.log("Sending email to:", user.email);
-    await sendEmail(user.email, subject, notes, action_type, user.full_name, banUntil, violationHistoryId);
+    // Check role and send email accordingly
+    if (user.role_id === 2 && user.Shop) {
+      console.log("Sending shop owner email to:", user.email);
+      await sendShopOwnerEmail(
+        user.email,
+        subject,
+        notes,
+        action_type,
+        user.full_name,
+        user.Shop.shop_name,
+        banUntil,
+        violationHistoryId
+      );
+    } else {
+      console.log("Sending regular email to:", user.email);
+      await sendEmail(user.email, subject, notes, action_type, user.full_name, banUntil, violationHistoryId);
+    }
 
     res.status(200).json({
       success: true,
@@ -576,6 +648,7 @@ const addViolationHistory = async (req, res) => {
     res.status(500).json({ success: false, message: "Đã xảy ra lỗi khi xử lý vi phạm." });
   }
 };
+
 
 
 
