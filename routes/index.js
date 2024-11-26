@@ -550,6 +550,6 @@ router.get("/statistical/get-order-statistic", getOrderStatistics);
 router.get("/statistical/get-sales-revenue", getSalesRevenue);
 router.get("/statistical/get-platform-revenue", getPlatformRevenue);
 router.get("/statistical/get-top-seller-shops", getTopSellerShops);
-router.get("/statistical/get-top-sales-revenue", getTopSalesRevenue);
+router.get("/statistical/get-top-shop-sales-revenue", getTopSalesRevenue);
 
 module.exports = router;
