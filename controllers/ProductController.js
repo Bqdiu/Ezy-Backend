@@ -434,6 +434,7 @@ const getSuggestProductsOfShop = async (req, res) => {
 const getProductDetailsByID = async (req, res) => {
   try {
     const { id } = req.params;
+    const { user_id } = req.query;
     const product = await Product.findOne({
       where: { product_id: id },
       attributes: {
@@ -565,13 +566,13 @@ const getProductDetailsByID = async (req, res) => {
     //Kiểm tra người dùng đã có sub_category_id trong lịch sử tìm kiếm chưa
     const history = await HistorySearch.findOne({
       where: {
-        user_id: 1,
+        user_id: user_id,
         sub_category_id: product.SubCategory.sub_category_id,
       },
     });
     if (!history) {
       await HistorySearch.create({
-        user_id: 1,
+        user_id: user_id,
         sub_category_id: product.SubCategory.sub_category_id,
       });
     }
