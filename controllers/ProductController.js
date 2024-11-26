@@ -563,19 +563,22 @@ const getProductDetailsByID = async (req, res) => {
       console.log("Total stock of " + classify?.product_classify_id, data);
       classify.dataValues.total_stock = data ? data.total_stock : 0;
     });
-    //Kiểm tra người dùng đã có sub_category_id trong lịch sử tìm kiếm chưa
-    const history = await HistorySearch.findOne({
-      where: {
-        user_id: user_id,
-        sub_category_id: product.SubCategory.sub_category_id,
-      },
-    });
-    if (!history) {
-      await HistorySearch.create({
-        user_id: user_id,
-        sub_category_id: product.SubCategory.sub_category_id,
+    if (user_id) {
+      const history = await HistorySearch.findOne({
+        where: {
+          user_id: user_id,
+          sub_category_id: product.SubCategory.sub_category_id,
+        },
       });
+      if (!history) {
+        await HistorySearch.create({
+          user_id: user_id,
+          sub_category_id: product.SubCategory.sub_category_id,
+        });
+      }
     }
+    //Kiểm tra người dùng đã có sub_category_id trong lịch sử tìm kiếm chưa
+
 
     //Mỗi khi người dùng xem chi tiết sản phẩm thì tăng số lượt xem
     product.visited = product.visited + 1;
