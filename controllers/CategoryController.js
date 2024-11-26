@@ -75,6 +75,12 @@ const getAllCategoriesWithSubCategories = async (req, res) => {
         },
       ],
     });
+    if(categories.length === 0) {
+      return res.status(404).json({
+        error: true,
+        message: "No categories found",
+      });
+    }
     res.status(200).json({
       success: true,
       data: categories,
@@ -124,6 +130,12 @@ const addCategory = async (req, res) => {
 
 const getCategoriesByShop = async (req, res) => {
   const { shop_id } = req.query;
+  if(!shop_id) {
+    return res.status(400).json({
+      error: true,
+      message: "shop_id is required",
+    });
+  }
   try {
     const categories = await Category.findAll({
       attributes: {
@@ -144,8 +156,8 @@ const getCategoriesByShop = async (req, res) => {
         },
       ],
     });
-    if (categories.length === 0) {
-      res.status(404).json({
+    if (!categories || categories.length === 0) {
+      return res.status(404).json({
         success: false,
         message: "No categories found",
       });
@@ -155,6 +167,7 @@ const getCategoriesByShop = async (req, res) => {
       data: categories,
     });
   } catch (error) {
+    console.error("Error fetching categories by shop: ", error);
     res.status(500).json({
       error: true,
       message: error.message || error,
