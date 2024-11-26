@@ -389,10 +389,205 @@ const getPlatformRevenue = async (req, res) => {
     }
 };
 
+const getTopSellerShops = async (req, res) => {
+    try {
+        // Tìm các shop với sản phẩm có doanh số > 0
+        const shops = await Product.findAll({
+            where: {
+                sold: {
+                    [Op.gt]: 0,
+                },
+            },
+            include: [
+                {
+                    model: ProductVarients,
+                    include: [
+                        {
+                            model: UserOrderDetails,
+                            include: [
+                                {
+                                    model: UserOrder,
+                                    where: {
+                                        order_status_id: 5, // Chỉ tính các đơn hàng đã hoàn thành
+                                    },
+                                    attributes: ["total_price"], // Chỉ lấy total_price
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+            attributes: ["shop_id", "sold"], // Chỉ lấy shop_id và sold
+            order: [["sold", "DESC"]],
+        });
+
+        // Gom nhóm theo shop_id và tính tổng doanh thu cho từng shop
+        const shopRevenueMap = {};
+
+        shops.forEach((product) => {
+            const shopId = product.shop_id;
+            if (!shopRevenueMap[shopId]) {
+                shopRevenueMap[shopId] = {
+                    shop_id: shopId,
+                    total_revenue: 0,
+                    products: [],
+                };
+            }
+
+            // Tính doanh thu cho từng sản phẩm trong shop
+            const productRevenue = product.ProductVarients.reduce((varientAcc, productVarient) => {
+                const varientRevenue = productVarient.UserOrderDetails.reduce((detailAcc, userOrderDetail) => {
+                    if (userOrderDetail.UserOrder) {
+                        return detailAcc + userOrderDetail.UserOrder.total_price;
+                    }
+                    return detailAcc;
+                }, 0);
+                return varientAcc + varientRevenue;
+            }, 0);
+
+            // Cộng doanh thu vào tổng doanh thu shop
+            shopRevenueMap[shopId].total_revenue += productRevenue;
+
+            // Lưu thông tin sản phẩm
+            shopRevenueMap[shopId].products.push({
+                product_id: product.id,
+                sold: product.sold,
+                revenue: productRevenue,
+            });
+        });
+
+        // Chuyển dữ liệu từ map sang mảng
+        const shopStatistics = Object.values(shopRevenueMap);
+
+        res.status(200).json({
+            success: true,
+            data: shopStatistics,
+        });
+    } catch (error) {
+        console.error("Error getting best seller shops: ", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Internal Server Error",
+        });
+    }
+};
+
+const getTopSalesRevenue = async (req, res) => {
+    const { start_date, end_date } = req.query;
+
+    const now = new Date();
+    const defaultEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Ngày cuối của tháng hiện tại
+    const defaultStartDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Ngày đầu của 3 tháng trước
+
+    const parsedStartDate = start_date && !isNaN(new Date(start_date)) ? new Date(start_date) : defaultStartDate;
+    const parsedEndDate = end_date && !isNaN(new Date(end_date)) ? new Date(end_date) : defaultEndDate;
+
+    if (parsedStartDate > parsedEndDate) {
+        return res.status(400).json({
+            error: true,
+            message: "start_date phải trước end_date",
+        });
+    }
+
+    try {
+        // Doanh thu theo ngày, nhóm theo shop
+        const revenueByDay = await UserOrder.findAll({
+            attributes: [
+                "shop_id",
+                [fn("DAY", col("created_at")), "day"],
+                [fn("MONTH", col("created_at")), "month"],
+                [fn("YEAR", col("created_at")), "year"],
+                [fn("SUM", col("total_price")), "total_revenue"],
+            ],
+            where: {
+                order_status_id: 5, // Chỉ tính đơn hàng đã hoàn thành
+                created_at: {
+                    [Op.between]: [parsedStartDate, parsedEndDate],
+                },
+            },
+            group: [
+                "shop_id",
+                fn("DAY", col("created_at")),
+                fn("MONTH", col("created_at")),
+                fn("YEAR", col("created_at")),
+            ],
+        });
+
+        // Doanh thu theo tuần, nhóm theo shop
+        const revenueByWeek = await UserOrder.findAll({
+            attributes: [
+                "shop_id",
+                [fn("WEEK", col("created_at")), "week"],
+                [fn("YEAR", col("created_at")), "year"],
+                [fn("SUM", col("total_price")), "total_revenue"],
+            ],
+            where: {
+                order_status_id: 5,
+                created_at: {
+                    [Op.between]: [parsedStartDate, parsedEndDate],
+                },
+            },
+            group: ["shop_id", fn("WEEK", col("created_at")), fn("YEAR", col("created_at"))],
+        });
+
+        // Doanh thu theo tháng, nhóm theo shop
+        const revenueByMonth = await UserOrder.findAll({
+            attributes: [
+                "shop_id",
+                [fn("MONTH", col("created_at")), "month"],
+                [fn("YEAR", col("created_at")), "year"],
+                [fn("SUM", col("total_price")), "total_revenue"],
+            ],
+            where: {
+                order_status_id: 5,
+                created_at: {
+                    [Op.between]: [parsedStartDate, parsedEndDate],
+                },
+            },
+            group: ["shop_id", fn("MONTH", col("created_at")), fn("YEAR", col("created_at"))],
+        });
+
+        // Doanh thu theo năm, nhóm theo shop
+        const revenueByYear = await UserOrder.findAll({
+            attributes: [
+                "shop_id",
+                [fn("YEAR", col("created_at")), "year"],
+                [fn("SUM", col("total_price")), "total_revenue"],
+            ],
+            where: {
+                order_status_id: 5,
+                created_at: {
+                    [Op.between]: [parsedStartDate, parsedEndDate],
+                },
+            },
+            group: ["shop_id", fn("YEAR", col("created_at"))],
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                revenueByDay,
+                revenueByWeek,
+                revenueByMonth,
+                revenueByYear,
+                start_date: parsedStartDate,
+                end_date: parsedEndDate,
+            },
+        });
+    } catch (error) {
+        console.error("Error fetching sales revenue:", error);
+        return res.status(500).json({
+            error: true,
+            message: "Đã xảy ra lỗi khi lấy doanh thu.",
+        });
+    }
+};
 
 module.exports = {
     getBestSellerShop,
     getOrderStatistics,
     getSalesRevenue,
     getPlatformRevenue,
+    getTopSellerShops,
+    getTopSalesRevenue
 }

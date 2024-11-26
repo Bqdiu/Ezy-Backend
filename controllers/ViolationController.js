@@ -16,11 +16,10 @@ const { ca } = require("translate-google/languages");
 const getReportedCustomers = async (req, res) => {
   try {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of the day
-
+    today.setHours(0, 0, 0, 0);
     const reportedCustomers = await UserAccount.findAll({
       where: {
-        role_id: 1, // Fetch only customers
+        role_id: 1, 
       },
       attributes: ["user_id", "username", "full_name", "phone_number", "email", "is_banned"],
       include: [
@@ -85,20 +84,20 @@ const getShopsWithViolations = async (req, res) => {
     // Fetch users with violations who are shop owners
     const usersWithViolations = await UserAccount.findAll({
       where: {
-        role_id: 2, // Role for shop owners
+        role_id: 2, 
       },
       include: [
         {
           model: Violations,
           as: "Violations",
           attributes: ["violation_id", "status", "date_reported", "notes"],
-          required: true, // Only include users with violations
+          required: true, 
         },
         {
           model: Shop,
           as: "Shop",
           attributes: ["shop_id", "shop_name", "business_email", "shop_address"],
-          required: true, // Ensure they are associated with a shop
+          required: true,
         },
       ],
     });
@@ -536,8 +535,9 @@ const revokeAccountViolationHandling = async (req, res) => {
     // Get the user's account status from your database
     const user = await UserAccount.findOne({ where: { user_id: history.violator_id } });
 
-    // Delete the violation history
-    await history.destroy();
+    // Update the violation history status
+    history.status = 'Đã thu hồi';
+    await history.save();
 
     // Unlock the account if it is locked
     if (user.is_banned) {
