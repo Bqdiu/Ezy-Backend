@@ -206,10 +206,12 @@ const getOrders = async (req, res) => {
     console.log(req.body);
     const sanitizedSearchText = searchText.trim().toLowerCase();
     const offset = (page - 1) * limit;
-    let whereConditions = {};
+    let whereConditions = {
+      user_id,
+    };
     if (status_id !== -1) {
       whereConditions = {
-        user_id,
+        ...whereConditions,
         order_status_id: status_id,
       };
     }
