@@ -579,7 +579,6 @@ const getProductDetailsByID = async (req, res) => {
     }
     //Kiểm tra người dùng đã có sub_category_id trong lịch sử tìm kiếm chưa
 
-
     //Mỗi khi người dùng xem chi tiết sản phẩm thì tăng số lượt xem
     product.visited = product.visited + 1;
     await product.save();
@@ -1784,7 +1783,7 @@ const getTopProductBySubCategoryID = async (req, res) => {
         stock: {
           [Sequelize.Op.gt]: 0,
         },
-        stock: { [Sequelize.Op.gt]: 0 },
+        sold: { [Sequelize.Op.gt]: 0 },
       },
       include: [
         {
