@@ -261,6 +261,9 @@ const {
   getPlatformRevenue,
   getTopSellerShops,
   getTopSalesRevenue,
+  getTopCategorySales,
+  getTopSubCategorySales,
+  getTopProductVariientSales
 } = require("../controllers/StatisticalController");
 
 //------------------Categories-----------------------
@@ -551,5 +554,8 @@ router.get("/statistical/get-sales-revenue", getSalesRevenue);
 router.get("/statistical/get-platform-revenue", getPlatformRevenue);
 router.get("/statistical/get-top-seller-shops", getTopSellerShops);
 router.get("/statistical/get-top-shop-sales-revenue", getTopSalesRevenue);
+router.get("/statistical/get-top-sale-categories", getTopCategorySales);
+router.get("/statistical/get-top-sale-sub-categories", getTopSubCategorySales);
+router.get("/statistical/get-top-product-varient-sales", getTopProductVariientSales);
 
 module.exports = router;

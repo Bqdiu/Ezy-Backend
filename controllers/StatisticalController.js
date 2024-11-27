@@ -3,7 +3,10 @@ const {
     UserOrder,
     UserOrderDetails,
     ProductVarients,
+    ProductClassify,
     SubCategory,
+    Category,
+    Shop,
 } = require("../models/Assosiations");
 
 const sequelize = require("../config/database");
@@ -476,8 +479,8 @@ const getTopSalesRevenue = async (req, res) => {
     const { start_date, end_date } = req.query;
 
     const now = new Date();
-    const defaultEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Ngày cuối của tháng hiện tại
-    const defaultStartDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Ngày đầu của 3 tháng trước
+    const defaultEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // End of current month
+    const defaultStartDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Start of 3 months ago
 
     const parsedStartDate = start_date && !isNaN(new Date(start_date)) ? new Date(start_date) : defaultStartDate;
     const parsedEndDate = end_date && !isNaN(new Date(end_date)) ? new Date(end_date) : defaultEndDate;
@@ -485,41 +488,48 @@ const getTopSalesRevenue = async (req, res) => {
     if (parsedStartDate > parsedEndDate) {
         return res.status(400).json({
             error: true,
-            message: "start_date phải trước end_date",
+            message: "start_date must be before end_date",
         });
     }
 
     try {
-        // Doanh thu theo ngày, nhóm theo shop
+        // Fetch revenue by day
         const revenueByDay = await UserOrder.findAll({
             attributes: [
                 "shop_id",
-                [fn("DAY", col("created_at")), "day"],
-                [fn("MONTH", col("created_at")), "month"],
-                [fn("YEAR", col("created_at")), "year"],
-                [fn("SUM", col("total_price")), "total_revenue"],
+                [fn("DAY", col("UserOrder.created_at")), "day"],
+                [fn("MONTH", col("UserOrder.created_at")), "month"],
+                [fn("YEAR", col("UserOrder.created_at")), "year"],
+                [fn("SUM", col("UserOrder.total_price")), "total_revenue"],
             ],
             where: {
-                order_status_id: 5, // Chỉ tính đơn hàng đã hoàn thành
+                order_status_id: 5, // Only completed orders
                 created_at: {
                     [Op.between]: [parsedStartDate, parsedEndDate],
                 },
             },
+            include: [
+                {
+                    model: Shop,
+                    attributes: ["shop_name"],
+                },
+            ],
             group: [
                 "shop_id",
-                fn("DAY", col("created_at")),
-                fn("MONTH", col("created_at")),
-                fn("YEAR", col("created_at")),
+                "Shop.shop_name",
+                fn("DAY", col("UserOrder.created_at")),
+                fn("MONTH", col("UserOrder.created_at")),
+                fn("YEAR", col("UserOrder.created_at")),
             ],
         });
 
-        // Doanh thu theo tuần, nhóm theo shop
+        // Fetch revenue by week
         const revenueByWeek = await UserOrder.findAll({
             attributes: [
                 "shop_id",
-                [fn("WEEK", col("created_at")), "week"],
-                [fn("YEAR", col("created_at")), "year"],
-                [fn("SUM", col("total_price")), "total_revenue"],
+                [fn("WEEK", col("UserOrder.created_at")), "week"],
+                [fn("YEAR", col("UserOrder.created_at")), "year"],
+                [fn("SUM", col("UserOrder.total_price")), "total_revenue"],
             ],
             where: {
                 order_status_id: 5,
@@ -527,16 +537,27 @@ const getTopSalesRevenue = async (req, res) => {
                     [Op.between]: [parsedStartDate, parsedEndDate],
                 },
             },
-            group: ["shop_id", fn("WEEK", col("created_at")), fn("YEAR", col("created_at"))],
+            include: [
+                {
+                    model: Shop,
+                    attributes: ["shop_name"],
+                },
+            ],
+            group: [
+                "shop_id",
+                "Shop.shop_name",
+                fn("WEEK", col("UserOrder.created_at")),
+                fn("YEAR", col("UserOrder.created_at")),
+            ],
         });
 
-        // Doanh thu theo tháng, nhóm theo shop
+        // Fetch revenue by month
         const revenueByMonth = await UserOrder.findAll({
             attributes: [
                 "shop_id",
-                [fn("MONTH", col("created_at")), "month"],
-                [fn("YEAR", col("created_at")), "year"],
-                [fn("SUM", col("total_price")), "total_revenue"],
+                [fn("MONTH", col("UserOrder.created_at")), "month"],
+                [fn("YEAR", col("UserOrder.created_at")), "year"],
+                [fn("SUM", col("UserOrder.total_price")), "total_revenue"],
             ],
             where: {
                 order_status_id: 5,
@@ -544,15 +565,26 @@ const getTopSalesRevenue = async (req, res) => {
                     [Op.between]: [parsedStartDate, parsedEndDate],
                 },
             },
-            group: ["shop_id", fn("MONTH", col("created_at")), fn("YEAR", col("created_at"))],
+            include: [
+                {
+                    model: Shop,
+                    attributes: ["shop_name"],
+                },
+            ],
+            group: [
+                "shop_id",
+                "Shop.shop_name",
+                fn("MONTH", col("UserOrder.created_at")),
+                fn("YEAR", col("UserOrder.created_at")),
+            ],
         });
 
-        // Doanh thu theo năm, nhóm theo shop
+        // Fetch revenue by year
         const revenueByYear = await UserOrder.findAll({
             attributes: [
                 "shop_id",
-                [fn("YEAR", col("created_at")), "year"],
-                [fn("SUM", col("total_price")), "total_revenue"],
+                [fn("YEAR", col("UserOrder.created_at")), "year"],
+                [fn("SUM", col("UserOrder.total_price")), "total_revenue"],
             ],
             where: {
                 order_status_id: 5,
@@ -560,7 +592,13 @@ const getTopSalesRevenue = async (req, res) => {
                     [Op.between]: [parsedStartDate, parsedEndDate],
                 },
             },
-            group: ["shop_id", fn("YEAR", col("created_at"))],
+            include: [
+                {
+                    model: Shop,
+                    attributes: ["shop_name"],
+                },
+            ],
+            group: ["shop_id", "Shop.shop_name", fn("YEAR", col("UserOrder.created_at"))],
         });
 
         return res.status(200).json({
@@ -578,10 +616,245 @@ const getTopSalesRevenue = async (req, res) => {
         console.error("Error fetching sales revenue:", error);
         return res.status(500).json({
             error: true,
-            message: "Đã xảy ra lỗi khi lấy doanh thu.",
+            message: "An error occurred while fetching revenue data.",
         });
     }
 };
+
+const getTopCategorySales = async (req, res) => {
+    const { start_date, end_date } = req.query;
+
+    const now = new Date();
+    const defaultEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // End of current month
+    const defaultStartDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Start of 3 months ago
+
+    const parsedStartDate = start_date && !isNaN(new Date(start_date)) ? new Date(start_date) : defaultStartDate;
+    const parsedEndDate = end_date && !isNaN(new Date(end_date)) ? new Date(end_date) : defaultEndDate;
+
+    if (parsedStartDate > parsedEndDate) {
+        return res.status(400).json({
+            error: true,
+            message: "start_date must be before end_date",
+        });
+    }
+
+    try {
+        // Fetch category sales data
+        const categorySales = await UserOrderDetails.findAll({
+            attributes: [
+                [fn("SUM", col("UserOrderDetails.quantity")), "total_quantity_sold"],
+                [col("ProductVarient->Product->SubCategory->Category.category_name"), "category_name"],
+            ],
+            include: [
+                {
+                    model: ProductVarients,
+                    as: "ProductVarient",
+                    attributes: [],
+                    include: [
+                        {
+                            model: Product,
+                            as: "Product",
+                            attributes: [],
+                            include: [
+                                {
+                                    model: SubCategory,
+                                    as: "SubCategory",
+                                    attributes: [],
+                                    include: [
+                                        {
+                                            model: Category,
+                                            as: "Category",
+                                            attributes: [],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    model: UserOrder,
+                    as: "UserOrder",
+                    attributes: [],
+                    where: {
+                        order_status_id: 5, // Completed orders
+                        created_at: {
+                            [Op.between]: [parsedStartDate, parsedEndDate],
+                        },
+                    },
+                },
+            ],
+            group: [col("ProductVarient->Product->SubCategory->Category.category_name")],
+            order: [[fn("SUM", col("UserOrderDetails.quantity")), "DESC"]],
+        });
+
+        res.status(200).json({
+            success: true,
+            data: categorySales,
+        });
+    } catch (error) {
+        console.error("Error fetching category sales data:", error);
+        res.status(500).json({
+            error: true,
+            message: "An error occurred while fetching category sales data.",
+        });
+    }
+};
+
+
+const getTopSubCategorySales = async (req, res) => {
+    const { start_date, end_date } = req.query;
+
+    const now = new Date();
+    const defaultEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // End of current month
+    const defaultStartDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Start of 3 months ago
+
+    const parsedStartDate = start_date && !isNaN(new Date(start_date)) ? new Date(start_date) : defaultStartDate;
+    const parsedEndDate = end_date && !isNaN(new Date(end_date)) ? new Date(end_date) : defaultEndDate;
+
+    if (parsedStartDate > parsedEndDate) {
+        return res.status(400).json({
+            error: true,
+            message: "start_date must be before end_date",
+        });
+    }
+
+    try {
+        // Fetch subcategory sales data
+        const subCategorySales = await UserOrderDetails.findAll({
+            attributes: [
+                [fn("SUM", col("UserOrderDetails.quantity")), "total_quantity_sold"],
+                [col("ProductVarient->Product->SubCategory.sub_category_name"), "sub_category_name"],
+            ],
+            include: [
+                {
+                    model: ProductVarients,
+                    as: "ProductVarient",
+                    attributes: [],
+                    include: [
+                        {
+                            model: Product,
+                            as: "Product",
+                            attributes: [],
+                            include: [
+                                {
+                                    model: SubCategory,
+                                    as: "SubCategory",
+                                    attributes: [],
+                                },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    model: UserOrder,
+                    as: "UserOrder",
+                    attributes: [],
+                    where: {
+                        order_status_id: 5, // Completed orders
+                        created_at: {
+                            [Op.between]: [parsedStartDate, parsedEndDate],
+                        },
+                    },
+                },
+            ],
+            group: [col("ProductVarient->Product->SubCategory.sub_category_name")],
+            order: [[fn("SUM", col("UserOrderDetails.quantity")), "DESC"]],
+        });
+
+        res.status(200).json({
+            success: true,
+            data: subCategorySales,
+        });
+    } catch (error) {
+        console.error("Error fetching subcategory sales data:", error);
+        res.status(500).json({
+            error: true,
+            message: "An error occurred while fetching subcategory sales data.",
+        });
+    }
+};
+
+const getTopProductVariientSales = async (req, res) => {
+    const { start_date, end_date } = req.query;
+
+    const now = new Date();
+    const defaultEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // End of current month
+    const defaultStartDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Start of 3 months ago
+
+    const parsedStartDate = start_date && !isNaN(new Date(start_date)) ? new Date(start_date) : defaultStartDate;
+    const parsedEndDate = end_date && !isNaN(new Date(end_date)) ? new Date(end_date) : defaultEndDate;
+
+    if (parsedStartDate > parsedEndDate) {
+        return res.status(400).json({
+            error: true,
+            message: "start_date must be before end_date",
+        });
+    }
+
+    try {
+        // Fetch product variant sales data
+        const productVarientSales = await UserOrderDetails.findAll({
+            attributes: [
+                [fn("SUM", col("UserOrderDetails.quantity")), "total_quantity_sold"],
+                [col("ProductVarient.product_varients_id"), "product_varients_id"],
+                [col("ProductVarient.classify"), "classify"],
+                [col("ProductVarient.Product.product_name"), "product_name"],
+                [col("ProductVarient.ProductClassify.product_classify_name"), "product_classify_name"],
+                [col("ProductVarient.ProductClassify.type_name"), "type_name"],
+            ],
+            include: [
+                {
+                    model: ProductVarients,
+                    as: "ProductVarient",
+                    attributes: [],
+                    include: [
+                        {
+                            model: Product,
+                            as: "Product",
+                            attributes: [],
+                        },
+                        {
+                            model: ProductClassify,
+                            as: "ProductClassify",
+                            attributes: [],
+                        },
+                    ],
+                },
+                {
+                    model: UserOrder,
+                    as: "UserOrder",
+                    attributes: [],
+                    where: {
+                        order_status_id: 5, // Completed orders
+                        created_at: {
+                            [Op.between]: [parsedStartDate, parsedEndDate],
+                        },
+                    },
+                },
+            ],
+            group: [
+                col("ProductVarient.product_varients_id"),
+                col("ProductVarient.classify"),
+                col("ProductVarient.Product.product_name"),
+                col("ProductVarient.ProductClassify.product_classify_name"),
+            ],
+            order: [[fn("SUM", col("UserOrderDetails.quantity")), "DESC"]],
+        });
+
+        res.status(200).json({
+            success: true,
+            data: productVarientSales,
+        });
+    } catch (error) {
+        console.error("Error fetching product variant sales data:", error);
+        res.status(500).json({
+            error: true,
+            message: "An error occurred while fetching product variant sales data.",
+        });
+    }
+};
+
 
 module.exports = {
     getBestSellerShop,
@@ -589,5 +862,8 @@ module.exports = {
     getSalesRevenue,
     getPlatformRevenue,
     getTopSellerShops,
-    getTopSalesRevenue
+    getTopSalesRevenue,
+    getTopCategorySales,
+    getTopSubCategorySales,
+    getTopProductVariientSales
 }
