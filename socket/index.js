@@ -422,6 +422,46 @@ cron.schedule("0 0 * * 1", async () => {
   }
 });
 
+//Tự động duy trì sự kiện chào mừng khách hàng mới
+//cron.schedule("* * * * *", async () => {
+cron.schedule("0 * * * *", async () => {
+  try {
+      const currentTime = new Date();
+
+      // Fetch the event with ID = 1
+      const saleEvent = await SaleEvents.findOne({
+          where: { sale_events_id: 1 },
+      });
+
+      if (saleEvent) {
+          const timeLeft = new Date(saleEvent.ended_at) - currentTime;
+
+          // If the event is about to end in less than 24 hours
+          if (timeLeft < 24 * 60 * 60 * 1000 && timeLeft > 0) {
+              const newEndDate = new Date(saleEvent.ended_at);
+              newEndDate.setMonth(newEndDate.getMonth() + 1);
+
+              await saleEvent.update({ ended_at: newEndDate });
+
+              console.log(
+                  `Sale event with ID ${saleEvent.sale_events_id} has been extended to ${newEndDate}.`
+              );
+
+              // Emit a socket event to notify clients about the update
+              io.emit("saleEventUpdated", {
+                  saleEventId: saleEvent.sale_events_id,
+                  newEndDate,
+              });
+          }
+      } else {
+          console.log("No sale event with ID = 1 found.");
+      }
+  } catch (error) {
+      console.error("Error extending sale event end date:", error);
+  }
+});
+
+
 module.exports = {
   io,
   app,

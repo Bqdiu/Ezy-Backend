@@ -826,7 +826,7 @@ const getTopProductVariientSales = async (req, res) => {
                     as: "UserOrder",
                     attributes: [],
                     where: {
-                        order_status_id: 5, // Completed orders
+                        order_status_id: 5,
                         created_at: {
                             [Op.between]: [parsedStartDate, parsedEndDate],
                         },
@@ -854,6 +854,75 @@ const getTopProductVariientSales = async (req, res) => {
         });
     }
 };
+const getTopProductSales = async (req, res) => {
+    const { start_date, end_date } = req.query;
+
+    const now = new Date();
+    const defaultEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // End of current month
+    const defaultStartDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Start of 3 months ago
+
+    const parsedStartDate = start_date && !isNaN(new Date(start_date)) ? new Date(start_date) : defaultStartDate;
+    const parsedEndDate = end_date && !isNaN(new Date(end_date)) ? new Date(end_date) : defaultEndDate;
+
+    if (parsedStartDate > parsedEndDate) {
+        return res.status(400).json({
+            error: true,
+            message: "start_date must be before end_date",
+        });
+    }
+
+    try {
+        // Fetch top product sales data
+        const productSales = await UserOrderDetails.findAll({
+            attributes: [
+                [fn("SUM", col("UserOrderDetails.quantity")), "total_quantity_sold"],
+                [col("ProductVarient.Product.product_id"), "product_id"],
+                [col("ProductVarient.Product.product_name"), "product_name"],
+            ],
+            include: [
+                {
+                    model: ProductVarients,
+                    as: "ProductVarient",
+                    attributes: [],
+                    include: [
+                        {
+                            model: Product,
+                            as: "Product",
+                            attributes: [],
+                        },
+                    ],
+                },
+                {
+                    model: UserOrder,
+                    as: "UserOrder",
+                    attributes: [],
+                    where: {
+                        order_status_id: 5, // Only completed orders
+                        created_at: {
+                            [Op.between]: [parsedStartDate, parsedEndDate],
+                        },
+                    },
+                },
+            ],
+            group: [
+                col("ProductVarient.Product.product_id"),
+                col("ProductVarient.Product.product_name"),
+            ],
+            order: [[fn("SUM", col("UserOrderDetails.quantity")), "DESC"]],
+        });
+
+        res.status(200).json({
+            success: true,
+            data: productSales,
+        });
+    } catch (error) {
+        console.error("Error fetching top product sales data:", error);
+        res.status(500).json({
+            error: true,
+            message: "An error occurred while fetching top product sales data.",
+        });
+    }
+};
 
 
 module.exports = {
@@ -865,5 +934,6 @@ module.exports = {
     getTopSalesRevenue,
     getTopCategorySales,
     getTopSubCategorySales,
-    getTopProductVariientSales
+    getTopProductVariientSales,
+    getTopProductSales
 }
