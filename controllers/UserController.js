@@ -1059,6 +1059,47 @@ const unlockAccount = async (req, res) => {
   }
 };
 
+const adminUpdateProfile = async (req, res) => {
+  try {
+    const { user_id, full_name, phone_number, gender, dob, avt_url, role_id } = req.body;
+
+    const user = await UserAccount.findOne({
+      where: {
+        user_id: user_id,
+      },
+    });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
+
+    const result = await user.update({
+      full_name,
+      phone_number,
+      gender,
+      dob,
+      avt_url,
+      role_id,
+    });
+
+    if (result) {
+      return res.status(200).json({
+        success: true,
+        data: user,
+        message: "Cập nhật thông tin thành công",
+      });
+    }
+  } catch (error) {
+    console.log("Error updating profile:", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
 module.exports = {
   getAllUser,
   checkEmailExists,
@@ -1084,4 +1125,5 @@ module.exports = {
   createUser,
   lockAccount,
   unlockAccount,
+  adminUpdateProfile
 };
