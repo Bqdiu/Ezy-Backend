@@ -227,7 +227,9 @@ const {
   updateStatusViolation,
   markReportAsViewed,
   revokeAccountViolationHandling,
-  addViolationHistory
+  addViolationHistory,
+  lockUserAccount,
+  unlockUserAccount
 } = require("../controllers/ViolationController");
 const {
   getReturnRequest,
@@ -511,6 +513,8 @@ router.put("/violations/update-status", updateStatusViolation);
 router.put("/violations/mark-as-viewed", markReportAsViewed);
 router.put("/violations/revoke-account/:id", revokeAccountViolationHandling);
 router.post("/violations/add-violation-history", addViolationHistory);
+router.post("/violations/lock-user-account", lockUserAccount);
+router.post("/violations/unlock-user-account", unlockUserAccount);
 
 //-----------------ReturnRequest-------------------
 router.post("/return-request/get-return-request", getReturnRequest);

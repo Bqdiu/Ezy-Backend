@@ -19,7 +19,7 @@ const getReportedCustomers = async (req, res) => {
     today.setHours(0, 0, 0, 0);
     const reportedCustomers = await UserAccount.findAll({
       where: {
-        role_id: 1, 
+        role_id: 1,
       },
       attributes: ["user_id", "username", "full_name", "phone_number", "email", "is_banned"],
       include: [
@@ -84,14 +84,14 @@ const getShopsWithViolations = async (req, res) => {
     // Fetch users with violations who are shop owners
     const usersWithViolations = await UserAccount.findAll({
       where: {
-        role_id: 2, 
+        role_id: 2,
       },
       include: [
         {
           model: Violations,
           as: "Violations",
           attributes: ["violation_id", "status", "date_reported", "notes"],
-          required: true, 
+          required: true,
         },
         {
           model: Shop,
@@ -456,9 +456,9 @@ const sendShopOwnerEmail = async (to, subject, notes, action_type, full_name, sh
           ${banUntil ? `<li><strong>Thời gian khóa tài khoản:</strong> Đến ${banUntil.toLocaleString()}</li>` : ""}
         </ul>
         <p style="margin-top: 20px; color: #f44336;">
-          ${action_type === "Cảnh cáo" 
-            ? "Đây là cảnh cáo chính thức. Nếu vi phạm tiếp tục xảy ra, chúng tôi sẽ áp dụng biện pháp mạnh mẽ hơn." 
-            : "Tài khoản của bạn sẽ bị hạn chế quyền truy cập theo quyết định trên."}
+          ${action_type === "Cảnh cáo"
+      ? "Đây là cảnh cáo chính thức. Nếu vi phạm tiếp tục xảy ra, chúng tôi sẽ áp dụng biện pháp mạnh mẽ hơn."
+      : "Tài khoản của bạn sẽ bị hạn chế quyền truy cập theo quyết định trên."}
         </p>
         <p style="margin-top: 20px;">
           Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ với bộ phận hỗ trợ qua email 
@@ -649,8 +649,147 @@ const addViolationHistory = async (req, res) => {
   }
 };
 
+const lockUserAccount = async (req, res) => {
+  const { violator_id, currentAdminId } = req.body;
+
+  if (!violator_id || !currentAdminId) {
+    return res.status(400).json({ success: false, message: "Missing required fields." });
+  }
+
+  try {
+    // Find the user
+    const user = await UserAccount.findOne({
+      where: { user_id: violator_id },
+      include: [{ model: Shop }], // Include shop details
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    // Lock the user account
+    user.is_banned = 1;
+    user.ban_until = null; // Permanent lock
+    await user.save();
+
+    // Disable the user in Firebase
+    await admin.auth().updateUser(user.user_id, { disabled: true });
+
+    // Create a ViolationHistory entry
+    const action_type = "Cấm vĩnh viễn";
+    const notes = "Khóa khẩn cấp";
+    const violationHistory = await ViolationHistory.create({
+      violator_id,
+      action_type,
+      notes,
+      status: "Đã xử lý",
+      updated_by_id: currentAdminId, // Admin who initiated the lock
+    });
+
+    const violationHistoryId = violationHistory.violation_history_id;
+    const subject = `Thông báo xử lý vi phạm`;
+
+    // Check role and send email accordingly
+    if (user.role_id === 2 && user.Shop) {
+      console.log("Sending shop owner email to:", user.email);
+      await sendShopOwnerEmail(
+        user.email,
+        subject,
+        notes,
+        action_type,
+        user.full_name,
+        user.Shop.shop_name,
+        null, // banUntil is null for permanent lock
+        violationHistoryId
+      );
+    } else {
+      console.log("Sending regular email to:", user.email);
+      await sendEmail(
+        user.email,
+        subject,
+        notes,
+        action_type,
+        user.full_name,
+        null, // banUntil is null for permanent lock
+        violationHistoryId
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User account locked successfully and violation history recorded.",
+      violationHistoryId,
+    });
+  } catch (error) {
+    console.error("Error locking user account:", error);
+    res.status(500).json({ success: false, message: "An error occurred while locking user account." });
+  }
+};
 
 
+const unlockUserAccount = async (req, res) => {
+  const { violator_id, currentAdminId } = req.body; // Extract violator_id and currentAdminId
+
+  console.log("Request body:", req.body);
+
+  try {
+    // Find the user by violator_id mapped to user_id
+    const user = await UserAccount.findOne({ where: { user_id: violator_id } });
+    console.log("User found:", user);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    // Unlock the user account
+    user.is_banned = 0;
+    user.ban_until = null;
+    await user.save();
+    console.log("User unlocked in database.");
+
+    // Enable the user in Firebase
+    try {
+      await admin.auth().updateUser(user.user_id, { disabled: false });
+      console.log("User unlocked in Firebase.");
+    } catch (firebaseError) {
+      console.error("Error unlocking user in Firebase:", firebaseError);
+      return res.status(500).json({
+        success: false,
+        message: "An error occurred while unlocking the user in Firebase.",
+      });
+    }
+
+    // Find the most recent ViolationHistory for the user
+    const recentViolationHistory = await ViolationHistory.findOne({
+      where: { violator_id },
+      order: [["updatedAt", "DESC"]],
+    });
+    console.log("Recent Violation History:", recentViolationHistory);
+
+    let violationHistoryId = null;
+
+    if (recentViolationHistory) {
+      // Update the status of the most recent violation history to "Thu hồi"
+      recentViolationHistory.status = "Thu hồi";
+      recentViolationHistory.updated_by_id = currentAdminId;
+      await recentViolationHistory.save();
+      violationHistoryId = recentViolationHistory.violation_history_id;
+      console.log("Violation history updated.");
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User account unlocked successfully, and violation history updated.",
+      violationHistoryId,
+    });
+  } catch (error) {
+    console.error("Error unlocking user account:", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while unlocking user account.",
+    });
+  }
+};
 
 
 module.exports = {
@@ -664,4 +803,6 @@ module.exports = {
   markReportAsViewed,
   revokeAccountViolationHandling,
   addViolationHistory,
+  lockUserAccount,
+  unlockUserAccount,
 };
