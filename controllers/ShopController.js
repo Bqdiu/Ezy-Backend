@@ -15,6 +15,7 @@ const {
   CustomizeShop,
   ShopRegisterFlashSales,
   FlashSaleTimerFrame,
+  ShopRegisterEvents,
 } = require("../models/Assosiations");
 const sequelize = require("../config/database");
 const Sequelize = require("sequelize");
@@ -216,6 +217,17 @@ const createShop = async (req, res) => {
       phone_number,
       user_id,
     });
+
+    try {
+      await ShopRegisterEvents.create({
+        shop_id: shop_id,
+        sale_events_id: 1,
+      });
+      console.log("ShopRegisterEvents created successfully");
+    } catch (error) {
+      console.error("Error creating ShopRegisterEvents: ", error);
+    }
+
     res.status(200).json({
       success: true,
       shop: new_shop,
