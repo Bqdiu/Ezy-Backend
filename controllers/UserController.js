@@ -892,8 +892,8 @@ const getDefaultAddress = async (req, res) => {
 
 const createUser = async (req, res) => {
   const {
-    user_id,
     username,
+    password,
     fullname,
     email,
     phoneNumber,
@@ -928,10 +928,14 @@ const createUser = async (req, res) => {
         message: "User đã tồn tại.",
       });
     }
-
+    const firebaseUser = await admin.auth().createUser({
+      email: email,
+      password: password
+    })
+    
     // Tạo user mới
     const newUser = await UserAccount.create({
-      user_id,
+      user_id: firebaseUser.uid,
       username,
       full_name: fullname,
       email,
@@ -1111,6 +1115,34 @@ const adminUpdateProfile = async (req, res) => {
   }
 };
 
+const getUserRoleId = async (req, res) => {
+  const { id } = req.params; // Lấy id từ req.params
+  try {
+    const user = await UserAccount.findOne({
+      where: {
+        user_id: id, 
+      },
+    });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      data: user.role_id,
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy role id: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+
 module.exports = {
   getAllUser,
   checkEmailExists,
@@ -1136,5 +1168,6 @@ module.exports = {
   createUser,
   lockAccount,
   unlockAccount,
-  adminUpdateProfile
+  adminUpdateProfile,
+  getUserRoleId,
 };

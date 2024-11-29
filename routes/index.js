@@ -69,7 +69,8 @@ const {
   createUser,
   lockAccount,
   unlockAccount,
-  adminUpdateProfile
+  adminUpdateProfile,
+  getUserRoleId
 } = require("../controllers/UserController");
 const {
   getAllRole,
@@ -394,6 +395,8 @@ router.post("/create-user", createUser);
 router.post("/lock-account", lockAccount);
 router.post("/unlock-account", unlockAccount);
 router.post("/admin-update-profile", adminUpdateProfile);
+router.get("/get-user-role-id/:id", getUserRoleId);
+
 //-----------------Address-----------------
 router.get("/address/get-address", getAddresses);
 router.post("/address/add-address", addAddress);
