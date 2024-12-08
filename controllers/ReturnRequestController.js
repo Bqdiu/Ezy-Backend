@@ -511,6 +511,25 @@ async function adjustStockAndSales(order) {
                 }
             })
         );
+        const products = await ProductVarients.findAll({
+            where: {
+                product_varients_id: order.UserOrderDetails.map((product) => product.product_varients_id),
+            },
+            include: [{ model: Product }],
+        });
+        await Promise.all(
+            products.map(async (product) => {
+                const userOrderDetail = order.UserOrderDetails.find(
+                    (detail) => detail.product_varients_id === product.product_varients_id
+                );
+                if (userOrderDetail) {
+                    await Product.increment(
+                        { sold: -userOrderDetail.quantity },
+                        { where: { product_id: product.product_id } }
+                    );
+                }
+            })
+        );
     }
 
 }
