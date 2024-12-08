@@ -892,13 +892,13 @@ const getDefaultAddress = async (req, res) => {
 
 const createUser = async (req, res) => {
   const {
-    user_id,
     username,
+    password,
     fullname,
     email,
-    phoneNumber = null,
-    gender = null,
-    dob = null,
+    phoneNumber,
+    gender,
+    dob,
     isVerified = 0,
     avtUrl = null,
     role_id,
@@ -928,10 +928,14 @@ const createUser = async (req, res) => {
         message: "User đã tồn tại.",
       });
     }
-
+    const firebaseUser = await admin.auth().createUser({
+      email: email,
+      password: password
+    })
+    
     // Tạo user mới
     const newUser = await UserAccount.create({
-      user_id,
+      user_id: firebaseUser.uid,
       username,
       full_name: fullname,
       email,
@@ -952,7 +956,18 @@ const createUser = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      user: newUser,
+      user: {
+        user_id: newUser.user_id,
+        username: newUser.username,
+        fullname: newUser.full_name,
+        email: newUser.email,
+        phoneNumber: newUser.phone_number,
+        gender: newUser.gender,
+        dob: newUser.dob,
+        role_id: newUser.role_id,
+        avtUrl: newUser.avt_url,
+        isVerified: newUser.isVerified,
+      },
       message: "User được tạo thành công.",
     });
   } catch (error) {
@@ -968,46 +983,46 @@ const lockAccount = async (req, res) => {
   const { user_id } = req.body;
 
   try {
-      // Fetch user information
-      const user = await UserAccount.findOne({ where: { user_id } });
-      if (!user) {
-          return res.status(404).json({ success: false, message: "User not found." });
+    // Fetch user information
+    const user = await UserAccount.findOne({ where: { user_id } });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    // Update user's status to banned
+    user.is_banned = 1;
+    await user.save();
+
+    if (user.role_id === 2) {
+      const shop = await Shop.findOne({ where: { user_id: user_id } });
+      if (shop) {
+        shop.shop_status = 0; // Assuming `is_active` denotes shop status
+        await shop.save();
+        console.log(`Shop status for owner ${user_id} updated successfully.`);
+      } else {
+        console.warn(`No shop found for owner ID: ${user_id}`);
       }
+    }
 
-      // Update user's status to banned
-      user.is_banned = 1;
-      await user.save();
+    // Disable the user in Firebase
+    try {
+      await admin.auth().updateUser(user.user_id, { disabled: true });
+      console.log(`Firebase user ${user.user_id} has been disabled.`);
+    } catch (firebaseError) {
+      console.error("Error disabling Firebase user:", firebaseError.message);
+      return res.status(500).json({ success: false, message: "Error disabling user on Firebase." });
+    }
 
-      if (user.role_id === 2) {
-          const shop = await Shop.findOne({ where: { user_id: user_id } });
-          if (shop) {
-              shop.shop_status = 0; // Assuming `is_active` denotes shop status
-              await shop.save();
-              console.log(`Shop status for owner ${user_id} updated successfully.`);
-          } else {
-              console.warn(`No shop found for owner ID: ${user_id}`);
-          }
-      }
-
-      // Disable the user in Firebase
-      try {
-          await admin.auth().updateUser(user.user_id, { disabled: true });
-          console.log(`Firebase user ${user.user_id} has been disabled.`);
-      } catch (firebaseError) {
-          console.error("Error disabling Firebase user:", firebaseError.message);
-          return res.status(500).json({ success: false, message: "Error disabling user on Firebase." });
-      }
-
-      res.status(200).json({
-          success: true,
-          message: "User account locked successfully.",
-      });
+    res.status(200).json({
+      success: true,
+      message: "User account locked successfully.",
+    });
   } catch (error) {
-      console.error("Error locking account:", error);
-      res.status(500).json({
-          success: false,
-          message: "An error occurred while locking the account.",
-      });
+    console.error("Error locking account:", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while locking the account.",
+    });
   }
 };
 
@@ -1100,6 +1115,34 @@ const adminUpdateProfile = async (req, res) => {
   }
 };
 
+const getUserRoleId = async (req, res) => {
+  const { id } = req.params; // Lấy id từ req.params
+  try {
+    const user = await UserAccount.findOne({
+      where: {
+        user_id: id, 
+      },
+    });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      data: user.role_id,
+    });
+  } catch (error) {
+    console.log("Lỗi khi lấy role id: ", error);
+    res.status(500).json({
+      error: true,
+      message: error.message || error,
+    });
+  }
+};
+
+
 module.exports = {
   getAllUser,
   checkEmailExists,
@@ -1125,5 +1168,6 @@ module.exports = {
   createUser,
   lockAccount,
   unlockAccount,
-  adminUpdateProfile
+  adminUpdateProfile,
+  getUserRoleId,
 };
