@@ -968,18 +968,18 @@ const confirmOrderCompleted = async (req, res) => {
       updatedAt: new Date(),
     });
 
-    await Promise.all(
-      order.UserOrderDetails.map(async (product) => {
-        await Product.increment(
-          { sold: product.quantity },
-          {
-            where: {
-              product_id: product.ProductVarient.product_id,
-            },
-          }
-        );
-      })
-    );
+    // await Promise.all(
+    //   order.UserOrderDetails.map(async (product) => {
+    //     await Product.increment(
+    //       { sold: product.quantity },
+    //       {
+    //         where: {
+    //           product_id: product.ProductVarient.product_id,
+    //         },
+    //       }
+    //     );
+    //   })
+    // );
 
     return res.status(200).json({
       success: true,
@@ -1524,6 +1524,11 @@ const sendRequest = async (req, res) => {
       include: [
         {
           model: UserOrderDetails,
+          include: [
+            {
+              model: ProductVarients,
+            },
+          ],
         },
         {
           model: Shop,
@@ -1601,30 +1606,39 @@ const sendRequest = async (req, res) => {
         updated_at: new Date(),
       });
 
-      await Promise.all(
-        order.UserOrderDetails.map(async (product) => {
-          await ProductVarients.increment(
-            { stock: product.quantity },
-            {
-              where: {
-                product_varients_id: product.product_varients_id,
-              },
-            }
-          ),
-            product.on_shop_register_flash_sales_id !== null &&
-              (await ShopRegisterFlashSales.decrement(
-                {
-                  sold: product.quantity,
-                },
-                {
-                  where: {
-                    shop_register_flash_sales_id:
-                      product.on_shop_register_flash_sales_id,
-                  },
-                }
-              ));
-        })
-      );
+      // await Promise.all(
+      //   order.UserOrderDetails.map(async (product) => {
+      //     await ProductVarients.increment(
+      //       { stock: product.quantity },
+      //       {
+      //         where: {
+      //           product_varients_id: product.product_varients_id,
+      //         },
+      //       }
+      //     ),
+      //     await Product.decrement(
+      //       { sold: product.quantity },
+      //       {
+      //         where: {
+      //           product_id: product.ProductVarient.product_id,
+      //         },
+      //       }
+      //     )
+      //     ,
+      //       product.on_shop_register_flash_sales_id !== null &&
+      //         (await ShopRegisterFlashSales.decrement(
+      //           {
+      //             sold: product.quantity,
+      //           },
+      //           {
+      //             where: {
+      //               shop_register_flash_sales_id:
+      //                 product.on_shop_register_flash_sales_id,
+      //             },
+      //           }
+      //         ));
+      //   })
+      // );
       if (
         Array.isArray(order.UserOrderDetails) &&
         order.UserOrderDetails.length > 0
@@ -1639,6 +1653,14 @@ const sendRequest = async (req, res) => {
                 },
               }
             ),
+              await Product.decrement(
+                { sold: product.quantity },
+                {
+                  where: {
+                    product_id: product.ProductVarient.product_id,
+                  },
+                }
+              ),
               product.on_shop_register_flash_sales_id !== null &&
                 (await ShopRegisterFlashSales.decrement(
                   {

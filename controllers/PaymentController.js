@@ -1114,6 +1114,16 @@ const saveOrder = async (
       //     item.ProductVarient.Product.ShopRegisterFlashSales[0].sold >
       //     0
       // );
+      await Product.increment(
+        {
+          sold: item.quantity,
+        },
+        {
+          where: {
+            product_id: item.ProductVarient.Product.product_id,
+          },
+        }
+      );
       if (item.ProductVarient.Product.ShopRegisterFlashSales.length > 0) {
         if (
           item.ProductVarient.Product.ShopRegisterFlashSales[0].quantity -
@@ -1267,6 +1277,16 @@ const saveOrder = async (
                     .shop_register_flash_sales_id
                 : null,
           });
+          await Product.increment(
+            {
+              sold: item.quantity,
+            },
+            {
+              where: {
+                product_id: item.ProductVarient.Product.product_id,
+              },
+            }
+          );
           if (item.ProductVarient.Product.ShopRegisterFlashSales.length > 0) {
             if (
               item.ProductVarient.Product.ShopRegisterFlashSales[0].quantity -

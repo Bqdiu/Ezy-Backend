@@ -91,6 +91,7 @@ const getCart = async (req, res) => {
                     "product_name",
                     "product_status",
                     "thumbnail",
+                    "sold",
                   ],
                   // where: {
                   //   product_status: 1,
