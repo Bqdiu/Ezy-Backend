@@ -2093,6 +2093,14 @@ const processOrder = async (orderItem) => {
                 },
               }
             ),
+              await Product.decrement(
+                { sold: product.quantity },
+                {
+                  where: {
+                    product_id: product.ProductVarient.product_id,
+                  },
+                }
+              ),
               product.on_shop_register_flash_sales_id !== null &&
                 (await ShopRegisterFlashSales.decrement(
                   {
@@ -2178,7 +2186,15 @@ const processOrder = async (orderItem) => {
               where: {
                 product_varients_id: product.product_varients_id,
               },
-            }
+            },
+            await Product.decrement(
+              { sold: product.quantity },
+              {
+                where: {
+                  product_id: product.ProductVarient.product_id,
+                },
+              }
+            )
           ),
             product.on_shop_register_flash_sales_id !== null &&
               (await ShopRegisterFlashSales.decrement(
