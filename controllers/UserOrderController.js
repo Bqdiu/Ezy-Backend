@@ -1599,7 +1599,7 @@ const sendRequest = async (req, res) => {
       await Notifications.create({
         user_id: order.user_id,
         notifications_type: "order",
-        title: "Yêu cầu trả hàng được chấp nhận",
+        title: "Yêu cầu hủy đơn được chấp nhận",
         thumbnail: order.UserOrderDetails[0].thumbnail,
         content: `Đơn hàng ${order.user_order_id} đã bị hủy do yêu cầu trả hàng`,
         created_at: new Date(),
