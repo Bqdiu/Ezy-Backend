@@ -31,6 +31,7 @@ const {
   PaymentMethod,
   ShopRegisterFlashSales,
   Notifications,
+  DiscountVoucherUsage,
 } = require("../models/Assosiations");
 const {
   getOrderDetailGHN,
@@ -1216,17 +1217,15 @@ const buyOrderAgain = async (req, res) => {
         if (product.ProductVarient.Product.product_status === 0) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name}  ${
-              product.classify !== "" && "- " + product.classify
-            } đã bị khóa`,
+            message: `Sản phẩm ${product.varient_name}  ${product.classify !== "" && "- " + product.classify
+              } đã bị khóa`,
           });
         }
         if (stock < product.quantity) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name} ${
-              product.classify !== "" && "- " + product.classify
-            } không đủ hàng`,
+            message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
+              } không đủ hàng`,
           });
         }
         const cartItem = await CartItems.findOne({
@@ -1242,9 +1241,8 @@ const buyOrderAgain = async (req, res) => {
           if (newQuantity > stock) {
             return res.status(400).json({
               error: true,
-              message: `Sản phẩm ${product.varient_name} ${
-                product.classify !== "" && "- " + product.classify
-              } không đủ hàng`,
+              message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
+                } không đủ hàng`,
             });
           }
           // console.log("price: ", newQuantity * discount_price);
@@ -1393,6 +1391,17 @@ const shopCancelOrder = async (req, res) => {
             },
           }
         );
+
+        const product_varients = await ProductVarients.findOne({
+          where: { product_varients_id: product.product_varients_id },
+          include: [{ model: Product }]
+        });
+        if (product_varients && product_varients.Product) {
+          await Product.increment(
+            { sold: -product.quantity },
+            { where: { product_id: product_varients.Product.product_id } }
+          );
+        }
       })
     );
 
@@ -1429,6 +1438,7 @@ const shopCancelOrder = async (req, res) => {
         description: "Hoàn tiền đơn hàng",
       });
     }
+    await adjustVouchers(order);
     await Notifications.create({
       user_id: order.user_id,
       notifications_type: "order",
@@ -1662,17 +1672,17 @@ const sendRequest = async (req, res) => {
                 }
               ),
               product.on_shop_register_flash_sales_id !== null &&
-                (await ShopRegisterFlashSales.decrement(
-                  {
-                    sold: product.quantity,
+              (await ShopRegisterFlashSales.decrement(
+                {
+                  sold: product.quantity,
+                },
+                {
+                  where: {
+                    shop_register_flash_sales_id:
+                      product.on_shop_register_flash_sales_id,
                   },
-                  {
-                    where: {
-                      shop_register_flash_sales_id:
-                        product.on_shop_register_flash_sales_id,
-                    },
-                  }
-                ));
+                }
+              ));
           })
         );
       }
@@ -2102,17 +2112,17 @@ const processOrder = async (orderItem) => {
                 }
               ),
               product.on_shop_register_flash_sales_id !== null &&
-                (await ShopRegisterFlashSales.decrement(
-                  {
-                    sold: product.quantity,
+              (await ShopRegisterFlashSales.decrement(
+                {
+                  sold: product.quantity,
+                },
+                {
+                  where: {
+                    shop_register_flash_sales_id:
+                      product.on_shop_register_flash_sales_id,
                   },
-                  {
-                    where: {
-                      shop_register_flash_sales_id:
-                        product.on_shop_register_flash_sales_id,
-                    },
-                  }
-                ));
+                }
+              ));
           })
         );
       }
@@ -2197,17 +2207,17 @@ const processOrder = async (orderItem) => {
             )
           ),
             product.on_shop_register_flash_sales_id !== null &&
-              (await ShopRegisterFlashSales.decrement(
-                {
-                  sold: product.quantity,
+            (await ShopRegisterFlashSales.decrement(
+              {
+                sold: product.quantity,
+              },
+              {
+                where: {
+                  shop_register_flash_sales_id:
+                    product.on_shop_register_flash_sales_id,
                 },
-                {
-                  where: {
-                    shop_register_flash_sales_id:
-                      product.on_shop_register_flash_sales_id,
-                  },
-                }
-              ));
+              }
+            ));
         })
       );
     }
@@ -2232,6 +2242,34 @@ const processOrdersInBatches = async (batchsize) => {
   }
   console.log("Đã xử lý xong tất cả đơn hàng.");
 };
+
+
+async function adjustVouchers(order) {
+  if (order.vouchers_applied !== null) {
+    const vouchersApplied = order.vouchers_applied.split(",").map(Number);
+    await Promise.all(
+      vouchersApplied.map(async (voucherId) => {
+        await DiscountVoucher.increment(
+          { quantity: 1 },
+          { where: { discount_voucher_id: voucherId } }
+        );
+      })
+    );
+    const discount_voucher = await DiscountVoucher.findOne({
+      where: { discount_voucher_id: order.vouchers_applied },
+    });
+    const discountVoucherUsage = await DiscountVoucherUsage.findOne({
+      where: {
+        user_id: order.user_id,
+        discount_voucher_id: discount_voucher.discount_voucher_id,
+      },
+    })
+    if (discountVoucherUsage) {
+      discountVoucherUsage.total_used -= 1;
+      await discountVoucherUsage.save();
+    }
+  }
+}
 
 module.exports = {
   deleteOrder,

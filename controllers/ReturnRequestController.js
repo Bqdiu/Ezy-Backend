@@ -505,6 +505,16 @@ async function adjustStockAndSales(order) {
                         { stock: product.quantity },
                         { where: { product_varients_id: product.product_varients_id } }
                     );
+                    const product_varients = await ProductVarients.findOne({
+                        where: { product_varients_id: product.product_varients_id },
+                        include: [{ model: Product }]
+                    });
+                    if (product_varients && product_varients.Product) {
+                        await Product.increment(
+                            { sold: -product.quantity },
+                            { where: { product_id: product_varients.Product.product_id } }
+                        );
+                    }
                 }
                 if (product.on_shop_register_flash_sales_id !== null) {
                     await ShopRegisterFlashSales.decrement(
@@ -514,6 +524,8 @@ async function adjustStockAndSales(order) {
                 }
             })
         );
+        // if(returnRequest.return_type_id === 1) minus sold of product
+
     }
 
 }
@@ -523,7 +535,7 @@ async function adjustVouchers(order) {
         const returnRequest = await ReturnRequest.findOne({
             where: { user_order_id: order.user_order_id },
         });
-        if (returnRequest.return_type_id === 2) {
+        if (returnRequest.return_type_id === 1) {
             const vouchersApplied = order.vouchers_applied.split(",").map(Number);
             await Promise.all(
                 vouchersApplied.map(async (voucherId) => {
