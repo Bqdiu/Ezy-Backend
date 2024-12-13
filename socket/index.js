@@ -376,8 +376,8 @@ cron.schedule("0 0 * * 1", async () => {
   console.log("Running weekly shop revenue distribution...");
 
   const today = new Date();
-  const lastWeek = new Date(today);
-  lastWeek.setDate(today.getDate() - 7);
+  const fourteenDaysAgo = new Date(today);
+  fourteenDaysAgo.setDate(today.getDate() - 14);
 
   try {
     // Fetch all shops
@@ -385,7 +385,7 @@ cron.schedule("0 0 * * 1", async () => {
       include: [
         {
           model: UserAccount,
-          where: { role_id: 2 }, 
+          where: { role_id: 2 },
         },
       ],
     });
@@ -394,21 +394,22 @@ cron.schedule("0 0 * * 1", async () => {
       const shopId = shop.shop_id;
       const ownerId = shop.UserAccount.user_id;
 
-      // Calculate total revenue for the last 7 days
-      const totalRevenueData = await UserOrder.findAll({
-        attributes: [[fn("SUM", col("total_price")), "total_revenue"]],
+      // Fetch pending orders for this shop
+      const pendingOrders = await UserOrder.findAll({
         where: {
           shop_id: shopId,
           order_status_id: 5,
           return_expiration_date: null,
+          is_pending_payout: 1,
           created_at: {
-            [Op.between]: [lastWeek, today],
+            [Op.between]: [fourteenDaysAgo, today],
           },
         },
       });
 
-      const totalRevenue = parseFloat(totalRevenueData[0]?.dataValues?.total_revenue || 0);
-      const netRevenue = totalRevenue * 0.96;
+      // Calculate total revenue
+      const totalRevenue = pendingOrders.reduce((sum, order) => sum + parseFloat(order.total_price), 0);
+      const netRevenue = totalRevenue * 0.96; // Deduct platform fee (4%)
 
       if (netRevenue > 0) {
         // Update wallet balance
@@ -422,13 +423,31 @@ cron.schedule("0 0 * * 1", async () => {
             user_wallet_id: wallet.user_wallet_id,
             transaction_type: "Doanh thu",
             amount: netRevenue,
-            description: "Doanh thu cửa hàng",
+            description: "Doanh thu cửa hàng từ đơn hàng trong 14 ngày qua",
           });
 
           console.log(`Transferred ${netRevenue} to shop owner ${ownerId} for shop ${shopId}.`);
         } else {
           console.error(`Wallet not found for shop owner ${ownerId}.`);
         }
+
+        // Mark orders as processed
+        await UserOrder.update(
+          { is_pending_payout: 0 },
+          {
+            where: {
+              shop_id: shopId,
+              order_status_id: 5,
+              return_expiration_date: null,
+              is_pending_payout: 1,
+              created_at: {
+                [Op.between]: [fourteenDaysAgo, today],
+              },
+            },
+          }
+        );
+
+        console.log(`Marked ${pendingOrders.length} orders as processed for shop ${shopId}.`);
       } else {
         console.log(`No revenue to transfer for shop ${shopId} (Owner: ${ownerId})`);
       }
