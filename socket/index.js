@@ -8,6 +8,7 @@ const {
   FlashSales,
   FlashSaleTimerFrame,
   SaleEvents,
+  SaleEventsUser,
   UserAccount,
   RequestSupports,
   UserOrder,
@@ -220,6 +221,7 @@ io.on("connection", (socket) => {
     }
   });
 
+  //cron.schedule("* * * * *", async () => {
   cron.schedule("0 0 * * *", async () => {
     try {
       const currentTime = new Date();
@@ -238,6 +240,22 @@ io.on("connection", (socket) => {
         await event.save();
 
         console.log(`Sale event ${event.sale_events_id} has started.`);
+
+        //find all users with role_id = 1
+        const users = await UserAccount.findAll({
+          where: { role_id: 1 },
+          attributes: ["user_id"],
+        });
+
+        //Add all users to SaleEventsUser table
+        const saleEventUsers = users.map((user) => ({
+          user_id: user.user_id,
+          sale_events_id: event.sale_events_id,
+        }));
+
+        await SaleEventsUser.bulkCreate(saleEventUsers);
+
+
         io.emit("saleEventStarted", { saleEventId: event.sale_events_id });
       }
 
