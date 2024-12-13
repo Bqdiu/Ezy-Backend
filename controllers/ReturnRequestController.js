@@ -520,15 +520,20 @@ async function adjustStockAndSales(order) {
 
 async function adjustVouchers(order) {
     if (order.vouchers_applied !== null) {
-        const vouchersApplied = order.vouchers_applied.split(",").map(Number);
-        await Promise.all(
-            vouchersApplied.map(async (voucherId) => {
-                await DiscountVoucher.increment(
-                    { quantity: 1 },
-                    { where: { discount_voucher_id: voucherId } }
-                );
-            })
-        );
+        const returnRequest = await ReturnRequest.findOne({
+            where: { user_order_id: order.user_order_id },
+        });
+        if (returnRequest.return_type_id === 2) {
+            const vouchersApplied = order.vouchers_applied.split(",").map(Number);
+            await Promise.all(
+                vouchersApplied.map(async (voucherId) => {
+                    await DiscountVoucher.increment(
+                        { quantity: 1 },
+                        { where: { discount_voucher_id: voucherId } }
+                    );
+                })
+            );
+        }
     }
 }
 
