@@ -223,31 +223,29 @@ const acceptReturnRequest = async (req, res) => {
                     updatedAt: new Date(),
                 });
 
-                if (order.payment_method_id === 3 || order.payment_method_id === 4) {
-                    const wallet = await UserWallet.findOne({
-                        where: {
-                            user_id: order.user_id,
-                        },
-                    });
-                    let final_price;
-                    if (returnRequest.return_reason_id !== 1 && returnRequest.return_reason_id !== 2) {
-                        final_price = order.final_price - (order.shipping_fee - order.discount_shipping_fee);
-                    }
-                    else {
-                        final_price = order.final_price;
-                    }
-                    console.log("final_price", final_price);
-                    await wallet.update({
-                        balance: wallet.balance + final_price,
-                    });
-                    await WalletTransaction.create({
-                        user_wallet_id: wallet.user_wallet_id,
-                        transaction_type: "Hoàn tiền",
-                        amount: final_price,
-                        transaction_date: new Date(),
-                        description: "Hoàn tiền đơn hàng",
-                    });
+                const wallet = await UserWallet.findOne({
+                    where: {
+                        user_id: order.user_id,
+                    },
+                });
+                let final_price;
+                if (returnRequest.return_reason_id !== 1 && returnRequest.return_reason_id !== 2) {
+                    final_price = order.final_price - (order.shipping_fee - order.discount_shipping_fee);
                 }
+                else {
+                    final_price = order.final_price;
+                }
+                console.log("final_price", final_price);
+                await wallet.update({
+                    balance: wallet.balance + final_price,
+                });
+                await WalletTransaction.create({
+                    user_wallet_id: wallet.user_wallet_id,
+                    transaction_type: "Hoàn tiền",
+                    amount: final_price,
+                    transaction_date: new Date(),
+                    description: "Hoàn tiền đơn hàng",
+                });
 
                 await adjustStockAndSales(order);
 
@@ -497,35 +495,21 @@ async function adjustStockAndSales(order) {
         }
     }
     if (order?.UserOrderDetails?.length > 0) {
+        const returnRequest = await ReturnRequest.findOne({
+            where: { user_order_id: order.user_order_id },
+        });
         await Promise.all(
             order?.UserOrderDetails?.map(async (product) => {
-                await ProductVarients.increment(
-                    { stock: product.quantity },
-                    { where: { product_varients_id: product.product_varients_id } }
-                );
+                if (returnRequest.return_type_id === 1) {
+                    await ProductVarients.increment(
+                        { stock: product.quantity },
+                        { where: { product_varients_id: product.product_varients_id } }
+                    );
+                }
                 if (product.on_shop_register_flash_sales_id !== null) {
                     await ShopRegisterFlashSales.decrement(
                         { sold: product.quantity },
                         { where: { shop_register_flash_sales_id: product.on_shop_register_flash_sales_id } }
-                    );
-                }
-            })
-        );
-        const products = await ProductVarients.findAll({
-            where: {
-                product_varients_id: order.UserOrderDetails.map((product) => product.product_varients_id),
-            },
-            include: [{ model: Product }],
-        });
-        await Promise.all(
-            products.map(async (product) => {
-                const userOrderDetail = order.UserOrderDetails.find(
-                    (detail) => detail.product_varients_id === product.product_varients_id
-                );
-                if (userOrderDetail) {
-                    await Product.increment(
-                        { sold: -userOrderDetail.quantity },
-                        { where: { product_id: product.product_id } }
                     );
                 }
             })
