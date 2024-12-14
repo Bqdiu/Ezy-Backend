@@ -205,7 +205,6 @@ const getSuggestProducts = async (req, res) => {
       excludeProductIds = [],
     } = req.query;
 
-    const offset = (parseInt(pageNumbers, 10) - 1) * parseInt(limit, 10);
     const subCategoryIds = new Set();
 
     // Bước 1: Lấy danh mục phụ ngẫu nhiên cho sự đa dạng của sản phẩm
@@ -263,7 +262,6 @@ const getSuggestProducts = async (req, res) => {
         },
       ],
       order: [
-        [sequelize.random()], // Chọn ngẫu nhiên để đa dạng
         ["sold", "DESC"], // Ưu tiên sản phẩm bán chạy
         ["avgRating", "DESC"], // Ưu tiên sản phẩm có đánh giá cao
         ["visited", "DESC"], // Ưu tiên sản phẩm có lượt xem cao
@@ -275,7 +273,6 @@ const getSuggestProducts = async (req, res) => {
         ], // Ưu tiên shop có tổng lượt xem cao
       ],
       limit: parseInt(limit, 10), // Số lượng sản phẩm tối đa
-      offset: offset, // Dùng để phân trang
     });
 
     // Bước 4: Lấy thông tin flash sale
