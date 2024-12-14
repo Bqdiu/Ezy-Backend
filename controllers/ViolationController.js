@@ -124,9 +124,11 @@ const getShopsWithViolations = async (req, res) => {
       };
     });
 
+    const sortedShopData = shopData.sort((a, b) => b.total_violations - a.total_violations);
+
     res.status(200).json({
       success: true,
-      data: shopData,
+      data: sortedShopData,
     });
   } catch (error) {
     console.error("Error fetching shop violations:", error);
@@ -533,7 +535,10 @@ const revokeAccountViolationHandling = async (req, res) => {
     }
 
     // Get the user's account status from your database
-    const user = await UserAccount.findOne({ where: { user_id: history.violator_id } });
+    const user = await UserAccount.findOne({
+      where: { user_id: history.violator_id },
+      include: [{ model: Shop }], // Include shop details 
+    });
 
     // Update the violation history status
     history.status = 'Đã thu hồi';
@@ -544,7 +549,10 @@ const revokeAccountViolationHandling = async (req, res) => {
       user.is_banned = false;
       user.ban_until = null;
       await user.save();
-
+      if (user.role_id === 2 && user.Shop) {
+        user.Shop.shop_status = 1;
+        await user.Shop.save();
+      }
       try {
         // Unlock the user on Firebase
         await admin.auth().updateUser(user.user_id, { disabled: false });
@@ -586,27 +594,33 @@ const addViolationHistory = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found." });
     }
 
-    let banUntil = null;
-
-    // Handle account locking based on action type
-    if (action_type.includes("Khóa")) {
+    let banUntil;
+    if (action_type.includes("Khóa vĩnh viễn")) {
+      user.is_banned = 1;
+      user.ban_until = null; // Permanent lock
+    } else if (action_type.includes("Khóa")) {
       const daysToBan = parseInt(action_type.match(/\d+/)?.[0], 10) || 0;
       banUntil = new Date();
       banUntil.setDate(banUntil.getDate() + daysToBan);
 
       user.is_banned = 1;
-      user.ban_until = banUntil;
-      await user.save();
+      user.ban_until = banUntil; // Temporary lock
+    }
+    await user.save();
 
-      console.log("User banned until:", banUntil);
+    // Disable the user in Firebase
+    try {
+      await admin.auth().updateUser(user.user_id, { disabled: true });
+      console.log("Firebase user disabled:", user.user_id);
+    } catch (firebaseError) {
+      console.error("Error disabling Firebase user:", firebaseError.message);
+    }
 
-      // Disable the user in Firebase
-      try {
-        await admin.auth().updateUser(user.user_id, { disabled: true });
-        console.log("Firebase user disabled:", user.user_id);
-      } catch (firebaseError) {
-        console.error("Error disabling Firebase user:", firebaseError.message);
-      }
+    // If the user has role_id = 2 (shop owner) and their shop exists, update the shop_status
+    if (user.role_id === 2 && user.Shop) {
+      user.Shop.shop_status = 0; // Update shop_status to 0
+      await user.Shop.save(); // Save the shop's updated status
+      console.log(`Shop status updated to 0 for shop: ${user.Shop.shop_name}`);
     }
 
     // Create violation history record
@@ -648,6 +662,7 @@ const addViolationHistory = async (req, res) => {
     res.status(500).json({ success: false, message: "Đã xảy ra lỗi khi xử lý vi phạm." });
   }
 };
+
 
 const lockUserAccount = async (req, res) => {
   const { violator_id, currentAdminId } = req.body;
@@ -691,6 +706,10 @@ const lockUserAccount = async (req, res) => {
 
     // Check role and send email accordingly
     if (user.role_id === 2 && user.Shop) {
+
+      user.Shop.shop_status = 0;
+      await user.Shop.save();
+
       console.log("Sending shop owner email to:", user.email);
       await sendShopOwnerEmail(
         user.email,
@@ -734,7 +753,10 @@ const unlockUserAccount = async (req, res) => {
 
   try {
     // Find the user by violator_id mapped to user_id
-    const user = await UserAccount.findOne({ where: { user_id: violator_id } });
+    const user = await UserAccount.findOne({
+      where: { user_id: violator_id },
+      include: [{ model: Shop }], // Include shop details
+    });
     console.log("User found:", user);
 
     if (!user) {
@@ -746,6 +768,12 @@ const unlockUserAccount = async (req, res) => {
     user.ban_until = null;
     await user.save();
     console.log("User unlocked in database.");
+
+    if (user.role_id === 2 && user.Shop) {
+      user.Shop.shop_status = 1;
+      await user.Shop.save();
+      console.log(`Shop ${user.Shop.shop_name} locked (shop_status = 0).`);
+    }
 
     // Enable the user in Firebase
     try {
