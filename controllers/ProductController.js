@@ -203,22 +203,26 @@ const getSuggestProducts = async (req, res) => {
       pageNumbers = 1,
       limit = 2,
       excludeProductIds = [],
+      randomSub = [],
     } = req.query;
-
+    const offset = (parseInt(pageNumbers, 10) - 1) * parseInt(limit, 10);
     const subCategoryIds = new Set();
-
-    // Bước 1: Lấy danh mục phụ ngẫu nhiên cho sự đa dạng của sản phẩm
-    const randomSubCategories = await SubCategory.findAll({
-      include: {
-        model: Product,
-        required: true,
-      },
-      order: sequelize.random(),
-      limit: 15,
-    });
-    randomSubCategories.forEach((sub) =>
-      subCategoryIds.add(sub.sub_category_id)
-    );
+    let randomSubCategories = [];
+    if (randomSub.length === 0) {
+      randomSubCategories = await SubCategory.findAll({
+        order: sequelize.random(),
+        limit: 15,
+        include: {
+          model: Product,
+          required: true,
+        },
+      });
+      randomSubCategories.forEach((sub) =>
+        subCategoryIds.add(sub.sub_category_id)
+      );
+    } else {
+      randomSub.forEach((sub) => subCategoryIds.add(sub));
+    }
 
     // Bước 2: Nếu có user_id, thêm danh mục phụ từ lịch sử tìm kiếm
     if (user_id) {
@@ -232,6 +236,8 @@ const getSuggestProducts = async (req, res) => {
         subCategoryIds.add(search.SubCategory.sub_category_id)
       );
     }
+    // Bước 1: Lấy danh mục phụ ngẫu nhiên cho sự đa dạng của sản phẩm
+
     const { count, rows: suggestedProducts } = await Product.findAndCountAll({
       where: {
         sub_category_id: Array.from(subCategoryIds),
@@ -239,6 +245,7 @@ const getSuggestProducts = async (req, res) => {
         product_status: 1,
         product_id: { [Sequelize.Op.notIn]: excludeProductIds },
       },
+
       include: [
         {
           model: Shop,
@@ -261,6 +268,7 @@ const getSuggestProducts = async (req, res) => {
           },
         },
       ],
+
       order: [
         ["sold", "DESC"], // Ưu tiên sản phẩm bán chạy
         ["avgRating", "DESC"], // Ưu tiên sản phẩm có đánh giá cao
@@ -273,6 +281,7 @@ const getSuggestProducts = async (req, res) => {
         ], // Ưu tiên shop có tổng lượt xem cao
       ],
       limit: parseInt(limit, 10), // Số lượng sản phẩm tối đa
+      offset,
     });
 
     // Bước 4: Lấy thông tin flash sale
@@ -340,6 +349,7 @@ const getSuggestProducts = async (req, res) => {
       total: count,
       pageNumbers,
       totalPages: Math.ceil(count / limit),
+      randomSubCats: Array.from(subCategoryIds),
     });
   } catch (error) {
     console.error("Lỗi khi lấy dữ liệu sản phẩm gợi ý:", error);
@@ -432,6 +442,7 @@ const getProductDetailsByID = async (req, res) => {
   try {
     const { id } = req.params;
     const { user_id } = req.query;
+    console.log("user_id: ", user_id);
     const product = await Product.findOne({
       where: { product_id: id },
       attributes: {
