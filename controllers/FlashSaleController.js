@@ -3,9 +3,11 @@ const {
   FlashSales,
   ShopRegisterFlashSales,
   Product,
+  Shop,
 } = require("../models/Assosiations");
 const FlashSaleTimerFrame = require("../models/FlashSaleTimeFrame");
 const moment = require("moment-timezone");
+const { Sequelize } = require("sequelize");
 const timeInVietnam = moment.tz("Asia/Ho_Chi_Minh");
 
 const getAllFlashSales = async (req, res) => {
@@ -495,62 +497,74 @@ const deleteTimeFrame = async (req, res) => {
       .json({ success: false, message: "Đã xảy ra lỗi khi xóa khung giờ" });
   }
 };
-
+//getShopRegisteredProductsByFlashSale
 const getShopRegisteredProductsByFlashSale = async (req, res) => {
   const { flash_sales_id } = req.params;
 
   try {
+    if (!flash_sales_id || isNaN(flash_sales_id)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID flash sale không hợp lệ.",
+      });
+    }
+
     const registeredProducts = await ShopRegisterFlashSales.findAll({
       include: [
         {
           model: FlashSaleTimerFrame,
-          where: { flash_sales_id },
-          attributes: ["flash_sale_time_frame_id", "started_at", "ended_at"],
+          where: { flash_sales_id }, // Chỉ lấy các khung giờ thuộc flash sale ID
+          attributes: [], // Không cần thông tin chi tiết về khung giờ
+          required: true,
         },
         {
           model: Product,
-          attributes: ["product_id", "product_name", "thumbnail"],
+          attributes: ["product_id", "product_name", "thumbnail", "base_price", "stock"],
         },
         {
           model: Shop,
-          attributes: [
-            "shop_id",
-            "shop_name",
-            "logo_url",
-            "shop_description",
-            "business_email",
-            "phone_number",
-          ],
+          attributes: ["shop_id", "shop_name", "logo_url", "shop_description", "business_email", "phone_number"],
         },
       ],
-      attributes: [
-        "shop_id",
-        "original_price",
-        "flash_sale_price",
-        "quantity",
-        "sold",
-      ],
+      attributes: ["original_price", "flash_sale_price", "quantity", "sold"],
     });
 
-    if (registeredProducts.length === 0) {
+    if (!registeredProducts || registeredProducts.length === 0) {
       return res.status(404).json({
         success: false,
         message: "Không có sản phẩm nào được đăng ký trong flash sale này.",
       });
     }
 
+    const responseData = registeredProducts.map((product) => ({
+      shop: product.Shop,
+      product: product.Product,
+      flash_sale_details: {
+        original_price: product.original_price,
+        flash_sale_price: product.flash_sale_price,
+        quantity: product.quantity,
+        sold: product.sold,
+      },
+    }));
+
     return res.status(200).json({
       success: true,
-      data: registeredProducts,
+      data: responseData,
     });
   } catch (error) {
-    console.error("Lỗi khi lấy sản phẩm đã đăng ký:", error);
-    res.status(500).json({
+    console.error("Lỗi khi lấy danh sách sản phẩm đã đăng ký:", error);
+    return res.status(500).json({
       success: false,
-      message: "Đã xảy ra lỗi khi lấy sản phẩm đã đăng ký.",
+      message: "Đã xảy ra lỗi khi lấy danh sách sản phẩm đã đăng ký.",
     });
   }
 };
+
+
+
+
+
+
 const getSuggestFlashSaleForShop = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
