@@ -478,28 +478,33 @@ const getTopSellerShops = async (req, res) => {
 const getTopSalesRevenue = async (req, res) => {
     const { start_date, end_date } = req.query;
 
-    const now = new Date();
-    const defaultEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // End of current month
-    const defaultStartDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Start of 3 months ago
-
-    const parsedStartDate = start_date && !isNaN(new Date(start_date)) ? new Date(start_date) : defaultStartDate;
-    const parsedEndDate = end_date && !isNaN(new Date(end_date)) ? new Date(end_date) : defaultEndDate;
-
-    if (parsedStartDate > parsedEndDate) {
-        return res.status(400).json({
-            error: true,
-            message: "start_date must be before end_date",
-        });
-    }
-
     try {
-        // Fetch revenue by day
-        const revenueByDay = await UserOrder.findAll({
+        // Parse and validate the date range
+        const now = new Date();
+        const defaultStartDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Start of 3 months ago
+        const defaultEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // End of current month
+
+        const parsedStartDate = start_date ? new Date(start_date) : defaultStartDate;
+        const parsedEndDate = end_date ? new Date(end_date) : defaultEndDate;
+
+        if (isNaN(parsedStartDate) || isNaN(parsedEndDate)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid start_date or end_date.",
+            });
+        }
+
+        if (parsedStartDate > parsedEndDate) {
+            return res.status(400).json({
+                success: false,
+                message: "start_date must be before end_date.",
+            });
+        }
+
+        // Query to fetch top 5 shops by total revenue within the specified range
+        const topShops = await UserOrder.findAll({
             attributes: [
                 "shop_id",
-                [fn("DAY", col("UserOrder.created_at")), "day"],
-                [fn("MONTH", col("UserOrder.created_at")), "month"],
-                [fn("YEAR", col("UserOrder.created_at")), "year"],
                 [fn("SUM", col("UserOrder.total_price")), "total_revenue"],
             ],
             where: {
@@ -514,109 +519,27 @@ const getTopSalesRevenue = async (req, res) => {
                     attributes: ["shop_name"],
                 },
             ],
-            group: [
-                "shop_id",
-                "Shop.shop_name",
-                fn("DAY", col("UserOrder.created_at")),
-                fn("MONTH", col("UserOrder.created_at")),
-                fn("YEAR", col("UserOrder.created_at")),
-            ],
+            group: ["shop_id", "Shop.shop_name"],
+            order: [[fn("SUM", col("UserOrder.total_price")), "DESC"]],
+            limit: 5, // Limit to top 5 results
         });
 
-        // Fetch revenue by week
-        const revenueByWeek = await UserOrder.findAll({
-            attributes: [
-                "shop_id",
-                [fn("WEEK", col("UserOrder.created_at")), "week"],
-                [fn("YEAR", col("UserOrder.created_at")), "year"],
-                [fn("SUM", col("UserOrder.total_price")), "total_revenue"],
-            ],
-            where: {
-                order_status_id: 5,
-                created_at: {
-                    [Op.between]: [parsedStartDate, parsedEndDate],
-                },
-            },
-            include: [
-                {
-                    model: Shop,
-                    attributes: ["shop_name"],
-                },
-            ],
-            group: [
-                "shop_id",
-                "Shop.shop_name",
-                fn("WEEK", col("UserOrder.created_at")),
-                fn("YEAR", col("UserOrder.created_at")),
-            ],
-        });
+        // Format the response
+        const formattedShops = topShops.map((shop) => ({
+            shop_id: shop.shop_id,
+            shop_name: shop.Shop?.shop_name || "Unknown",
+            total_revenue: parseFloat(shop.dataValues.total_revenue) || 0,
+        }));
 
-        // Fetch revenue by month
-        const revenueByMonth = await UserOrder.findAll({
-            attributes: [
-                "shop_id",
-                [fn("MONTH", col("UserOrder.created_at")), "month"],
-                [fn("YEAR", col("UserOrder.created_at")), "year"],
-                [fn("SUM", col("UserOrder.total_price")), "total_revenue"],
-            ],
-            where: {
-                order_status_id: 5,
-                created_at: {
-                    [Op.between]: [parsedStartDate, parsedEndDate],
-                },
-            },
-            include: [
-                {
-                    model: Shop,
-                    attributes: ["shop_name"],
-                },
-            ],
-            group: [
-                "shop_id",
-                "Shop.shop_name",
-                fn("MONTH", col("UserOrder.created_at")),
-                fn("YEAR", col("UserOrder.created_at")),
-            ],
-        });
-
-        // Fetch revenue by year
-        const revenueByYear = await UserOrder.findAll({
-            attributes: [
-                "shop_id",
-                [fn("YEAR", col("UserOrder.created_at")), "year"],
-                [fn("SUM", col("UserOrder.total_price")), "total_revenue"],
-            ],
-            where: {
-                order_status_id: 5,
-                created_at: {
-                    [Op.between]: [parsedStartDate, parsedEndDate],
-                },
-            },
-            include: [
-                {
-                    model: Shop,
-                    attributes: ["shop_name"],
-                },
-            ],
-            group: ["shop_id", "Shop.shop_name", fn("YEAR", col("UserOrder.created_at"))],
-        });
-
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
-            data: {
-                revenueByDay,
-                revenueByWeek,
-                revenueByMonth,
-                revenueByYear,
-                start_date: parsedStartDate,
-                end_date: parsedEndDate,
-            },
+            data: formattedShops,
         });
     } catch (error) {
-        console.error("Error fetching sales revenue:", error);
-        return res.status(500).json({
-            error: true,
-            message: "An error occurred while fetching revenue data.",
+        console.error("Error fetching top shops by revenue:", error);
+        res.status(500).json({
+            success: false,
+            message: "An error occurred while fetching top shops by revenue.",
         });
     }
 };
@@ -686,6 +609,7 @@ const getTopCategorySales = async (req, res) => {
             ],
             group: [col("ProductVarient->Product->SubCategory->Category.category_name")],
             order: [[fn("SUM", col("UserOrderDetails.quantity")), "DESC"]],
+            limit: 10,
         });
 
         res.status(200).json({
@@ -760,6 +684,7 @@ const getTopSubCategorySales = async (req, res) => {
             ],
             group: [col("ProductVarient->Product->SubCategory.sub_category_name")],
             order: [[fn("SUM", col("UserOrderDetails.quantity")), "DESC"]],
+            limit: 10,
         });
 
         res.status(200).json({
@@ -840,6 +765,7 @@ const getTopProductVariientSales = async (req, res) => {
                 col("ProductVarient.ProductClassify.product_classify_name"),
             ],
             order: [[fn("SUM", col("UserOrderDetails.quantity")), "DESC"]],
+            limit: 10,
         });
 
         res.status(200).json({
@@ -909,6 +835,7 @@ const getTopProductSales = async (req, res) => {
                 col("ProductVarient.Product.product_name"),
             ],
             order: [[fn("SUM", col("UserOrderDetails.quantity")), "DESC"]],
+            limit: 10,
         });
 
         res.status(200).json({
