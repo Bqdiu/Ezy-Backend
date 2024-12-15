@@ -25,7 +25,7 @@ const { Op, fn, col } = require("sequelize");
 const {
   deleteOrder,
   checkPaid,
-  updateBlockStatus, 
+  updateBlockStatus,
   checkBlockStatus,
   processOrdersInBatches,
 } = require("../controllers/UserOrderController");
@@ -255,7 +255,6 @@ io.on("connection", (socket) => {
 
         await SaleEventsUser.bulkCreate(saleEventUsers);
 
-
         io.emit("saleEventStarted", { saleEventId: event.sale_events_id });
       }
 
@@ -321,6 +320,7 @@ io.on("connection", (socket) => {
   });
 
   // * * * * *: 1 phút
+  // 0 0 * * * : 0h mỗi ngày
   cron.schedule("0 0 * * *", async () => {
     console.log("Processing orders in batches...");
     try {
@@ -408,12 +408,17 @@ cron.schedule("0 0 * * 1", async () => {
       });
 
       // Calculate total revenue
-      const totalRevenue = pendingOrders.reduce((sum, order) => sum + parseFloat(order.total_price), 0);
+      const totalRevenue = pendingOrders.reduce(
+        (sum, order) => sum + parseFloat(order.total_price),
+        0
+      );
       const netRevenue = totalRevenue * 0.96; // Deduct platform fee (4%)
 
       if (netRevenue > 0) {
         // Update wallet balance
-        const wallet = await UserWallet.findOne({ where: { user_id: ownerId } });
+        const wallet = await UserWallet.findOne({
+          where: { user_id: ownerId },
+        });
         if (wallet) {
           wallet.balance += netRevenue;
           await wallet.save();
@@ -426,7 +431,9 @@ cron.schedule("0 0 * * 1", async () => {
             description: "Doanh thu cửa hàng từ đơn hàng trong 14 ngày qua",
           });
 
-          console.log(`Transferred ${netRevenue} to shop owner ${ownerId} for shop ${shopId}.`);
+          console.log(
+            `Transferred ${netRevenue} to shop owner ${ownerId} for shop ${shopId}.`
+          );
         } else {
           console.error(`Wallet not found for shop owner ${ownerId}.`);
         }
@@ -447,9 +454,13 @@ cron.schedule("0 0 * * 1", async () => {
           }
         );
 
-        console.log(`Marked ${pendingOrders.length} orders as processed for shop ${shopId}.`);
+        console.log(
+          `Marked ${pendingOrders.length} orders as processed for shop ${shopId}.`
+        );
       } else {
-        console.log(`No revenue to transfer for shop ${shopId} (Owner: ${ownerId})`);
+        console.log(
+          `No revenue to transfer for shop ${shopId} (Owner: ${ownerId})`
+        );
       }
     }
 
@@ -463,41 +474,40 @@ cron.schedule("0 0 * * 1", async () => {
 //cron.schedule("* * * * *", async () => {
 cron.schedule("0 * * * *", async () => {
   try {
-      const currentTime = new Date();
+    const currentTime = new Date();
 
-      // Fetch the event with ID = 1
-      const saleEvent = await SaleEvents.findOne({
-          where: { sale_events_id: 1 },
-      });
+    // Fetch the event with ID = 1
+    const saleEvent = await SaleEvents.findOne({
+      where: { sale_events_id: 1 },
+    });
 
-      if (saleEvent) {
-          const timeLeft = new Date(saleEvent.ended_at) - currentTime;
+    if (saleEvent) {
+      const timeLeft = new Date(saleEvent.ended_at) - currentTime;
 
-          // If the event is about to end in less than 24 hours
-          if (timeLeft < 24 * 60 * 60 * 1000 && timeLeft > 0) {
-              const newEndDate = new Date(saleEvent.ended_at);
-              newEndDate.setMonth(newEndDate.getMonth() + 1);
+      // If the event is about to end in less than 24 hours
+      if (timeLeft < 24 * 60 * 60 * 1000 && timeLeft > 0) {
+        const newEndDate = new Date(saleEvent.ended_at);
+        newEndDate.setMonth(newEndDate.getMonth() + 1);
 
-              await saleEvent.update({ ended_at: newEndDate });
+        await saleEvent.update({ ended_at: newEndDate });
 
-              console.log(
-                  `Sale event with ID ${saleEvent.sale_events_id} has been extended to ${newEndDate}.`
-              );
+        console.log(
+          `Sale event with ID ${saleEvent.sale_events_id} has been extended to ${newEndDate}.`
+        );
 
-              // Emit a socket event to notify clients about the update
-              io.emit("saleEventUpdated", {
-                  saleEventId: saleEvent.sale_events_id,
-                  newEndDate,
-              });
-          }
-      } else {
-          console.log("No sale event with ID = 1 found.");
+        // Emit a socket event to notify clients about the update
+        io.emit("saleEventUpdated", {
+          saleEventId: saleEvent.sale_events_id,
+          newEndDate,
+        });
       }
+    } else {
+      console.log("No sale event with ID = 1 found.");
+    }
   } catch (error) {
-      console.error("Error extending sale event end date:", error);
+    console.error("Error extending sale event end date:", error);
   }
 });
-
 
 module.exports = {
   io,
