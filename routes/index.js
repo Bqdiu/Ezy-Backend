@@ -497,7 +497,7 @@ router.get(
 );
 router.get("/flash-sales/get-product-by-time-frame", getProductByTimeFrame);
 router.get(
-  "/flash-sales/get-shop-registered-products/:id",
+  "/flash-sales/get-shop-registered-products/:flash_sales_id",
   getShopRegisteredProductsByFlashSale
 );
 router.get(
