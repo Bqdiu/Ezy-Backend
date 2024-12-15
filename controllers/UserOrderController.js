@@ -372,7 +372,13 @@ const getOrderDetails = async (req, res) => {
         {
           model: ReturnRequest,
           attributes: ["return_request_id", "status_id", "return_type_id"],
-
+          required: false,
+          where: Sequelize.literal(`
+            (
+              (UserOrder.order_status_id IN (2, 3, 6) AND ReturnRequest.return_type_id = 1) OR
+              (UserOrder.order_status_id IN (4, 5, 7) AND ReturnRequest.return_type_id = 2)
+            )
+          `),
           include: [
             {
               model: ReturnReason,
