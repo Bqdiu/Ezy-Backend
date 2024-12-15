@@ -537,11 +537,12 @@ const updateOrderStatus = async (data) => {
         return_expiration_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         updated_at: new Date(),
       });
-      await OrderStatusHistory.create({
-        user_order_id,
-        order_status_id: 4,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      await OrderStatusHistory.findOrCreate({
+        where: { user_order_id, order_status_id: 4 },
+        defaults: {
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       });
       await Promise.all(
         order.UserOrderDetails.map(async (product) => {
@@ -555,6 +556,8 @@ const updateOrderStatus = async (data) => {
               },
             }
           );
+          console.log("Đã cập nhật số lượng bán: ", product.quantity);
+          console.log("Đã cập nhật số lượng bán: ", product.ProductVarient.product_id);
         })
       );
     }
@@ -721,10 +724,13 @@ const getShopOrders = async (req, res) => {
     const { shop_id, status_id, limit = 10, page = 1, searchText } = req.body;
     console.log("body broooooo", req.body);
     const offset = (page - 1) * limit;
-    let whereConditions = {
-      shop_id,
-      ...(status_id !== -1 && { order_status_id: status_id }),
-    };
+    let whereConditions = { shop_id };
+    if (status_id !== -1) {
+      whereConditions = {
+        ...whereConditions,
+        order_status_id: status_id,
+      };
+    }
     let sanitizedSearchText = searchText ? searchText.trim().toLowerCase() : "";
 
     if (sanitizedSearchText) {
@@ -1134,6 +1140,15 @@ const confirmOrder = async (req, res) => {
       });
     }
 
+    // check stock product varient before create order
+    const check_stock = await checkStockProductVarientsOrders(order);
+    console.log("check_stockkkkkkkkkkkkkkkkkkk: ", check_stock);
+    if (check_stock.error) {
+      return res.status(400).json({
+        error: true,
+        message: check_stock.message,
+      })
+    }
     const resultGHN = await createOrderGHN(shopId, data);
     if (resultGHN.error) {
       return res.status(400).json({
@@ -1167,7 +1182,7 @@ const confirmOrder = async (req, res) => {
         updated_at: new Date(),
         url: `/user/purchase/order/${order.user_order_id}`,
       });
-
+      await decrementStockProductVarients(order);
       return res.status(200).json({
         success: true,
         message: "Order created successfully",
@@ -1259,17 +1274,15 @@ const buyOrderAgain = async (req, res) => {
         if (product.ProductVarient.Product.product_status === 0) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name}  ${
-              product.classify !== "" && "- " + product.classify
-            } đã bị khóa`,
+            message: `Sản phẩm ${product.varient_name}  ${product.classify !== "" && "- " + product.classify
+              } đã bị khóa`,
           });
         }
         if (stock < product.quantity) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name} ${
-              product.classify !== "" && "- " + product.classify
-            } không đủ hàng`,
+            message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
+              } không đủ hàng`,
           });
         }
         const cartItem = await CartItems.findOne({
@@ -1285,9 +1298,8 @@ const buyOrderAgain = async (req, res) => {
           if (newQuantity > stock) {
             return res.status(400).json({
               error: true,
-              message: `Sản phẩm ${product.varient_name} ${
-                product.classify !== "" && "- " + product.classify
-              } không đủ hàng`,
+              message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
+                } không đủ hàng`,
             });
           }
           // console.log("price: ", newQuantity * discount_price);
@@ -1418,6 +1430,7 @@ const shopCancelOrder = async (req, res) => {
     await order.update({
       order_status_id: 6,
       is_canceled_by: 2,
+      is_processed: 1,
       updated_at: new Date(),
     });
     await OrderStatusHistory.create({
@@ -1426,46 +1439,52 @@ const shopCancelOrder = async (req, res) => {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-    await Promise.all(
+    await Promise.allSettled(
       order.UserOrderDetails.map(async (product) => {
-        await ProductVarients.increment(
-          { stock: product.quantity },
-          {
-            where: {
-              product_varients_id: product.product_varients_id,
-            },
-          }
-        );
-
-        const product_varients = await ProductVarients.findOne({
-          where: { product_varients_id: product.product_varients_id },
-          include: [{ model: Product }],
-        });
-        if (product_varients && product_varients.Product) {
-          await Product.increment(
-            { sold: -product.quantity },
-            { where: { product_id: product_varients.Product.product_id } }
+        if (product.on_shop_register_flash_sales_id === null && order.order_code !== null) {
+          await ProductVarients.increment(
+            { stock: product.quantity },
+            {
+              where: {
+                product_varients_id: product.product_varients_id,
+              },
+            }
+          );
+        }
+        if (product.on_shop_register_flash_sales_id !== null) {
+          await ProductVarients.increment(
+            { stock: product.quantity },
+            {
+              where: {
+                product_varients_id: product.product_varients_id,
+              },
+            }
+          );
+          await ShopRegisterFlashSales.decrement(
+            { sold: product.quantity },
+            {
+              where: {
+                shop_register_flash_sales_id:
+                  product.on_shop_register_flash_sales_id,
+              },
+            }
           );
         }
       })
     );
 
-    // if (order.vouchers_applied !== null) {
-    //   const vouchersApplied = order.vouchers_applied.split(",").map(Number);
-    //   await Promise.all(
-    //     vouchersApplied.map(async (voucherId) => {
-    //       await DiscountVoucher.increment(
-    //         { quantity: 1 },
-    //         {
-    //           where: {
-    //             discount_voucher_id: voucherId,
-    //           },
-    //         }
-    //       );
-    //     })
-    //   );
-    // }
-
+    const status_id = 2;
+    await ReturnRequest.create({
+      user_id: order.user_id,
+      shop_id: order.shop_id,
+      user_order_id: order.user_order_id,
+      return_type_id: 1,
+      return_reason_id: 8,
+      note: "Hủy đơn hàng bởi cửa hàng",
+      status_id: status_id,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
     if (order.payment_method_id === 3 || order.payment_method_id === 4) {
       const wallet = await UserWallet.findOne({
         where: {
@@ -2169,17 +2188,17 @@ const processOrder = async (orderItem) => {
               }
             ),
               product.on_shop_register_flash_sales_id !== null &&
-                (await ShopRegisterFlashSales.decrement(
-                  {
-                    sold: product.quantity,
+              (await ShopRegisterFlashSales.decrement(
+                {
+                  sold: product.quantity,
+                },
+                {
+                  where: {
+                    shop_register_flash_sales_id:
+                      product.on_shop_register_flash_sales_id,
                   },
-                  {
-                    where: {
-                      shop_register_flash_sales_id:
-                        product.on_shop_register_flash_sales_id,
-                    },
-                  }
-                ));
+                }
+              ));
           })
         );
       }
@@ -2274,17 +2293,17 @@ const processOrder = async (orderItem) => {
                 },
               }
             ),
-            await ShopRegisterFlashSales.decrement(
-              {
-                sold: product.quantity,
-              },
-              {
-                where: {
-                  shop_register_flash_sales_id:
-                    product.on_shop_register_flash_sales_id,
+              await ShopRegisterFlashSales.decrement(
+                {
+                  sold: product.quantity,
                 },
-              }
-            ));
+                {
+                  where: {
+                    shop_register_flash_sales_id:
+                      product.on_shop_register_flash_sales_id,
+                  },
+                }
+              ));
         })
       );
     }
@@ -2335,6 +2354,43 @@ async function adjustVouchers(order) {
       await discountVoucherUsage.save();
     }
   }
+}
+
+async function checkStockProductVarientsOrders(order) {
+  for (const product of order.UserOrderDetails) {
+    if (product.on_shop_register_flash_sales_id === null) {
+      const product_varients = await ProductVarients.findOne({
+        where: { product_varients_id: product.product_varients_id },
+        include: [{ model: Product }],
+      });
+      if (product_varients.stock < product.quantity) {
+        return {
+          error: true,
+          message: `${product_varients.Product.product_name} không đủ số lượng tồn kho. Tồn kho: ${product_varients.stock}`,
+        };
+      }
+    }
+  }
+  return {
+    error: false,
+    message: "Sản phẩm đủ số lượng tồn kho",
+  };
+}
+
+async function decrementStockProductVarients(order) {
+  await Promise.all(
+    order.UserOrderDetails.map(async (product) => {
+      if (product.on_shop_register_flash_sales_id === null) {
+        await ProductVarients.decrement(
+          { stock: product.quantity },
+          {
+            where: { product_varients_id: product.product_varients_id },
+          }
+        );
+      }
+    })
+  );
+
 }
 
 module.exports = {
