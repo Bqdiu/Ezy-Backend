@@ -501,10 +501,34 @@ async function adjustStockAndSales(order) {
         await Promise.all(
             order?.UserOrderDetails?.map(async (product) => {
                 if (returnRequest.return_type_id === 1) {
-                    await ProductVarients.increment(
-                        { stock: product.quantity },
-                        { where: { product_varients_id: product.product_varients_id } }
-                    );
+                    if (product.on_shop_register_flash_sales_id === null){
+                        await ProductVarients.increment(
+                            { stock: product.quantity },
+                            { where: { product_varients_id: product.product_varients_id } }
+                        );
+                    }
+                    else{
+                        await ProductVarients.increment(
+                            { stock: product.quantity },
+                            {
+                                where: {
+                                    product_varients_id: product.product_varients_id,
+                                },
+                            }
+                        );
+                        await ShopRegisterFlashSales.decrement(
+                            { sold: product.quantity },
+                            {
+                                where: {
+                                    shop_register_flash_sales_id:
+                                        product.on_shop_register_flash_sales_id,
+                                },
+                            }
+                        );
+                    }
+                }
+                else{
+                    // trừ sold của product
                     const product_varients = await ProductVarients.findOne({
                         where: { product_varients_id: product.product_varients_id },
                         include: [{ model: Product }]
@@ -515,16 +539,20 @@ async function adjustStockAndSales(order) {
                             { where: { product_id: product_varients.Product.product_id } }
                         );
                     }
-                }
-                if (product.on_shop_register_flash_sales_id !== null) {
-                    await ShopRegisterFlashSales.decrement(
-                        { sold: product.quantity },
-                        { where: { shop_register_flash_sales_id: product.on_shop_register_flash_sales_id } }
-                    );
+                    // trừ sold của shop_register_flash_sales
+                    if (product.on_shop_register_flash_sales_id !== null) {
+                        await ShopRegisterFlashSales.increment(
+                            { sold: -product.quantity },
+                            {
+                                where: {
+                                    shop_register_flash_sales_id: product.on_shop_register_flash_sales_id,
+                                },
+                            }
+                        );
+                    }
                 }
             })
         );
-        // if(returnRequest.return_type_id === 1) minus sold of product
 
     }
 
