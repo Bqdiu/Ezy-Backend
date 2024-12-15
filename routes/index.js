@@ -497,14 +497,13 @@ router.get(
 );
 router.get("/flash-sales/get-product-by-time-frame", getProductByTimeFrame);
 router.get(
-  "/flash-sales/get-shop-registered-products/:flash_sales_id",
+  "/flash-sales/get-shop-registered-products/:id",
   getShopRegisteredProductsByFlashSale
 );
 router.get(
   "/flash-sales/get-suggest-flash-sale-shop",
   getSuggestFlashSaleForShop
 );
-
 //----------------Violation----------------
 router.get("/violations/get-reported-customers", getReportedCustomers);
 router.get("/violations/get-shops-with-violations", getShopsWithViolations);

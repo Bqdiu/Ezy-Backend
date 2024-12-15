@@ -497,72 +497,74 @@ const deleteTimeFrame = async (req, res) => {
       .json({ success: false, message: "Đã xảy ra lỗi khi xóa khung giờ" });
   }
 };
-//getShopRegisteredProductsByFlashSale
 const getShopRegisteredProductsByFlashSale = async (req, res) => {
-  const { flash_sales_id } = req.params;
+  const { id } = req.params;
 
   try {
-    if (!flash_sales_id || isNaN(flash_sales_id)) {
-      return res.status(400).json({
-        success: false,
-        message: "ID flash sale không hợp lệ.",
-      });
-    }
-
-    const registeredProducts = await ShopRegisterFlashSales.findAll({
+    const timeFrames = await FlashSaleTimerFrame.findAll({
+      where: { flash_sales_id: id },
+      order: [["started_at", "ASC"]],
       include: [
         {
-          model: FlashSaleTimerFrame,
-          where: { flash_sales_id }, // Chỉ lấy các khung giờ thuộc flash sale ID
-          attributes: [], // Không cần thông tin chi tiết về khung giờ
-          required: true,
-        },
-        {
-          model: Product,
-          attributes: ["product_id", "product_name", "thumbnail", "base_price", "stock"],
-        },
-        {
-          model: Shop,
-          attributes: ["shop_id", "shop_name", "logo_url", "shop_description", "business_email", "phone_number"],
+          model: ShopRegisterFlashSales,
+          include: [
+            {
+              model: Product,
+              attributes: ["product_id", "product_name", "thumbnail", "sold", "base_price"],
+            },
+            {
+              model: Shop,
+              attributes: ["shop_id", "shop_name", "shop_address", "phone_number"],
+            },
+          ],
         },
       ],
-      attributes: ["original_price", "flash_sale_price", "quantity", "sold"],
     });
 
-    if (!registeredProducts || registeredProducts.length === 0) {
+    if (!timeFrames || timeFrames.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Không có sản phẩm nào được đăng ký trong flash sale này.",
+        message: "Không có khung giờ nào cho Flash Sale này",
       });
     }
 
-    const responseData = registeredProducts.map((product) => ({
-      shop: product.Shop,
-      product: product.Product,
-      flash_sale_details: {
-        original_price: product.original_price,
-        flash_sale_price: product.flash_sale_price,
-        quantity: product.quantity,
-        sold: product.sold,
-      },
+    // Nhóm dữ liệu theo khung giờ
+    const groupedData = timeFrames.map((timeFrame) => ({
+      time_frame_id: timeFrame.flash_sale_time_frame_id,
+      started_at: timeFrame.started_at,
+      ended_at: timeFrame.ended_at,
+      status: timeFrame.status,
+      registered_products: timeFrame.ShopRegisterFlashSales.map((registration) => ({
+        shop: {
+          shop_id: registration.Shop.shop_id,
+          shop_name: registration.Shop.shop_name,
+          address: registration.Shop.shop_address,
+          phone_number: registration.Shop.phone_number,
+        },
+        product: {
+          product_id: registration.Product.product_id,
+          product_name: registration.Product.product_name,
+          thumbnail: registration.Product.thumbnail,
+          base_price: registration.Product.base_price,
+          flash_sale_price: registration.flash_sale_price,
+          sold: registration.sold,
+        },
+        quantity: registration.quantity,
+      })),
     }));
 
     return res.status(200).json({
       success: true,
-      data: responseData,
+      data: groupedData,
     });
   } catch (error) {
-    console.error("Lỗi khi lấy danh sách sản phẩm đã đăng ký:", error);
+    console.error("Lỗi khi lấy thông tin sản phẩm và cửa hàng:", error.message);
     return res.status(500).json({
       success: false,
-      message: "Đã xảy ra lỗi khi lấy danh sách sản phẩm đã đăng ký.",
+      message: "Đã xảy ra lỗi khi lấy thông tin sản phẩm và cửa hàng",
     });
   }
 };
-
-
-
-
 
 
 const getSuggestFlashSaleForShop = async (req, res) => {
@@ -654,6 +656,8 @@ const getSuggestFlashSaleForShop = async (req, res) => {
     });
   }
 };
+
+
 
 module.exports = {
   getAllFlashSales,
