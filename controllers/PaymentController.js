@@ -1121,6 +1121,16 @@ const saveOrder = async (
             item.ProductVarient.Product.ShopRegisterFlashSales[0].sold >
           0
         ) {
+          await ProductVarients.decrement(
+            {
+              stock: item.quantity,
+            },
+            {
+              where: {
+                product_varients_id: item.product_varients_id,
+              },
+            }
+          );
           await ShopRegisterFlashSales.update(
             {
               sold:
@@ -1284,6 +1294,16 @@ const saveOrder = async (
                 item.ProductVarient.Product.ShopRegisterFlashSales[0].sold >
               0
             ) {
+              await ProductVarients.decrement(
+                {
+                  stock: item.quantity,
+                },
+                {
+                  where: {
+                    product_varients_id: item.product_varients_id,
+                  },
+                }
+              );
               await ShopRegisterFlashSales.update(
                 {
                   sold:
