@@ -235,7 +235,12 @@ const getOrders = async (req, res) => {
         ],
       };
     }
-
+    let returnRequestWhere = {};
+    if (status_id === 2 || status_id === 3) {
+      returnRequestWhere.return_type_id = 1;
+    } else if (status_id === 4 || status_id === 5) {
+      returnRequestWhere.return_type_id = 2;
+    }
     const { count, rows: orders } = await UserOrder.findAndCountAll({
       include: [
         {
@@ -269,6 +274,12 @@ const getOrders = async (req, res) => {
               attributes: ["user_id", "username"],
             },
           ],
+        },
+        {
+          model: ReturnRequest,
+          attributes: ["return_request_id", "return_type_id", "status_id"],
+          where: returnRequestWhere,
+          required: false,
         },
       ],
       where: whereConditions,
@@ -360,7 +371,8 @@ const getOrderDetails = async (req, res) => {
         },
         {
           model: ReturnRequest,
-          attributes: ["return_request_id", "status_id"],
+          attributes: ["return_request_id", "status_id", "return_type_id"],
+
           include: [
             {
               model: ReturnReason,
@@ -1432,21 +1444,21 @@ const shopCancelOrder = async (req, res) => {
       })
     );
 
-    if (order.vouchers_applied !== null) {
-      const vouchersApplied = order.vouchers_applied.split(",").map(Number);
-      await Promise.all(
-        vouchersApplied.map(async (voucherId) => {
-          await DiscountVoucher.increment(
-            { quantity: 1 },
-            {
-              where: {
-                discount_voucher_id: voucherId,
-              },
-            }
-          );
-        })
-      );
-    }
+    // if (order.vouchers_applied !== null) {
+    //   const vouchersApplied = order.vouchers_applied.split(",").map(Number);
+    //   await Promise.all(
+    //     vouchersApplied.map(async (voucherId) => {
+    //       await DiscountVoucher.increment(
+    //         { quantity: 1 },
+    //         {
+    //           where: {
+    //             discount_voucher_id: voucherId,
+    //           },
+    //         }
+    //       );
+    //     })
+    //   );
+    // }
 
     if (order.payment_method_id === 3 || order.payment_method_id === 4) {
       const wallet = await UserWallet.findOne({
@@ -1554,6 +1566,7 @@ const sendRequest = async (req, res) => {
       note,
       ghn_status,
     } = req.body;
+    console.log(req.body);
     const order = await UserOrder.findOne({
       where: {
         user_order_id,
@@ -1582,7 +1595,8 @@ const sendRequest = async (req, res) => {
     await order.update({
       return_request_status: 1,
     });
-
+    const status_id =
+      ghn_status === "ready_to_pick" || order.order_code === null ? 2 : 1;
     await ReturnRequest.create({
       user_id: order.user_id,
       shop_id: order.shop_id,
@@ -1590,8 +1604,7 @@ const sendRequest = async (req, res) => {
       return_type_id,
       return_reason_id,
       note,
-      status_id:
-        ghn_status === "ready-to-pick" || order.order_code === null ? 2 : 1,
+      status_id: status_id,
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -1604,9 +1617,11 @@ const sendRequest = async (req, res) => {
       content: `Đơn hàng ${order.user_order_id} đã được yêu cầu trả hàng`,
       created_at: new Date(),
       updated_at: new Date(),
+      url: `/user/purchase/order/${order.user_order_id}`,
     });
+    // console.log("ghn_status: ", ghn_status);
 
-    if (ghn_status === "ready-to-pick" || order.order_code === null) {
+    if (ghn_status === "ready_to_pick" || order.order_code === null) {
       if (order.order_code !== null) {
         const order_codes = [order.order_code];
         const cancelGHNResult = await cancelOrderGHN(
@@ -1646,36 +1661,43 @@ const sendRequest = async (req, res) => {
         Array.isArray(order.UserOrderDetails) &&
         order.UserOrderDetails.length > 0
       ) {
-        await Promise.all(
+        console.log("order.UserOrderDetails: ", order.UserOrderDetails);
+        await Promise.allSettled(
           order.UserOrderDetails.map(async (product) => {
-            await ProductVarients.increment(
-              { stock: product.quantity },
-              {
-                where: {
-                  product_varients_id: product.product_varients_id,
-                },
-              }
-            ),
-              // await Product.decrement(
-              //   { sold: product.quantity },
-              //   {
-              //     where: {
-              //       product_id: product.ProductVarient.product_id,
-              //     },
-              //   }
-              // ),
-              product.on_shop_register_flash_sales_id !== null &&
-                (await ShopRegisterFlashSales.decrement(
-                  {
-                    sold: product.quantity,
+            console.log("product: ", product.on_shop_register_flash_sales_id);
+            console.log("ghn_status: ", ghn_status);
+            if (
+              ghn_status === "ready_to_pick" &&
+              product.on_shop_register_flash_sales_id === null
+            ) {
+              await ProductVarients.increment(
+                { stock: product.quantity },
+                {
+                  where: {
+                    product_varients_id: product.product_varients_id,
                   },
-                  {
-                    where: {
-                      shop_register_flash_sales_id:
-                        product.on_shop_register_flash_sales_id,
-                    },
-                  }
-                ));
+                }
+              );
+            }
+            if (product.on_shop_register_flash_sales_id !== null) {
+              await ProductVarients.increment(
+                { stock: product.quantity },
+                {
+                  where: {
+                    product_varients_id: product.product_varients_id,
+                  },
+                }
+              );
+              await ShopRegisterFlashSales.decrement(
+                { sold: product.quantity },
+                {
+                  where: {
+                    shop_register_flash_sales_id:
+                      product.on_shop_register_flash_sales_id,
+                  },
+                }
+              );
+            }
           })
         );
       }
@@ -2129,6 +2151,7 @@ const processOrder = async (orderItem) => {
             updated_at: new Date(),
           });
         }
+        await adjustVouchers(order);
         await Promise.all(
           order.UserOrderDetails.map(async (product) => {
             await ProductVarients.increment(
@@ -2235,7 +2258,17 @@ const processOrder = async (orderItem) => {
           //   )
           // ),
           product.on_shop_register_flash_sales_id !== null &&
-            (await ShopRegisterFlashSales.decrement(
+            (await ProductVarients.increment(
+              {
+                stock: product.quantity,
+              },
+              {
+                where: {
+                  product_varients_id: product.product_varients_id,
+                },
+              }
+            ),
+            await ShopRegisterFlashSales.decrement(
               {
                 sold: product.quantity,
               },
