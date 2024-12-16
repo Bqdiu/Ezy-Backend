@@ -239,7 +239,7 @@ const ipnHandler = async (req, res) => {
     const transaction = await WalletTransaction.findOne({
       where: {
         description: {
-          [Op.like]: `%vnPayCode: ${verify.vnp_TxnRef}%`,
+          [Op.like]: `vnPayCode: ${verify.vnp_TxnRef}`,
         },
       },
     });
@@ -256,7 +256,7 @@ const ipnHandler = async (req, res) => {
         const transaction = await WalletTransaction.create({
           user_wallet_id,
           transaction_type: "Nạp tiền vào ví",
-          description: `%vnPayCode: ${verify.vnp_TxnRef}%`,
+          description: `vnPayCode: ${verify.vnp_TxnRef}`,
           amount: verify.vnp_Amount,
           transaction_date: new Date(),
         });

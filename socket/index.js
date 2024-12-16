@@ -374,8 +374,8 @@ const updateStatusOfRequest = async (request_support_id) => {
 };
 
 // Cron job chạy hàng tuần vào 0h thứ 2
-//cron.schedule("* * * * *", async () => {
-cron.schedule("0 0 * * 1", async () => {
+cron.schedule("* * * * *", async () => {
+  // cron.schedule("0 0 * * 1", async () => {
   console.log("Running weekly shop revenue distribution...");
 
   const today = new Date();
@@ -407,10 +407,11 @@ cron.schedule("0 0 * * 1", async () => {
               return_expiration_date: {
                 [Op.lt]: today,
               },
-            },],
-            created_at: {
-              [Op.between]: [fourteenDaysAgo, today],
             },
+          ],
+          created_at: {
+            [Op.between]: [fourteenDaysAgo, today],
+          },
           is_pending_payout: 1,
         },
       });
@@ -458,7 +459,8 @@ cron.schedule("0 0 * * 1", async () => {
                   return_expiration_date: {
                     [Op.lt]: today,
                   },
-                },],
+                },
+              ],
               created_at: {
                 [Op.between]: [fourteenDaysAgo, today],
               },
