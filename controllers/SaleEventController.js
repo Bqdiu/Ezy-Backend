@@ -25,37 +25,93 @@ const getAllSaleEvents = async (req, res) => {
     }
 }
 const addSaleEvent = async (req, res) => {
-    const {
-        sale_events_name,
-        thumbnail,
-        started_at,
-        ended_at
-    } = req.body;
-
+    const { sale_events_name, thumbnail, started_at, ended_at } = req.body;
+  
     try {
-        const startDate = new Date(started_at);
-        const endDate = new Date(ended_at);
-
-        const newSaleEvent = await SaleEvents.create({
-            sale_events_name,
-            thumbnail: thumbnail || null,
-            started_at: startDate,
-            ended_at: endDate,
+      // Kiểm tra đầu vào
+      if (!sale_events_name || !started_at || !ended_at) {
+        return res.status(400).json({
+          success: false,
+          message: "Vui lòng cung cấp đầy đủ thông tin: tên sự kiện, ngày bắt đầu và ngày kết thúc.",
         });
-
-        res.status(201).json({
-            success: true,
-            data: newSaleEvent,
-            message: 'Tạo sự kiện thành công',
+      }
+  
+      const startDate = new Date(started_at);
+      const endDate = new Date(ended_at);
+      const now = new Date();
+  
+      // Kiểm tra thời gian bắt đầu phải là 00:00:00
+      if (
+        startDate.getHours() !== 0 ||
+        startDate.getMinutes() !== 0 ||
+        startDate.getSeconds() !== 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Thời gian bắt đầu phải là 00:00:00.",
         });
+      }
+  
+      // Kiểm tra thời gian kết thúc phải là 23:00:00
+      if (
+        endDate.getHours() !== 23 ||
+        endDate.getMinutes() !== 59 ||
+        endDate.getSeconds() !== 59
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Thời gian kết thúc phải là 23:59:59.",
+        });
+      }
+  
+      // Kiểm tra ngày bắt đầu nhỏ hơn ngày kết thúc
+      if (startDate >= endDate) {
+        return res.status(400).json({
+          success: false,
+          message: "Ngày bắt đầu phải nhỏ hơn ngày kết thúc.",
+        });
+      }
+  
+      // Kiểm tra ngày bắt đầu không nằm trong quá khứ
+      if (startDate < now) {
+        return res.status(400).json({
+          success: false,
+          message: "Ngày bắt đầu phải sau ngày hiện tại.",
+        });
+      }
+  
+      // Kiểm tra khoảng cách giữa ngày bắt đầu và ngày kết thúc
+      const diffInDays = (endDate - startDate) / (1000 * 60 * 60 * 24); // Tính khoảng cách theo ngày
+      if (diffInDays > 30) {
+        return res.status(400).json({
+          success: false,
+          message: "Khoảng thời gian của sự kiện không được vượt quá 30 ngày.",
+        });
+      }
+  
+      // Tạo sự kiện mới
+      const newSaleEvent = await SaleEvents.create({
+        sale_events_name,
+        thumbnail: thumbnail || null,
+        started_at: startDate,
+        ended_at: endDate,
+      });
+  
+      res.status(201).json({
+        success: true,
+        data: newSaleEvent,
+        message: "Tạo sự kiện thành công",
+      });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi khi tạo sự kiện',
-            error: error.message,
-        });
+      console.error("Lỗi khi tạo sự kiện:", error);
+      res.status(500).json({
+        success: false,
+        message: "Lỗi khi tạo sự kiện",
+        error: error.message,
+      });
     }
-}
+  };
+  
 const deleteSaleEvent = async (req, res) => {
     const { id } = req.params;
     try {
@@ -310,60 +366,114 @@ const getEventById = async (req, res) => {
 const updateSaleEvent = async (req, res) => {
     const { id } = req.params;
     const { sale_events_name, thumbnail, started_at, ended_at } = req.body;
-
+  
     try {
-        const saleEvent = await SaleEvents.findOne({ where: { sale_events_id: id } });
-
-        if (!saleEvent) {
-            return res.status(404).json({
-                success: false,
-                message: 'Sự kiện không tìm thấy',
-            });
-        }
-
-        const newStartDate = new Date(started_at);
-        const newEndDate = new Date(ended_at);
-
-        // Fetch associated vouchers
-        const vouchers = await DiscountVoucher.findAll({
-            where: { sale_events_id: id },
-            attributes: ['discount_voucher_id', 'started_at', 'ended_at'],
+      const saleEvent = await SaleEvents.findOne({ where: { sale_events_id: id } });
+  
+      if (!saleEvent) {
+        return res.status(404).json({
+          success: false,
+          message: 'Sự kiện không tìm thấy',
         });
+      }
+  
+      const newStartDate = new Date(started_at);
+      const newEndDate = new Date(ended_at);
+      const now = new Date();
+  
+      // Kiểm tra ngày bắt đầu phải nhỏ hơn ngày kết thúc
+      if (newStartDate >= newEndDate) {
+        return res.status(400).json({
+          success: false,
+          message: 'Ngày bắt đầu phải nhỏ hơn ngày kết thúc.',
+        });
+      }
+  
+      // Kiểm tra ngày bắt đầu và ngày kết thúc không nằm trong quá khứ
+      if (newStartDate < now || newEndDate < now) {
+        return res.status(400).json({
+          success: false,
+          message: 'Ngày bắt đầu và ngày kết thúc không được nằm trong quá khứ.',
+        });
+      }
+  
+      // Kiểm tra khoảng cách giữa ngày bắt đầu và ngày kết thúc
+      const diffInDays = (newEndDate - newStartDate) / (1000 * 60 * 60 * 24); // Tính khoảng cách theo ngày
+      if (diffInDays > 30) {
+        return res.status(400).json({
+          success: false,
+          message: 'Khoảng thời gian của sự kiện không được vượt quá 30 ngày.',
+        });
+      }
 
-        // Validate new event dates against voucher dates
-        for (const voucher of vouchers) {
-            const voucherStartDate = new Date(voucher.started_at);
-            const voucherEndDate = new Date(voucher.ended_at);
-
-            if (newStartDate > voucherStartDate || newEndDate < voucherEndDate) {
+            // Kiểm tra thời gian bắt đầu phải là 00:00:00
+            if (
+                newStartDate.getHours() !== 0 ||
+                newStartDate.getMinutes() !== 0 ||
+                newStartDate.getSeconds() !== 0
+              ) {
                 return res.status(400).json({
-                    success: false,
-                    message: `Ngày cập nhật của sự kiện không hợp lệ. Voucher ${voucher.discount_voucher_id} đã bắt đầu vào ${voucherStartDate.toDateString()} và kết thúc vào ${voucherEndDate.toDateString()}`,
+                  success: false,
+                  message: "Thời gian bắt đầu phải là 00:00:00.",
                 });
-            }
-        }
+              }
+          
+              // Kiểm tra thời gian kết thúc phải là 23:00:00
+              if (
+                newEndDate.getHours() !== 23 ||
+                newEndDate.getMinutes() !== 59 ||
+                newEndDate.getSeconds() !== 59
+              ) {
+                return res.status(400).json({
+                  success: false,
+                  message: "Thời gian kết thúc phải là 23:59:59.",
+                });
+              }
 
-        // Update the sale event
-        await saleEvent.update({
-            sale_events_name,
-            thumbnail: thumbnail || saleEvent.thumbnail,
-            started_at: newStartDate,
-            ended_at: newEndDate,
-        });
-
-        res.status(200).json({
-            success: true,
-            message: 'Cập nhật sự kiện thành công',
-            data: saleEvent,
-        });
-    } catch (error) {
-        res.status(500).json({
+      // Kiểm tra thời gian bắt đầu phải là 00:00:00
+    
+  
+      // Lấy danh sách voucher liên kết với sự kiện
+      const vouchers = await DiscountVoucher.findAll({
+        where: { sale_events_id: id },
+        attributes: ['discount_voucher_id', 'started_at', 'ended_at'],
+      });
+  
+      // Kiểm tra ngày mới so với ngày của các voucher
+      for (const voucher of vouchers) {
+        const voucherStartDate = new Date(voucher.started_at);
+        const voucherEndDate = new Date(voucher.ended_at);
+  
+        if (newStartDate > voucherStartDate || newEndDate < voucherEndDate) {
+          return res.status(400).json({
             success: false,
-            message: 'Lỗi khi cập nhật sự kiện',
-            error: error.message,
-        });
+            message: `Ngày cập nhật không hợp lệ. Voucher ${voucher.discount_voucher_id} có thời gian từ ${voucherStartDate.toISOString()} đến ${voucherEndDate.toISOString()}.`,
+          });
+        }
+      }
+  
+      // Cập nhật sự kiện
+      await saleEvent.update({
+        sale_events_name,
+        thumbnail: thumbnail || saleEvent.thumbnail,
+        started_at: newStartDate,
+        ended_at: newEndDate,
+      });
+  
+      res.status(200).json({
+        success: true,
+        message: 'Cập nhật sự kiện thành công',
+        data: saleEvent,
+      });
+    } catch (error) {
+      console.error('Lỗi khi cập nhật sự kiện:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Lỗi khi cập nhật sự kiện',
+        error: error.message,
+      });
     }
-};
+  };  
 
 const activateEvents = async () => {
     try {

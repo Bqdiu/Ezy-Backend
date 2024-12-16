@@ -286,6 +286,25 @@ const addVoucherByEventId = async (req, res) => {
         .json({ error: true, message: "Sale event not found." });
     }
 
+    const existingVoucher = await DiscountVoucher.findOne({
+      where: { discount_voucher_code },
+    });
+
+    if (existingVoucher) {
+      return res.status(400).json({
+        success: false,
+        message: "Mã voucher đã tồn tại. Vui lòng chọn mã khác.",
+      });
+    }
+
+    // Check if usage exceeds quantity
+    if (usage > quantity) {
+      return res.status(400).json({
+        success: false,
+        message: "Số lần sử dụng không được vượt quá số lượng.",
+      });
+    }
+
     // Create a new voucher associated with the sale event
     const newVoucher = await DiscountVoucher.create({
       sale_events_id,
@@ -336,6 +355,25 @@ const updateVoucher = async (req, res) => {
       return res
         .status(404)
         .json({ error: true, message: "Voucher not found." });
+    }
+
+    const existingVoucher = await DiscountVoucher.findOne({
+      where: { discount_voucher_code },
+    });
+
+    if (existingVoucher) {
+      return res.status(400).json({
+        success: false,
+        message: "Mã voucher đã tồn tại. Vui lòng chọn mã khác.",
+      });
+    }
+
+    // Check if usage exceeds quantity
+    if (usage > quantity) {
+      return res.status(400).json({
+        success: false,
+        message: "Số lần sử dụng không được vượt quá số lượng.",
+      });
     }
 
     // Directly assign values from request, assuming all fields are provided by frontend
