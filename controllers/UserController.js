@@ -10,6 +10,7 @@ const {
 const { Op } = require("sequelize");
 const admin = require("../firebase/firebaseAdmin");
 const bcryptjs = require("bcryptjs");
+const nodemailer = require("nodemailer");
 const getAllUser = async (req, res) => {
   try {
     const users = await UserAccount.findAll({
@@ -930,9 +931,13 @@ const createUser = async (req, res) => {
     }
     const firebaseUser = await admin.auth().createUser({
       email: email,
-      password: password
-    })
-    
+      password: password,
+    });
+    const verificationLink = await admin
+      .auth()
+      .generateEmailVerificationLink(email);
+    await sendEmailVerificationNodeMailer(email, verificationLink);
+
     // Tạo user mới
     const newUser = await UserAccount.create({
       user_id: firebaseUser.uid,
@@ -978,7 +983,32 @@ const createUser = async (req, res) => {
     });
   }
 };
+async function sendEmailVerificationNodeMailer(email, verificationLink) {
+  // Tạo một transporter sử dụng thông tin SMTP
+  const transporter = nodemailer.createTransport({
+    service: "gmail", // Dịch vụ Gmail
+    auth: {
+      user: process.env.google_email, // Email gửi
+      pass: process.env.google_app_password, // Mật khẩu hoặc mật khẩu ứng dụng
+    },
+  });
 
+  // Cấu hình email
+  const mailOptions = {
+    from: process.env.google_email, // Địa chỉ gửi email
+    to: email, // Địa chỉ nhận
+    subject: "Xác thực tài khoản", // Tiêu đề email
+    text: `Vui lòng xác thực tài khoản của bạn tại đây: ${verificationLink}`, // Nội dung email
+  };
+
+  try {
+    // Gửi email
+    await transporter.sendMail(mailOptions);
+    console.log("Email xác thực đã được gửi tới:", email);
+  } catch (error) {
+    console.error("Lỗi khi gửi email:", error);
+  }
+}
 const lockAccount = async (req, res) => {
   const { user_id } = req.body;
 
@@ -986,7 +1016,9 @@ const lockAccount = async (req, res) => {
     // Fetch user information
     const user = await UserAccount.findOne({ where: { user_id } });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
     }
 
     // Update user's status to banned
@@ -1010,7 +1042,9 @@ const lockAccount = async (req, res) => {
       console.log(`Firebase user ${user.user_id} has been disabled.`);
     } catch (firebaseError) {
       console.error("Error disabling Firebase user:", firebaseError.message);
-      return res.status(500).json({ success: false, message: "Error disabling user on Firebase." });
+      return res
+        .status(500)
+        .json({ success: false, message: "Error disabling user on Firebase." });
     }
 
     res.status(200).json({
@@ -1033,7 +1067,9 @@ const unlockAccount = async (req, res) => {
     // Fetch user information
     const user = await UserAccount.findOne({ where: { user_id } });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
     }
 
     // Update user's status to active
@@ -1058,7 +1094,9 @@ const unlockAccount = async (req, res) => {
       console.log(`Firebase user ${user.user_id} has been enabled.`);
     } catch (firebaseError) {
       console.error("Error enabling Firebase user:", firebaseError.message);
-      return res.status(500).json({ success: false, message: "Error enabling user on Firebase." });
+      return res
+        .status(500)
+        .json({ success: false, message: "Error enabling user on Firebase." });
     }
 
     res.status(200).json({
@@ -1076,7 +1114,8 @@ const unlockAccount = async (req, res) => {
 
 const adminUpdateProfile = async (req, res) => {
   try {
-    const { user_id, full_name, phone_number, gender, dob, avt_url, role_id } = req.body;
+    const { user_id, full_name, phone_number, gender, dob, avt_url, role_id } =
+      req.body;
 
     const user = await UserAccount.findOne({
       where: {
@@ -1120,7 +1159,7 @@ const getUserRoleId = async (req, res) => {
   try {
     const user = await UserAccount.findOne({
       where: {
-        user_id: id, 
+        user_id: id,
       },
     });
     if (!user) {
@@ -1141,7 +1180,6 @@ const getUserRoleId = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   getAllUser,

@@ -132,7 +132,8 @@ io.on("connection", (socket) => {
   });
 
   // Cron job chạy mỗi 2 tiếng để kiểm tra cả việc bắt đầu và kết thúc khung giờ flash sale
-  cron.schedule("0 */2 * * *", async () => {
+  cron.schedule("* * * * *", async () => {
+    //cron.schedule("0 */2 * * *", async () => {
     try {
       const currentTime = new Date();
 
@@ -181,7 +182,8 @@ io.on("connection", (socket) => {
     }
   });
 
-  cron.schedule("0 0 * * *", async () => {
+  cron.schedule("* * * * *", async () => {
+    //cron.schedule("0 0 * * *", async () => {
     try {
       const currentTime = new Date();
 
@@ -221,8 +223,8 @@ io.on("connection", (socket) => {
     }
   });
 
-  //cron.schedule("* * * * *", async () => {
-  cron.schedule("0 0 * * *", async () => {
+  cron.schedule("* * * * *", async () => {
+    //cron.schedule("0 0 * * *", async () => {
     try {
       const currentTime = new Date();
 
@@ -372,7 +374,8 @@ const updateStatusOfRequest = async (request_support_id) => {
 };
 
 // Cron job chạy hàng tuần vào 0h thứ 2
-cron.schedule("0 0 * * 1", async () => {
+cron.schedule("* * * * *", async () => {
+  //cron.schedule("0 0 * * 1", async () => {
   console.log("Running weekly shop revenue distribution...");
 
   const today = new Date();

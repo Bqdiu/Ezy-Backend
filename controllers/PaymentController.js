@@ -690,12 +690,14 @@ const vnPayIPN = async (req, res) => {
               updated_at: new Date(),
             });
 
-            await OrderStatusHistory.create({
-              user_order_id: order.user_order_id,
-              order_status_id: 2,
-              createdAt: new Date(),
-              updatedAt: new Date(),
+            await OrderStatusHistory.findOrCreate({
+              where: { user_order_id: order.user_order_id, order_status_id: 2 },
+              defaults: {
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              },
             });
+
             await order.update({
               order_status_id: 2,
               is_blocked: 0,
