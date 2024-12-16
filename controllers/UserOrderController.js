@@ -490,11 +490,12 @@ const updateOrderStatus = async (data) => {
         order_status_id: 3,
         updated_at: new Date(),
       });
-      await OrderStatusHistory.create({
-        user_order_id,
-        order_status_id: 3,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      await OrderStatusHistory.findOrCreate({
+        where: { user_order_id, order_status_id: 3 },
+        defaults: {
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       });
     } else if (
       status === "picked" &&
@@ -506,11 +507,12 @@ const updateOrderStatus = async (data) => {
         updated_at: new Date(),
       });
 
-      await OrderStatusHistory.create({
-        user_order_id,
-        order_status_id: 4,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      await OrderStatusHistory.findOrCreate({
+        where: { user_order_id, order_status_id: 4 },
+        defaults: {
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       });
     } else if (
       status === "cancel" &&
@@ -522,11 +524,12 @@ const updateOrderStatus = async (data) => {
         updated_at: new Date(),
       });
 
-      await OrderStatusHistory.create({
-        user_order_id,
-        order_status_id: 6,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      await OrderStatusHistory.findOrCreate({
+        where: { user_order_id, order_status_id: 6 },
+        defaults: {
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       });
     } else if (
       status === "delivered" &&
@@ -557,7 +560,10 @@ const updateOrderStatus = async (data) => {
             }
           );
           console.log("Đã cập nhật số lượng bán: ", product.quantity);
-          console.log("Đã cập nhật số lượng bán: ", product.ProductVarient.product_id);
+          console.log(
+            "Đã cập nhật số lượng bán: ",
+            product.ProductVarient.product_id
+          );
         })
       );
     }
@@ -1147,7 +1153,7 @@ const confirmOrder = async (req, res) => {
       return res.status(400).json({
         error: true,
         message: check_stock.message,
-      })
+      });
     }
     const resultGHN = await createOrderGHN(shopId, data);
     if (resultGHN.error) {
@@ -1274,15 +1280,17 @@ const buyOrderAgain = async (req, res) => {
         if (product.ProductVarient.Product.product_status === 0) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name}  ${product.classify !== "" && "- " + product.classify
-              } đã bị khóa`,
+            message: `Sản phẩm ${product.varient_name}  ${
+              product.classify !== "" && "- " + product.classify
+            } đã bị khóa`,
           });
         }
         if (stock < product.quantity) {
           return res.status(400).json({
             error: true,
-            message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
-              } không đủ hàng`,
+            message: `Sản phẩm ${product.varient_name} ${
+              product.classify !== "" && "- " + product.classify
+            } không đủ hàng`,
           });
         }
         const cartItem = await CartItems.findOne({
@@ -1298,8 +1306,9 @@ const buyOrderAgain = async (req, res) => {
           if (newQuantity > stock) {
             return res.status(400).json({
               error: true,
-              message: `Sản phẩm ${product.varient_name} ${product.classify !== "" && "- " + product.classify
-                } không đủ hàng`,
+              message: `Sản phẩm ${product.varient_name} ${
+                product.classify !== "" && "- " + product.classify
+              } không đủ hàng`,
             });
           }
           // console.log("price: ", newQuantity * discount_price);
@@ -1441,7 +1450,10 @@ const shopCancelOrder = async (req, res) => {
     });
     await Promise.allSettled(
       order.UserOrderDetails.map(async (product) => {
-        if (product.on_shop_register_flash_sales_id === null && order.order_code !== null) {
+        if (
+          product.on_shop_register_flash_sales_id === null &&
+          order.order_code !== null
+        ) {
           await ProductVarients.increment(
             { stock: product.quantity },
             {
@@ -2028,11 +2040,13 @@ const processOrder = async (orderItem) => {
           order_status_id: 3,
           updated_at: new Date(),
         });
-        await OrderStatusHistory.create({
-          user_order_id,
-          order_status_id: 3,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+
+        await OrderStatusHistory.findOrCreate({
+          where: { user_order_id, order_status_id: 3 },
+          defaults: {
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
         });
       } else if (
         status === "picked" &&
@@ -2044,11 +2058,12 @@ const processOrder = async (orderItem) => {
           updated_at: new Date(),
         });
 
-        await OrderStatusHistory.create({
-          user_order_id,
-          order_status_id: 4,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        await OrderStatusHistory.findOrCreate({
+          where: { user_order_id, order_status_id: 4 },
+          defaults: {
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
         });
       } else if (
         status === "cancel" &&
@@ -2059,12 +2074,12 @@ const processOrder = async (orderItem) => {
           order_status_id: 6,
           updated_at: new Date(),
         });
-
-        await OrderStatusHistory.create({
-          user_order_id,
-          order_status_id: 6,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        await OrderStatusHistory.findOrCreate({
+          where: { user_order_id, order_status_id: 6 },
+          defaults: {
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
         });
       } else if (
         status === "delivered" &&
@@ -2077,11 +2092,12 @@ const processOrder = async (orderItem) => {
           order_status_id: 4,
           updated_at: new Date(),
         });
-        await OrderStatusHistory.create({
-          user_order_id,
-          order_status_id: 4,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        await OrderStatusHistory.findOrCreate({
+          where: { user_order_id, order_status_id: 4 },
+          defaults: {
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
         });
         await Promise.all(
           order.UserOrderDetails.map(async (product) => {
@@ -2108,11 +2124,12 @@ const processOrder = async (orderItem) => {
           updated_at: new Date(),
         });
 
-        await OrderStatusHistory.create({
-          user_order_id,
-          order_status_id: 5,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        await OrderStatusHistory.findOrCreate({
+          where: { user_order_id, order_status_id: 5 },
+          defaults: {
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
         });
       } else if (
         status === "ready_to_pick" &&
@@ -2143,12 +2160,12 @@ const processOrder = async (orderItem) => {
           is_canceled_by: 1,
           is_processed: 1,
         });
-
-        await OrderStatusHistory.create({
-          user_order_id,
-          order_status_id: 6,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        await OrderStatusHistory.findOrCreate({
+          where: { user_order_id, order_status_id: 6 },
+          defaults: {
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
         });
 
         if (order.payment_method_id === 3 || order.payment_method_id === 4) {
@@ -2188,17 +2205,17 @@ const processOrder = async (orderItem) => {
               }
             ),
               product.on_shop_register_flash_sales_id !== null &&
-              (await ShopRegisterFlashSales.decrement(
-                {
-                  sold: product.quantity,
-                },
-                {
-                  where: {
-                    shop_register_flash_sales_id:
-                      product.on_shop_register_flash_sales_id,
+                (await ShopRegisterFlashSales.decrement(
+                  {
+                    sold: product.quantity,
                   },
-                }
-              ));
+                  {
+                    where: {
+                      shop_register_flash_sales_id:
+                        product.on_shop_register_flash_sales_id,
+                    },
+                  }
+                ));
           })
         );
       }
@@ -2229,11 +2246,12 @@ const processOrder = async (orderItem) => {
         is_processed: 1,
       });
 
-      await OrderStatusHistory.create({
-        user_order_id,
-        order_status_id: 6,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      await OrderStatusHistory.findOrCreate({
+        where: { user_order_id, order_status_id: 6 },
+        defaults: {
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       });
 
       if (
@@ -2293,17 +2311,17 @@ const processOrder = async (orderItem) => {
                 },
               }
             ),
-              await ShopRegisterFlashSales.decrement(
-                {
-                  sold: product.quantity,
+            await ShopRegisterFlashSales.decrement(
+              {
+                sold: product.quantity,
+              },
+              {
+                where: {
+                  shop_register_flash_sales_id:
+                    product.on_shop_register_flash_sales_id,
                 },
-                {
-                  where: {
-                    shop_register_flash_sales_id:
-                      product.on_shop_register_flash_sales_id,
-                  },
-                }
-              ));
+              }
+            ));
         })
       );
     }
@@ -2390,7 +2408,6 @@ async function decrementStockProductVarients(order) {
       }
     })
   );
-
 }
 
 module.exports = {
