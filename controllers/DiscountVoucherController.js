@@ -356,9 +356,8 @@ const updateVoucher = async (req, res) => {
         .status(404)
         .json({ error: true, message: "Voucher not found." });
     }
-
     const existingVoucher = await DiscountVoucher.findOne({
-      where: { discount_voucher_code },
+      where: { discount_voucher_code: discount_voucher_code },
     });
 
     if (existingVoucher) {
